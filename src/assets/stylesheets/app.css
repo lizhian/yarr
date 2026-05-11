@@ -7,6 +7,7 @@ html {
 }
 
 body {
+  --accent-color: #006fb8;
   font-family: "Maple Mono NF CN", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: normal;
   overscroll-behavior: none;
@@ -186,6 +187,10 @@ select.form-control:not([multiple]):not([size]) {
 
 #item-list-scroll .item-status-read {
   color: #8a8a86;
+}
+
+#item-list-scroll input:checked + .selectgroup-label {
+  color: #fff;
 }
 
 .toolbar-item:hover,
@@ -467,7 +472,7 @@ button.theme-light {
 
 a,
 .btn-link:hover {
-  color: #0080d4;
+  color: var(--accent-color);
 }
 
 .toolbar-item.active,
@@ -475,12 +480,12 @@ a,
 .dropdown-item:active,
 .selectgroup input:checked + .selectgroup-label {
   color: #fff;
-  background-color: #0080d4 !important;
+  background-color: var(--accent-color) !important;
 }
 
 .btn-default:focus,
 .form-control:focus {
-  border-color: #0080d4;
+  border-color: var(--accent-color);
 }
 
 /* theme: sepia */
@@ -520,6 +525,7 @@ a,
 .theme-night .form-control,
 .theme-night .modal-content,
 .theme-night .toolbar-search {
+  --accent-color: #4aa8ff;
   color: #d1d1d1;
   background-color: #1f1f1f;
 }
