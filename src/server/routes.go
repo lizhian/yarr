@@ -85,7 +85,7 @@ func (s *Server) handleManifest(c *router.Context) {
 		"$schema":     "https://json.schemastore.org/web-manifest-combined.json",
 		"name":        "yarr!",
 		"short_name":  "yarr",
-		"description": "yet another rss reader",
+		"description": "RSS 阅读器",
 		"display":     "standalone",
 		"start_url":   "/" + strings.TrimPrefix(s.BasePath, "/"),
 		"icons": []map[string]interface{}{
@@ -117,7 +117,7 @@ func (s *Server) handleFolderList(c *router.Context) {
 			return
 		}
 		if len(body.Title) == 0 {
-			c.JSON(http.StatusBadRequest, map[string]string{"error": "Folder title missing."})
+			c.JSON(http.StatusBadRequest, map[string]string{"error": "文件夹名称不能为空。"})
 			return
 		}
 		folder := s.db.CreateFolder(body.Title)

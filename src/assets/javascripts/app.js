@@ -243,17 +243,15 @@ var vm = new Vue({
         'items': false,
         'readability': false,
       },
-      'fonts': ['', 'serif', 'monospace'],
       'feedStats': {},
       'theme': {
         'name': s.theme_name,
-        'font': s.theme_font,
         'size': s.theme_size,
       },
       'themeColors': {
-        'night': '#0e0e0e',
+        'night': '#1f1f1f',
         'sepia': '#f4f0e5',
-        'light': '#fff',
+        'light': '#f7f7f5',
       },
       'refreshRate': s.refresh_rate,
       'authenticated': app.authenticated,
@@ -340,7 +338,6 @@ var vm = new Vue({
         document.body.classList.value = 'theme-' + theme.name
         api.settings.update({
           theme_name: theme.name,
-          theme_font: theme.font,
           theme_size: theme.size,
         })
       },
@@ -414,6 +411,13 @@ var vm = new Vue({
   methods: {
     updateMetaTheme: function(theme) {
       document.querySelector("meta[name='theme-color']").content = this.themeColors[theme]
+    },
+    themeTitle: function(theme) {
+      return {
+        light: '浅色',
+        sepia: '护眼',
+        night: '夜间',
+      }[theme] || theme
     },
     refreshStats: function(loopMode) {
       return api.status().then(function(data) {
@@ -541,7 +545,7 @@ var vm = new Vue({
       })
     },
     moveFeedToNewFolder: function(feed) {
-      var title = prompt('Enter folder name:')
+      var title = prompt('请输入文件夹名称：')
       if (!title) return
       api.folders.create({'title': title}).then(function(folder) {
         api.feeds.update(feed.id, {folder_id: folder.id}).then(function() {
@@ -552,7 +556,7 @@ var vm = new Vue({
       })
     },
     createNewFeedFolder: function() {
-      var title = prompt('Enter folder name:')
+      var title = prompt('请输入文件夹名称：')
       if (!title) return
       api.folders.create({'title': title}).then(function(result) {
         vm.refreshFeeds().then(function() {
@@ -565,7 +569,7 @@ var vm = new Vue({
       })
     },
     renameFolder: function(folder) {
-      var newTitle = prompt('Enter new title', folder.title)
+      var newTitle = prompt('请输入新名称', folder.title)
       if (newTitle) {
         api.folders.update(folder.id, {title: newTitle}).then(function() {
           folder.title = newTitle
@@ -576,7 +580,7 @@ var vm = new Vue({
       }
     },
     deleteFolder: function(folder) {
-      if (confirm('Are you sure you want to delete ' + folder.title + '?')) {
+      if (confirm('确定删除文件夹「' + folder.title + '」吗？')) {
         api.folders.delete(folder.id).then(function() {
           vm.feedSelected = null
           vm.refreshStats()
@@ -585,7 +589,7 @@ var vm = new Vue({
       }
     },
     updateFeedLink: function(feed) {
-      var newLink = prompt('Enter feed link', feed.feed_link)
+      var newLink = prompt('请输入订阅源链接', feed.feed_link)
       if (newLink) {
         api.feeds.update(feed.id, {feed_link: newLink}).then(function() {
           feed.feed_link = newLink
@@ -593,7 +597,7 @@ var vm = new Vue({
       }
     },
     renameFeed: function(feed) {
-      var newTitle = prompt('Enter new title', feed.title)
+      var newTitle = prompt('请输入新名称', feed.title)
       if (newTitle) {
         api.feeds.update(feed.id, {title: newTitle}).then(function() {
           feed.title = newTitle
@@ -601,7 +605,7 @@ var vm = new Vue({
       }
     },
     deleteFeed: function(feed) {
-      if (confirm('Are you sure you want to delete ' + feed.title + '?')) {
+      if (confirm('确定删除订阅源「' + feed.title + '」吗？')) {
         api.feeds.delete(feed.id).then(function() {
           vm.feedSelected = null
           vm.refreshStats()
@@ -629,7 +633,7 @@ var vm = new Vue({
           vm.feedNewChoice = result.choice
           vm.feedNewChoiceSelected = result.choice[0].url
         } else {
-          alert('No feeds found at the given url.')
+          alert('未在给定 URL 找到订阅源。')
         }
         vm.loading.newfeed = false
       })

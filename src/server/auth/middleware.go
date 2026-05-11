@@ -50,7 +50,7 @@ func (m *Middleware) Handler(c *router.Context) {
 		} else {
 			c.HTML(http.StatusOK, assets.Template("login.html"), map[string]interface{}{
 				"username": username,
-				"error":    "Invalid username/password",
+				"error":    "用户名或密码错误",
 				"settings": m.DB.GetSettings(),
 			})
 			return
