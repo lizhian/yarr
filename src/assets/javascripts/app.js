@@ -238,6 +238,7 @@ var vm = new Vue({
       'itemSearch': '',
       'itemSortNewestFirst': s.sort_newest_first,
       'itemListWidth': s.item_list_width || 300,
+      'articleListLayout': s.article_list_layout == 'card' ? 'card' : 'list',
       'rsshubBaseUrl': s.rsshub_base_url || '',
 
       'filteredFeedStats': {},
@@ -424,6 +425,10 @@ var vm = new Vue({
     'toolbarDisplay': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({toolbar_display: newVal})
+    },
+    'articleListLayout': function(newVal, oldVal) {
+      if (oldVal === undefined) return  // do nothing, initial setup
+      api.settings.update({article_list_layout: newVal})
     },
   },
   methods: {
@@ -665,6 +670,9 @@ var vm = new Vue({
         return link.type === 'image' && link.url
       })
       return link && link.url
+    },
+    toggleArticleListLayout: function() {
+      this.articleListLayout = this.articleListLayout == 'card' ? 'list' : 'card'
     },
     markItemsRead: function() {
       var query = this.getItemsQuery()

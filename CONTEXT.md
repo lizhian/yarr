@@ -64,6 +64,18 @@ _Avoid_: 文字模式, 无图标模式
 A small image preview shown alongside an article in the article list.
 _Avoid_: Thumbnail, 预览图
 
+**文章列表布局**:
+A user preference that controls whether articles are shown as a list or as cards in the article list.
+_Avoid_: 卡片模型, Item layout
+
+**卡片模式**:
+A variable-height article list layout where articles with thumbnails show the thumbnail above the title and articles without thumbnails show as text-only cards.
+_Avoid_: 卡片模型, Grid mode
+
+**列表模式**:
+The default article list layout that shows articles in the existing compact row format.
+_Avoid_: Row mode, 默认模式
+
 **移动端视图**:
 A narrow-screen reader layout where only one navigation layer is visible at a time.
 _Avoid_: WAP 页面, Mobile
@@ -85,6 +97,18 @@ _Avoid_: Browser back, 返回上一页
 - An **文章** can be **收藏** independently of whether it is read.
 - **全部** includes **已读**, **未读**, and **收藏** articles.
 - An **文章** can have a **缩略图** when it includes an image media link.
+- **文章列表布局** can present **文章** in **列表模式** or **卡片模式**.
+- **列表模式** is the default **文章列表布局**.
+- **卡片模式** presents **文章** as a single-column card flow.
+- **卡片模式** places the **缩略图** above the article title when the **文章** has a **缩略图**.
+- **卡片模式** does not add an image placeholder when the **文章** has no **缩略图**.
+- **卡片模式** allows article titles to wrap naturally instead of truncating them to a fixed line count.
+- **卡片模式** preserves each **文章**'s subscription source, relative time, and read or starred state indicators.
+- **卡片模式** gives each **文章** a lightweight card boundary while preserving clear selected and read-state styling across themes.
+- **文章列表布局** changes only how **文章** are displayed, not how they are selected, opened, marked as read, or navigated.
+- The article list toolbar can switch **文章列表布局** between **列表模式** and **卡片模式** with a single toggle action.
+- The article list toolbar layout toggle remains available in **移动端视图** as an icon-only compact action.
+- The article list toolbar layout toggle indicates the layout it will switch to, not the current **文章列表布局**.
 - **正文模式** applies to one selected **文章**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
 - **层级返回** applies only in **移动端视图**.
@@ -116,6 +140,9 @@ _Avoid_: Browser back, 返回上一页
 - "返回" means **层级返回** inside yarr before browser-level history navigation.
 - "Starred" is translated as **收藏** in user-facing UI, not "星标".
 - "顶栏图标显示对应的文字" refers to top-level toolbar actions, not icons inside menus or article/feed lists.
+- "卡片模型" means **卡片模式** in the **文章列表布局**, not a data model.
+- "快速切换卡片模式" means a top-level article list toolbar toggle, not a keyboard shortcut or settings menu option.
+- The **文章列表布局** toggle icon should represent **列表模式** or **卡片模式** directly, not reuse an unrelated layered-content icon.
 - **仅文字** is the default **工具栏显示** mode; **仅图标** preserves the previous compact toolbar behavior.
 - `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
 - Top-level toolbar labels are short action labels, not full descriptions; full descriptions remain in button titles.

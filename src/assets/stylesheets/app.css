@@ -197,12 +197,61 @@ select.form-control:not([multiple]):not([size]) {
   min-width: 0;
 }
 
+.item-list-meta {
+  line-height: 100%;
+  opacity: .7;
+  margin-bottom: .1rem;
+}
+
 .item-list-image {
   width: 72px;
   height: 54px;
   border-radius: 4px;
   flex-shrink: 0;
   object-fit: cover;
+}
+
+.article-list-layout-card #item-list-scroll {
+  padding: .5rem !important;
+}
+
+.article-list-layout-card .selectgroup + .selectgroup {
+  margin-top: .5rem;
+}
+
+.article-list-layout-card #item-list-scroll .selectgroup-label {
+  flex-direction: column;
+  align-items: stretch !important;
+  padding: 0;
+  border: 1px solid transparent;
+  overflow: hidden;
+}
+
+.article-list-layout-card #item-list-scroll input:checked + .selectgroup-label {
+  border-color: var(--accent-color);
+  background-color: var(--accent-color) !important;
+}
+
+.article-list-layout-card #item-list-scroll input:checked + .selectgroup-label:hover {
+  background-color: var(--accent-color) !important;
+}
+
+.article-list-layout-card .item-list-text {
+  width: 100%;
+  padding: .5rem .625rem;
+}
+
+.article-list-layout-card .item-list-title {
+  line-height: 1.25;
+}
+
+.article-list-layout-card .item-list-image {
+  order: -1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-left: 0 !important;
+  border-radius: 3px 3px 0 0;
 }
 
 .toolbar-item:hover,
@@ -504,6 +553,15 @@ button.theme-light {
   background-color: #ecece8;
 }
 
+.theme-light .article-list-layout-card #item-list-scroll .selectgroup-label {
+  border-color: #e4e4df;
+  background-color: #fbfbf9;
+}
+
+.theme-light .article-list-layout-card #item-list-scroll .selectgroup-label:hover {
+  background-color: #f0f0ec;
+}
+
 a,
 .btn-link:hover {
   color: var(--accent-color);
@@ -546,6 +604,15 @@ a,
   background-color: #e0d6ba;
 }
 
+.theme-sepia .article-list-layout-card #item-list-scroll .selectgroup-label {
+  border-color: #e0d6ba;
+  background-color: #faf6ea;
+}
+
+.theme-sepia .article-list-layout-card #item-list-scroll .selectgroup-label:hover {
+  background-color: #ede4cb;
+}
+
 .theme-sepia #item-list-scroll .item-status-read {
   color: #9a8f74;
 }
@@ -576,6 +643,15 @@ a,
 .theme-night .toolbar-search:hover,
 .theme-night .toolbar-search:focus {
   background-color: #303030;
+}
+
+.theme-night .article-list-layout-card #item-list-scroll .selectgroup-label {
+  border-color: #303030;
+  background-color: #242424;
+}
+
+.theme-night .article-list-layout-card #item-list-scroll .selectgroup-label:hover {
+  background-color: #2b2b2b;
 }
 
 .theme-night .dropdown-menu,

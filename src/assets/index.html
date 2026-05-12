@@ -19,7 +19,7 @@
     </script>
 </head>
 <body class="theme-{% .settings.theme_name %}">
-    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
+    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
@@ -215,6 +215,13 @@
                     <input id="searchbar" type="" class="d-block toolbar-search" v-model="itemSearch" @keydown.enter="$event.target.blur()" placeholder="搜索">
                 </div>
                 <button class="toolbar-item toolbar-item-icon-only ml-2"
+                        @click="toggleArticleListLayout()"
+                        :aria-pressed="articleListLayout == 'card'"
+                        :title="articleListLayout == 'card' ? '切换到列表模式' : '切换到卡片模式'">
+                    <span class="icon toolbar-icon" v-if="articleListLayout == 'card'">{% inline "list.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "grid.svg" %}</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only ml-2"
                         @click="markItemsRead()"
                         v-if="filterSelected == 'unread' || filterSelected == ''"
                         title="全部标为已读">
@@ -300,7 +307,7 @@
                     <input type="radio" name="item" :value="item.id" v-model="itemSelected">
                     <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
                         <div class="item-list-text flex-grow-1">
-                            <div style="line-height: 100%; opacity: .7; margin-bottom: .1rem;" class="d-flex align-items-center">
+                            <div class="item-list-meta d-flex align-items-center">
                                 <transition name="indicator">
                                     <span class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
                                     <span class="icon icon-small mr-1" v-if="item.status=='starred'">{% inline "star-full.svg" %}</span>
@@ -310,7 +317,7 @@
                                 </small>
                                 <small class="flex-shrink-0"><relative-time v-bind:title="formatDate(item.date)" :val="item.date"/></small>
                             </div>
-                            <div>{{ item.title || '无标题' }}</div>
+                            <div class="item-list-title">{{ item.title || '无标题' }}</div>
                         </div>
                         <img class="item-list-image ml-2"
                              v-if="itemImage(item)"
