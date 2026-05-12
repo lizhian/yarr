@@ -36,13 +36,25 @@ _Avoid_: Unread
 An article state meaning the user has consumed or marked the article as read.
 _Avoid_: Read
 
-**星标**:
+**收藏**:
 An article state meaning the user intentionally saved the article for later attention.
-_Avoid_: Starred, 收藏
+_Avoid_: Starred, 星标
 
 **正文模式**:
 A reading mode that extracts and displays the article body inside yarr.
 _Avoid_: Read Here, 阅读这里
+
+**工具栏显示**:
+A user preference that controls whether top-level toolbar actions are shown as icons, text, or both.
+_Avoid_: 顶栏图标模式, 按钮样式
+
+**仅图标**:
+A compact toolbar display mode where top-level toolbar actions show only their icon.
+_Avoid_: 图标模式, 紧凑模式
+
+**仅文字**:
+A toolbar display mode where most top-level toolbar actions show labels without icons.
+_Avoid_: 文字模式, 无图标模式
 
 **缩略图**:
 A small image preview shown alongside an article in the article list.
@@ -66,7 +78,7 @@ _Avoid_: Browser back, 返回上一页
 - OPML import and export preserve **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
 - An **文章** can be **未读** or **已读**.
-- An **文章** can be **星标** independently of whether it is read.
+- An **文章** can be **收藏** independently of whether it is read.
 - An **文章** can have a **缩略图** when it includes an image media link.
 - **正文模式** applies to one selected **文章**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
@@ -76,6 +88,10 @@ _Avoid_: Browser back, 返回上一页
 - **层级返回** from the article list to the subscription source list clears the current **订阅源** or **文件夹** selection.
 - **层级返回** keeps in-app layer changes and browser Back history aligned, whether the user changes layers through browser Back or yarr toolbar controls.
 - **层级返回** does not expose the current layer in the address bar.
+- **工具栏显示** applies to most top-level toolbar actions.
+- **工具栏显示** can be **仅文字** or **仅图标**.
+- Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
+- Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
 
 ## Example dialogue
 
@@ -93,3 +109,8 @@ _Avoid_: Browser back, 返回上一页
 - **RSSHub 基础链接** means an HTTP(S) base URL normalized without a trailing slash.
 - "WAP 页面" means **移动端视图**: the narrow-screen responsive layout, not a separate page or server route.
 - "返回" means **层级返回** inside yarr before browser-level history navigation.
+- "Starred" is translated as **收藏** in user-facing UI, not "星标".
+- "顶栏图标显示对应的文字" refers to top-level toolbar actions, not icons inside menus or article/feed lists.
+- **仅文字** is the default **工具栏显示** mode; **仅图标** preserves the previous compact toolbar behavior.
+- `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
+- Top-level toolbar labels are short action labels, not full descriptions; full descriptions remain in button titles.

@@ -262,6 +262,7 @@ var vm = new Vue({
         'light': '#f7f7f5',
       },
       'refreshRate': s.refresh_rate,
+      'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
       'authenticated': app.authenticated,
       'feed_errors': {},
       'navigationHistory': {
@@ -331,6 +332,9 @@ var vm = new Vue({
     refreshRateTitle: function () {
       const entry = this.refreshRateOptions.find(o => o.value === this.refreshRate)
       return entry ? entry.title : '0'
+    },
+    toolbarNarrow: function() {
+      return this.feedListWidth < 280 || this.itemListWidth < 280
     },
   },
   watch: {
@@ -416,6 +420,10 @@ var vm = new Vue({
     'refreshRate': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({refresh_rate: newVal})
+    },
+    'toolbarDisplay': function(newVal, oldVal) {
+      if (oldVal === undefined) return  // do nothing, initial setup
+      api.settings.update({toolbar_display: newVal})
     },
   },
   methods: {

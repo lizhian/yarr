@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 
@@ -19,16 +20,19 @@ func settingsDefaults() map[string]interface{} {
 		"theme_size":        1,
 		"refresh_rate":      0,
 		"rsshub_base_url":   "",
+		"toolbar_display":   "text",
 	}
 }
 
 func (s *Storage) GetSettingsValue(key string) interface{} {
 	row := s.db.QueryRow(`select val from settings where key=?`, key)
-	if row == nil {
+	var val []byte
+	if err := row.Scan(&val); err != nil {
+		if err != sql.ErrNoRows {
+			log.Print(err)
+		}
 		return settingsDefaults()[key]
 	}
-	var val []byte
-	row.Scan(&val)
 	if len(val) == 0 {
 		return nil
 	}

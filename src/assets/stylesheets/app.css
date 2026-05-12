@@ -282,7 +282,10 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .toolbar-item {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
   background-color: transparent;
   text-decoration: none;
   user-select: none;
@@ -298,6 +301,25 @@ select.form-control:not([multiple]):not([size]) {
   border-radius: 3px;
   cursor: pointer;
   color: inherit;
+}
+
+.toolbar-display-icon .toolbar-label,
+.toolbar-display-text .toolbar-icon,
+.toolbar-narrow .toolbar-label {
+  display: none;
+}
+
+.toolbar-narrow .toolbar-icon {
+  display: inline-block;
+}
+
+.toolbar-display-text .toolbar-item-icon-only .toolbar-icon {
+  display: inline-block;
+}
+
+.toolbar-display-text .toolbar-status-active .toolbar-label {
+  color: var(--accent-color);
+  font-weight: 600;
 }
 
 .toolbar-item:focus {
@@ -661,5 +683,11 @@ a,
   .toolbar-item,
   .toolbar-search {
     padding: .5rem;
+  }
+  .toolbar-label {
+    display: none;
+  }
+  .toolbar-display-text .toolbar-icon {
+    display: inline-block;
   }
 }
