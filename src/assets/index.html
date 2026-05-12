@@ -19,7 +19,7 @@
     </script>
 </head>
 <body class="theme-{% .settings.theme_name %}">
-    <div id="app" class="d-flex" :class="{'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null}" v-cloak>
+    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
@@ -31,26 +31,29 @@
                         :aria-pressed="filterSelected == 'unread'"
                         title="未读"
                         @click="filterSelected = 'unread'">
-                    <span class="icon">{% inline "circle-full.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
+                    <span class="toolbar-label">未读</span>
                 </button>
                 <button class="toolbar-item mx-1"
                         :class="{active: filterSelected == 'starred'}"
                         :aria-pressed="filterSelected == 'starred'"
-                        title="星标"
+                        title="收藏"
                         @click="filterSelected = 'starred'">
-                    <span class="icon">{% inline "star-full.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "star-full.svg" %}</span>
+                    <span class="toolbar-label">收藏</span>
                 </button>
                 <button class="toolbar-item mr-1"
                         :class="{active: filterSelected == ''}"
                         :aria-pressed="filterSelected == ''"
                         title="全部"
                         @click="filterSelected = ''">
-                    <span class="icon">{% inline "assorted.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
+                    <span class="toolbar-label">全部</span>
                 </button>
                 <div class="flex-grow-1"></div>
-                <dropdown class="settings-dropdown" toggle-class="btn btn-link toolbar-item px-2" ref="menuDropdown" drop="right" title="设置">
+                <dropdown class="settings-dropdown" toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2" ref="menuDropdown" drop="right" title="设置">
                     <template v-slot:button>
-                        <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
                     </template>
 
                     <button class="dropdown-item" @click="showSettings('create')">
@@ -99,6 +102,14 @@
 
                     <div class="dropdown-divider"></div>
 
+                    <header class="dropdown-header" role="heading" aria-level="2">工具栏显示</header>
+                    <div class="d-flex text-center">
+                        <button class="dropdown-item px-0" :aria-pressed="toolbarDisplay == 'text'" :class="{active: toolbarDisplay == 'text'}" @click.stop="toolbarDisplay='text'">仅文字</button>
+                        <button class="dropdown-item px-0" :aria-pressed="toolbarDisplay == 'icon'" :class="{active: toolbarDisplay == 'icon'}" @click.stop="toolbarDisplay='icon'">仅图标</button>
+                    </div>
+
+                    <div class="dropdown-divider"></div>
+
                     <header class="dropdown-header" role="heading" aria-level="2">优先显示</header>
                     <div class="d-flex text-center">
                         <button class="dropdown-item px-0" :aria-pressed="itemSortNewestFirst"  :class="{active: itemSortNewestFirst}"  @click.stop="itemSortNewestFirst=true">最新</button>
@@ -139,7 +150,7 @@
                     <div class="selectgroup-label d-flex align-items-center w-100">
                         <span class="icon mr-2">{% inline "layers.svg" %}</span>
                         <span class="flex-fill text-left text-truncate" v-if="filterSelected=='unread'">全部未读</span>
-                        <span class="flex-fill text-left text-truncate" v-if="filterSelected=='starred'">全部星标</span>
+                        <span class="flex-fill text-left text-truncate" v-if="filterSelected=='starred'">全部收藏</span>
                         <span class="flex-fill text-left text-truncate" v-if="filterSelected==''">全部订阅源</span>
                         <span class="counter text-right">{{ filteredTotalStats }}</span>
                     </div>
@@ -191,31 +202,32 @@
                 <button class="toolbar-item mr-2 d-block d-md-none"
                         @click="feedSelected = null"
                         title="显示订阅源">
-                    <span class="icon">{% inline "chevron-left.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
+                    <span class="toolbar-label">返回</span>
                 </button>
                 <div class="input-icon flex-grow-1">
                     <span class="icon">{% inline "search.svg" %}</span>
                     <!-- id used by keybindings -->
                     <input id="searchbar" type="" class="d-block toolbar-search" v-model="itemSearch" @keydown.enter="$event.target.blur()" placeholder="搜索">
                 </div>
-                <button class="toolbar-item ml-2"
+                <button class="toolbar-item toolbar-item-icon-only ml-2"
                         @click="markItemsRead()"
                         v-if="filterSelected == 'unread'"
                         title="全部标为已读">
-                    <span class="icon">{% inline "check.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "check.svg" %}</span>
                 </button>
 
 
-                <button class="btn btn-link toolbar-item px-2 ml-2" v-if="!current.type" disabled>
-                    <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                <button class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2" v-if="!current.type" disabled>
+                    <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
                 </button>
                 <dropdown class="settings-dropdown"
-                          toggle-class="btn btn-link toolbar-item px-2 ml-2"
+                          toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2"
                           drop="right"
                           title="订阅源设置"
                           v-if="current.type == 'feed'">
                     <template v-slot:button>
-                        <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
                     </template>
                     <header class="dropdown-header" role="heading" aria-level="2">{{ current.feed.title }}</header>
                     <a class="dropdown-item" :href="current.feed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="current.feed.link">
@@ -259,12 +271,12 @@
                     </button>
                 </dropdown>
                 <dropdown class="settings-dropdown"
-                          toggle-class="btn btn-link toolbar-item px-2 ml-2"
+                          toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2"
                           title="文件夹设置"
                           drop="right"
                           v-if="current.type == 'folder'">
                     <template v-slot:button>
-                        <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
                     </template>
                     <header class="dropdown-header" role="heading" aria-level="2">{{ current.folder.title }}</header>
                     <button class="dropdown-item" @click="renameFolder(current.folder)">
@@ -315,20 +327,25 @@
         <div id="col-item" class="vh-100 d-flex flex-column w-100" style="min-width: 0;">
             <div class="toolbar px-2 d-flex align-items-center" v-if="itemSelectedDetails">
                 <button class="toolbar-item"
+                        :class="{'toolbar-status-active': itemSelectedDetails.status=='starred'}"
                         @click="toggleItemStarred(itemSelectedDetails)"
-                        title="标为星标">
-                    <span class="icon" v-if="itemSelectedDetails.status=='starred'" >{% inline "star-full.svg" %}</span>
-                    <span class="icon" v-else-if="itemSelectedDetails.status!='starred'" >{% inline "star.svg" %}</span>
+                        title="标为收藏">
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status=='starred'" >{% inline "star-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else-if="itemSelectedDetails.status!='starred'" >{% inline "star.svg" %}</span>
+                    <span class="toolbar-label">收藏</span>
                 </button>
                 <button class="toolbar-item"
+                        :class="{'toolbar-status-active': itemSelectedDetails.status=='unread'}"
                         title="标为未读"
                         @click="toggleItemRead(itemSelectedDetails)">
-                    <span class="icon" v-if="itemSelectedDetails.status=='unread'">{% inline "circle-full.svg" %}</span>
-                    <span class="icon" v-if="itemSelectedDetails.status!='unread'">{% inline "circle.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status=='unread'">{% inline "circle-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status!='unread'">{% inline "circle.svg" %}</span>
+                    <span class="toolbar-label">未读</span>
                 </button>
                 <dropdown class="settings-dropdown" toggle-class="toolbar-item px-2" drop="center" title="外观">
                     <template v-slot:button>
-                        <span class="icon">{% inline "sliders.svg" %}</span>
+                        <span class="icon toolbar-icon">{% inline "sliders.svg" %}</span>
+                        <span class="toolbar-label">外观</span>
                     </template>
 
                     <div class="d-flex text-center">
@@ -340,20 +357,22 @@
                         :class="{active: itemSelectedReadability}"
                         @click="toggleReadability()"
                         title="正文模式">
-                    <span class="icon" :class="{'icon-loading': loading.readability}">{% inline "book-open.svg" %}</span>
+                    <span class="icon toolbar-icon" :class="{'icon-loading': loading.readability}">{% inline "book-open.svg" %}</span>
+                    <span class="toolbar-label">正文</span>
                 </button>
                 <a class="toolbar-item" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
-                    <span class="icon">{% inline "external-link.svg" %}</span>
+                    <span class="icon toolbar-icon">{% inline "external-link.svg" %}</span>
+                    <span class="toolbar-label">打开</span>
                 </a>
                 <div class="flex-grow-1"></div>
-                <button class="toolbar-item" @click="navigateToItem(-1)" title="上一篇文章" :disabled="itemSelected == items[0].id">
-                    <span class="icon">{% inline "chevron-left.svg" %}</span>
+                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(-1)" title="上一篇文章" :disabled="itemSelected == items[0].id">
+                    <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
                 </button>
-                <button class="toolbar-item" @click="navigateToItem(+1)" title="下一篇文章" :disabled="itemSelected == items[items.length - 1].id">
-                    <span class="icon">{% inline "chevron-right.svg" %}</span>
+                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(+1)" title="下一篇文章" :disabled="itemSelected == items[items.length - 1].id">
+                    <span class="icon toolbar-icon">{% inline "chevron-right.svg" %}</span>
                 </button>
-                <button class="toolbar-item" @click="itemSelected=null" title="关闭文章">
-                    <span class="icon">{% inline "x.svg" %}</span>
+                <button class="toolbar-item toolbar-item-icon-only" @click="itemSelected=null" title="关闭文章">
+                    <span class="icon toolbar-icon">{% inline "x.svg" %}</span>
                 </button>
             </div>
             <div v-if="itemSelectedDetails"
@@ -413,7 +432,7 @@
 
                 <table class="table table-borderless table-sm table-compact m-0">
                     <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td>
-                                                            <td>显示未读 / 星标 / 全部订阅源</td></tr>
+                                                            <td>显示未读 / 收藏 / 全部订阅源</td></tr>
                     <tr><td><kbd>/</kbd></td>               <td>聚焦搜索框</td></tr>
 
                     <tr><td colspan=2>&nbsp;</td></tr>
@@ -424,7 +443,7 @@
                     <tr><td colspan=2>&nbsp;</td></tr>
                     <tr><td><kbd>R</kbd></td>               <td>全部标为已读</td></tr>
                     <tr><td><kbd>r</kbd></td>               <td>标为已读 / 未读</td></tr>
-                    <tr><td><kbd>s</kbd></td>               <td>标为星标 / 取消星标</td></tr>
+                    <tr><td><kbd>s</kbd></td>               <td>标为收藏 / 取消收藏</td></tr>
                     <tr><td><kbd>o</kbd></td>               <td>打开链接</td></tr>
                     <tr><td><kbd>i</kbd></td>               <td>正文模式</td> </tr>
                     <tr><td><kbd>f</kbd> <kbd>b</kbd></td>  <td>向前 / 向后滚动正文</td>
