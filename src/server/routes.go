@@ -16,6 +16,7 @@ import (
 	"github.com/nkanaev/yarr/src/content/readability"
 	"github.com/nkanaev/yarr/src/content/sanitizer"
 	"github.com/nkanaev/yarr/src/content/silo"
+	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/server/auth"
 	"github.com/nkanaev/yarr/src/server/gzip"
 	"github.com/nkanaev/yarr/src/server/opml"
@@ -230,7 +231,19 @@ func (s *Server) handleFeedList(c *router.Context) {
 			return
 		}
 
-		result, err := worker.DiscoverFeed(form.Url)
+		rsshubBaseUrl := s.db.GetSettingsValueString("rsshub_base_url")
+		if rsshub.IsLink(form.Url) && rsshubBaseUrl == "" {
+			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": "请先配置 RSSHub 基础链接。"})
+			return
+		}
+		requestUrl, err := rsshub.Resolve(form.Url, rsshubBaseUrl)
+		if err != nil {
+			log.Printf("Failed to resolve feed link %s: %s", form.Url, err)
+			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+
+		result, err := worker.DiscoverFeedWithLink(requestUrl, form.Url)
 		switch {
 		case err != nil:
 			log.Printf("Faild to discover feed for %s: %s", form.Url, err)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/nkanaev/yarr/src/content/scraper"
 	"github.com/nkanaev/yarr/src/parser"
+	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/storage"
 	"golang.org/x/net/html/charset"
 )
@@ -29,6 +30,10 @@ type DiscoverResult struct {
 }
 
 func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {
+	return DiscoverFeedWithLink(candidateUrl, candidateUrl)
+}
+
+func DiscoverFeedWithLink(candidateUrl, feedLink string) (*DiscoverResult, error) {
 	result := &DiscoverResult{}
 	// Query URL
 	res, err := client.get(candidateUrl)
@@ -50,7 +55,7 @@ func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {
 	feed, err := parser.ParseAndFix(bytes.NewReader(body), candidateUrl, cs)
 	if err == nil {
 		result.Feed = feed
-		result.FeedLink = candidateUrl
+		result.FeedLink = feedLink
 		return result, nil
 	}
 
@@ -74,7 +79,7 @@ func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {
 		if sources[0].Url == candidateUrl {
 			return nil, errors.New("Recursion!")
 		}
-		return DiscoverFeed(sources[0].Url)
+		return DiscoverFeedWithLink(sources[0].Url, sources[0].Url)
 	}
 
 	result.Sources = sources
@@ -139,6 +144,10 @@ func findFavicon(siteUrl, feedUrl string) (*[]byte, error) {
 	return &emptyIcon, nil
 }
 
+func (w *Worker) resolveLink(link string) (string, error) {
+	return rsshub.Resolve(link, w.db.GetSettingsValueString("rsshub_base_url"))
+}
+
 func ConvertItems(items []parser.Item, feed storage.Feed) []storage.Item {
 	result := make([]storage.Item, len(items))
 	for i, item := range items {
@@ -169,7 +178,12 @@ func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
 		etag = state.Etag
 	}
 
-	res, err := client.getConditional(f.FeedLink, lmod, etag)
+	requestLink, err := rsshub.Resolve(f.FeedLink, db.GetSettingsValueString("rsshub_base_url"))
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := client.getConditional(requestLink, lmod, etag)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +199,7 @@ func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
 		return nil, nil
 	}
 
-	feed, err := parser.ParseAndFix(res.Body, f.FeedLink, getCharset(res))
+	feed, err := parser.ParseAndFix(res.Body, requestLink, getCharset(res))
 	if err != nil {
 		return nil, err
 	}

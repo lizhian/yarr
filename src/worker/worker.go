@@ -48,7 +48,12 @@ func (w *Worker) FindFavicons() {
 }
 
 func (w *Worker) FindFeedFavicon(feed storage.Feed) {
-	icon, err := findFavicon(feed.Link, feed.FeedLink)
+	feedLink, err := w.resolveLink(feed.FeedLink)
+	if err != nil {
+		log.Printf("Failed to resolve favicon feed link for %s: %s", feed.FeedLink, err)
+		return
+	}
+	icon, err := findFavicon(feed.Link, feedLink)
 	if err != nil {
 		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
 	}

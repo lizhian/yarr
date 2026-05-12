@@ -3,6 +3,8 @@ package storage
 import (
 	"encoding/json"
 	"log"
+
+	"github.com/nkanaev/yarr/src/rsshub"
 )
 
 func settingsDefaults() map[string]interface{} {
@@ -16,6 +18,7 @@ func settingsDefaults() map[string]interface{} {
 		"theme_font":        "",
 		"theme_size":        1,
 		"refresh_rate":      0,
+		"rsshub_base_url":   "",
 	}
 }
 
@@ -47,6 +50,16 @@ func (s *Storage) GetSettingsValueInt64(key string) int64 {
 	return 0
 }
 
+func (s *Storage) GetSettingsValueString(key string) string {
+	val := s.GetSettingsValue(key)
+	if val != nil {
+		if sval, ok := val.(string); ok {
+			return sval
+		}
+	}
+	return ""
+}
+
 func (s *Storage) GetSettings() map[string]interface{} {
 	result := settingsDefaults()
 	rows, err := s.db.Query(`select key, val from settings;`)
@@ -74,6 +87,18 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 	for key, val := range kv {
 		if defaults[key] == nil {
 			continue
+		}
+		if key == "rsshub_base_url" {
+			sval, ok := val.(string)
+			if !ok {
+				return false
+			}
+			normalized, err := rsshub.NormalizeBase(sval)
+			if err != nil {
+				log.Print(err)
+				return false
+			}
+			val = normalized
 		}
 		valEncoded, err := json.Marshal(val)
 		if err != nil {

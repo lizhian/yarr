@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -126,5 +128,26 @@ func TestMissingItemReturnsNotFound(t *testing.T) {
 
 	if recorder.Result().StatusCode != http.StatusNotFound {
 		t.Fatal("got", recorder.Result().StatusCode)
+	}
+}
+
+func TestCreateRSSHubFeedRequiresBaseURL(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", "/api/feeds", body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	var result map[string]string
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result["status"] != "error" {
+		t.Fatalf("got %q", result["status"])
 	}
 }

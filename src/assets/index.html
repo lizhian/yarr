@@ -121,6 +121,10 @@
                         <span class="icon mr-1">{% inline "upload.svg" %}</span>
                         导出
                     </a>
+                    <button class="dropdown-item" @click="showSettings('rsshub')">
+                        <span class="icon mr-1">{% inline "rss.svg" %}</span>
+                        RSSHub
+                    </button>
                     <div class="dropdown-divider"></div>
                     <button class="dropdown-item" @click="showSettings('shortcuts')">
                         <span class="icon mr-1">{% inline "help-circle.svg" %}</span>
@@ -222,7 +226,7 @@
                         <span class="icon mr-1">{% inline "globe.svg" %}</span>
                         网站
                     </a>
-                    <a class="dropdown-item" :href="current.feed.feed_link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="current.feed.feed_link">
+                    <a class="dropdown-item" :href="feedLinkHref(current.feed.feed_link)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="feedLinkHref(current.feed.feed_link)">
                         <span class="icon mr-1">{% inline "rss.svg" %}</span>
                         订阅源链接
                     </a>
@@ -383,7 +387,7 @@
                 <p class="cursor-default"><b>新订阅源</b></p>
                 <form action="" @submit.prevent="createFeed(event)" class="mt-4">
                     <label for="feed-url">URL</label>
-                    <input id="feed-url" name="url" type="url" class="form-control" required autocomplete="off" :readonly="feedNewChoice.length > 0" placeholder="https://example.com/feed" v-focus>
+                    <input id="feed-url" name="url" type="text" class="form-control" required autocomplete="off" :readonly="feedNewChoice.length > 0" placeholder="https://example.com/feed 或 rsshub://bilibili/weekly" v-focus>
                     <label for="feed-folder" class="mt-3 d-block">
                         文件夹
                         <a href="#" class="float-right text-decoration-none" @click.prevent="createNewFeedFolder()">新文件夹</a>
@@ -406,6 +410,14 @@
                         </label>
                     </div>
                     <button class="btn btn-block btn-default mt-3" :class="{loading: loading.newfeed}" type="submit">添加</button>
+                </form>
+            </div>
+            <div v-else-if="settings=='rsshub'">
+                <p class="cursor-default"><b>RSSHub</b></p>
+                <form action="" @submit.prevent="updateRSSHubBaseUrl(event)" class="mt-4">
+                    <label for="rsshub-base-url">RSSHub 基础链接</label>
+                    <input id="rsshub-base-url" name="rsshub_base_url" type="url" class="form-control" autocomplete="off" :value="rsshubBaseUrl" placeholder="https://rsshub.rssforever.com" v-focus>
+                    <button class="btn btn-block btn-default mt-3" type="submit">保存</button>
                 </form>
             </div>
             <div v-else-if="settings=='shortcuts'">

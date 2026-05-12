@@ -231,6 +231,7 @@ var vm = new Vue({
       'itemSearch': '',
       'itemSortNewestFirst': s.sort_newest_first,
       'itemListWidth': s.item_list_width || 300,
+      'rsshubBaseUrl': s.rsshub_base_url || '',
 
       'filteredFeedStats': {},
       'filteredFolderStats': {},
@@ -630,6 +631,8 @@ var vm = new Vue({
         } else if (result.status === 'multiple') {
           vm.feedNewChoice = result.choice
           vm.feedNewChoiceSelected = result.choice[0].url
+        } else if (result.status === 'error') {
+          alert(result.message || '无法添加订阅源。')
         } else {
           alert('未在给定 URL 找到订阅源。')
         }
@@ -698,6 +701,25 @@ var vm = new Vue({
         vm.feedNewChoice = []
         vm.feedNewChoiceSelected = ''
       }
+    },
+    updateRSSHubBaseUrl: function(event) {
+      var value = event.target.querySelector('input[name=rsshub_base_url]').value
+      api.settings.update({rsshub_base_url: value}).then(function(res) {
+        if (res.ok) {
+          api.settings.get().then(function(settings) {
+            vm.rsshubBaseUrl = settings.rsshub_base_url || ''
+            vm.settings = ''
+          })
+        } else {
+          alert('RSSHub 基础链接必须是 HTTP(S) URL。')
+        }
+      })
+    },
+    feedLinkHref: function(link) {
+      if (!link) return ''
+      if (link.indexOf('rsshub://') !== 0) return link
+      if (!this.rsshubBaseUrl) return ''
+      return this.rsshubBaseUrl.replace(/\/+$/, '') + '/' + link.replace('rsshub://', '').replace(/^\/+/, '')
     },
     resizeFeedList: function(width) {
       this.feedListWidth = Math.min(Math.max(200, width), 700)
