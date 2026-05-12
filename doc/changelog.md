@@ -1,5 +1,7 @@
 # upcoming
 
+# v2.7 (2026-05-12)
+
 - (new) serve on unix socket (thanks to @rvighne)
 - (new) more auto-refresh options: 1m, 12h & 24h (thanks to @aswerkljh for suggestion)
 - (fix) smooth scrolling on iOS (thanks to gatheraled)
