@@ -61,7 +61,7 @@ var shortcutFunctions = {
     helperFunctions.scrollContent(-1)
   },
   closeItem: function () {
-    vm.itemSelected = null
+    vm.closeItem()
   },
   showAll() {
     vm.filterSelected = ''

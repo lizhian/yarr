@@ -47,6 +47,10 @@ Vue.directive('focus', {
   }
 })
 
+function isMobileLayout() {
+  return window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches
+}
+
 Vue.component('drag', {
   props: ['width'],
   template: '<div class="drag"></div>',
@@ -213,6 +217,9 @@ var vm = new Vue({
     })
     this.updateMetaTheme(app.settings.theme_name)
   },
+  mounted: function() {
+    this.initNavigationHistory()
+  },
   data: function() {
     var s = app.settings
     return {
@@ -257,6 +264,12 @@ var vm = new Vue({
       'refreshRate': s.refresh_rate,
       'authenticated': app.authenticated,
       'feed_errors': {},
+      'navigationHistory': {
+        initialized: false,
+        applyingPop: false,
+        syncPending: false,
+        layer: null,
+      },
 
       'refreshRateOptions': [
         { title: "0", value: 0 },
@@ -351,20 +364,24 @@ var vm = new Vue({
       api.settings.update({filter: newVal}).then(this.refreshItems.bind(this, false))
       this.itemSelected = null
       this.computeStats()
+      this.syncNavigationHistory()
     },
     'feedSelected': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({feed: newVal}).then(this.refreshItems.bind(this, false))
       this.itemSelected = null
       if (this.$refs.itemlist) this.$refs.itemlist.scrollTop = 0
+      this.syncNavigationHistory()
     },
     'itemSelected': function(newVal, oldVal) {
       this.itemSelectedReadability = ''
       if (newVal === null) {
         this.itemSelectedDetails = null
+        this.syncNavigationHistory()
         return
       }
       if (this.$refs.content) this.$refs.content.scrollTop = 0
+      this.syncNavigationHistory()
 
       api.items.get(newVal).then(function(item) {
         if (this.itemSelected !== newVal) return
@@ -402,6 +419,132 @@ var vm = new Vue({
     },
   },
   methods: {
+    currentNavigationLayer: function() {
+      if (this.itemSelected !== null) return 'item'
+      if (this.feedSelected !== null) return 'items'
+      return 'feeds'
+    },
+    navigationLayerRank: function(layer) {
+      return {
+        feeds: 0,
+        items: 1,
+        item: 2,
+      }[layer]
+    },
+    navigationState: function(layer) {
+      return {
+        yarr: true,
+        layer: layer,
+        feedSelected: this.feedSelected,
+        itemSelected: this.itemSelected,
+      }
+    },
+    canUseNavigationHistory: function() {
+      return isMobileLayout() &&
+        window.history &&
+        typeof window.history.pushState === 'function' &&
+        typeof window.history.replaceState === 'function'
+    },
+    initNavigationHistory: function() {
+      if (this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
+
+      var layer = this.currentNavigationLayer()
+      window.history.replaceState(this.navigationState('feeds'), document.title)
+
+      if (this.navigationLayerRank(layer) >= this.navigationLayerRank('items')) {
+        window.history.pushState(this.navigationState('items'), document.title)
+      }
+      if (layer === 'item') {
+        window.history.pushState(this.navigationState('item'), document.title)
+      }
+
+      this.navigationHistory.initialized = true
+      this.navigationHistory.layer = layer
+      window.addEventListener('popstate', this.handleNavigationPop)
+    },
+    syncNavigationHistory: function() {
+      if (this.navigationHistory.applyingPop) return
+      if (!this.navigationHistory.initialized) this.initNavigationHistory()
+      if (!this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
+      if (this.navigationHistory.syncPending) return
+
+      this.navigationHistory.syncPending = true
+      this.$nextTick(function() {
+        this.navigationHistory.syncPending = false
+        this.applyNavigationHistorySync()
+      })
+    },
+    applyNavigationHistorySync: function() {
+      if (this.navigationHistory.applyingPop) return
+      if (!this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
+
+      var oldLayer = this.navigationHistory.layer
+      var newLayer = this.currentNavigationLayer()
+
+      if (oldLayer === newLayer) {
+        window.history.replaceState(this.navigationState(newLayer), document.title)
+        return
+      }
+
+      var oldRank = this.navigationLayerRank(oldLayer)
+      var newRank = this.navigationLayerRank(newLayer)
+
+      if (newRank > oldRank) {
+        if (oldLayer === 'feeds' && this.navigationLayerRank(newLayer) >= this.navigationLayerRank('items')) {
+          window.history.pushState(this.navigationState('items'), document.title)
+        }
+        if (newLayer === 'item') {
+          window.history.pushState(this.navigationState('item'), document.title)
+        }
+      } else {
+        this.navigationHistory.applyingPop = true
+        window.history.go(newRank - oldRank)
+        setTimeout(function() {
+          this.navigationHistory.applyingPop = false
+        }.bind(this), 500)
+      }
+
+      this.navigationHistory.layer = newLayer
+    },
+    handleNavigationPop: function(event) {
+      if (!isMobileLayout()) return
+      if (!event.state || !event.state.yarr) return
+
+      this.navigationHistory.applyingPop = true
+      this.navigationHistory.layer = event.state.layer || 'feeds'
+
+      if (event.state.layer === 'feeds') {
+        this.itemSelected = null
+        this.feedSelected = null
+      } else if (event.state.layer === 'items') {
+        this.feedSelected = event.state.feedSelected
+        this.itemSelected = null
+      } else if (event.state.layer === 'item') {
+        this.feedSelected = event.state.feedSelected
+        this.itemSelected = event.state.itemSelected
+      }
+
+      this.$nextTick(function() {
+        this.navigationHistory.applyingPop = false
+      })
+    },
+    closeItem: function() {
+      if (this.itemSelected === null) return
+      if (this.navigationHistory.initialized && this.canUseNavigationHistory()) {
+        window.history.back()
+        return
+      }
+      this.itemSelected = null
+    },
+    showFeedList: function() {
+      if (this.feedSelected === null) return
+      if (this.navigationHistory.initialized && this.canUseNavigationHistory() && this.currentNavigationLayer() === 'items') {
+        window.history.back()
+        return
+      }
+      this.itemSelected = null
+      this.feedSelected = null
+    },
     updateMetaTheme: function(theme) {
       document.querySelector("meta[name='theme-color']").content = this.themeColors[theme]
     },
