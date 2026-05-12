@@ -27,6 +27,14 @@
                 <div class="icon mx-2">{% inline "anchor.svg" %}</div>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item ml-1"
+                        :class="{active: filterSelected == ''}"
+                        :aria-pressed="filterSelected == ''"
+                        title="全部"
+                        @click="filterSelected = ''">
+                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
+                    <span class="toolbar-label">全部</span>
+                </button>
+                <button class="toolbar-item mx-1"
                         :class="{active: filterSelected == 'unread'}"
                         :aria-pressed="filterSelected == 'unread'"
                         title="未读"
@@ -34,21 +42,13 @@
                     <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
                     <span class="toolbar-label">未读</span>
                 </button>
-                <button class="toolbar-item mx-1"
+                <button class="toolbar-item mr-1"
                         :class="{active: filterSelected == 'starred'}"
                         :aria-pressed="filterSelected == 'starred'"
                         title="收藏"
                         @click="filterSelected = 'starred'">
                     <span class="icon toolbar-icon">{% inline "star-full.svg" %}</span>
                     <span class="toolbar-label">收藏</span>
-                </button>
-                <button class="toolbar-item mr-1"
-                        :class="{active: filterSelected == ''}"
-                        :aria-pressed="filterSelected == ''"
-                        title="全部"
-                        @click="filterSelected = ''">
-                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
-                    <span class="toolbar-label">全部</span>
                 </button>
                 <div class="flex-grow-1"></div>
                 <dropdown class="settings-dropdown" toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2" ref="menuDropdown" drop="right" title="设置">
@@ -216,7 +216,7 @@
                 </div>
                 <button class="toolbar-item toolbar-item-icon-only ml-2"
                         @click="markItemsRead()"
-                        v-if="filterSelected == 'unread'"
+                        v-if="filterSelected == 'unread' || filterSelected == ''"
                         title="全部标为已读">
                     <span class="icon toolbar-icon">{% inline "check.svg" %}</span>
                 </button>
@@ -444,7 +444,7 @@
 
                 <table class="table table-borderless table-sm table-compact m-0">
                     <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td>
-                                                            <td>显示未读 / 收藏 / 全部订阅源</td></tr>
+                                                            <td>显示全部订阅源 / 未读 / 收藏</td></tr>
                     <tr><td><kbd>/</kbd></td>               <td>聚焦搜索框</td></tr>
 
                     <tr><td colspan=2>&nbsp;</td></tr>

@@ -30,7 +30,7 @@ var shortcutFunctions = {
   },
   markAllRead: function() {
     // same condition as 'Mark all read button'
-    if (vm.filterSelected == 'unread'){
+    if (vm.filterSelected == 'unread' || vm.filterSelected == ''){
       vm.markItemsRead()
     }
   },
@@ -89,9 +89,9 @@ var keybindings = {
   "f": shortcutFunctions.scrollForward,
   "b": shortcutFunctions.scrollBackward,
   "q": shortcutFunctions.closeItem,
-  "1": shortcutFunctions.showUnread,
-  "2": shortcutFunctions.showStarred,
-  "3": shortcutFunctions.showAll,
+  "1": shortcutFunctions.showAll,
+  "2": shortcutFunctions.showUnread,
+  "3": shortcutFunctions.showStarred,
 }
 
 var codebindings = {
@@ -108,9 +108,9 @@ var codebindings = {
   "KeyF": shortcutFunctions.scrollForward,
   "KeyB": shortcutFunctions.scrollBackward,
   "KeyQ": shortcutFunctions.closeItem,
-  "Digit1": shortcutFunctions.showUnread,
-  "Digit2": shortcutFunctions.showStarred,
-  "Digit3": shortcutFunctions.showAll,
+  "Digit1": shortcutFunctions.showAll,
+  "Digit2": shortcutFunctions.showUnread,
+  "Digit3": shortcutFunctions.showStarred,
 }
 
 function isTextBox(element) {
