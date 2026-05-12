@@ -189,7 +189,7 @@
             <drag :width="itemListWidth" @resize="resizeItemList"></drag>
             <div class="px-2 toolbar d-flex align-items-center">
                 <button class="toolbar-item mr-2 d-block d-md-none"
-                        @click="feedSelected = null"
+                        @click="showFeedList()"
                         title="显示订阅源">
                     <span class="icon">{% inline "chevron-left.svg" %}</span>
                 </button>
@@ -352,7 +352,7 @@
                 <button class="toolbar-item" @click="navigateToItem(+1)" title="下一篇文章" :disabled="itemSelected == items[items.length - 1].id">
                     <span class="icon">{% inline "chevron-right.svg" %}</span>
                 </button>
-                <button class="toolbar-item" @click="itemSelected=null" title="关闭文章">
+                <button class="toolbar-item" @click="closeItem()" title="关闭文章">
                     <span class="icon">{% inline "x.svg" %}</span>
                 </button>
             </div>

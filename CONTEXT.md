@@ -40,6 +40,14 @@ _Avoid_: Read Here, 阅读这里
 A small image preview shown alongside an article in the article list.
 _Avoid_: Thumbnail, 预览图
 
+**移动端视图**:
+A narrow-screen reader layout where only one navigation layer is visible at a time.
+_Avoid_: WAP 页面, Mobile
+
+**层级返回**:
+A mobile navigation behavior where Back moves from article details to the article list, then from the article list to the subscription source list.
+_Avoid_: Browser back, 返回上一页
+
 ## Relationships
 
 - A **文件夹** contains zero or more **订阅源**.
@@ -49,13 +57,25 @@ _Avoid_: Thumbnail, 预览图
 - An **文章** can be **星标** independently of whether it is read.
 - An **文章** can have a **缩略图** when it includes an image media link.
 - **正文模式** applies to one selected **文章**.
+- **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
+- **层级返回** applies only in **移动端视图**.
+- **层级返回** applies whether the current layer was reached during the current browser session or restored from saved reader settings.
+- **层级返回** treats selected article details as a single layer; moving between articles does not create per-article Back steps.
+- **层级返回** from the article list to the subscription source list clears the current **订阅源** or **文件夹** selection.
+- **层级返回** keeps in-app layer changes and browser Back history aligned, whether the user changes layers through browser Back or yarr toolbar controls.
+- **层级返回** does not expose the current layer in the address bar.
 
 ## Example dialogue
 
 > **Dev:** "刷新所有 **订阅源** 后，新内容应该显示在哪里？"
 > **Domain expert:** "每个 **订阅源** 产生的 **文章** 显示在文章列表里；如果还没读，就出现在 **未读** 过滤结果中。"
+>
+> **Dev:** "用户在 **移动端视图** 的文章详情里点返回时应该离开 yarr 吗？"
+> **Domain expert:** "不，先通过 **层级返回** 回到文章列表；再返回才回到订阅源列表。"
 
 ## Flagged ambiguities
 
 - "Feed" is translated as **订阅源** in user-facing UI, not "源".
 - "Item" and "Article" are translated as **文章** in user-facing UI, not "条目".
+- "WAP 页面" means **移动端视图**: the narrow-screen responsive layout, not a separate page or server route.
+- "返回" means **层级返回** inside yarr before browser-level history navigation.
