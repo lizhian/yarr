@@ -189,6 +189,43 @@ func TestListItems(t *testing.T) {
 	}
 }
 
+func TestCreateItemsBackfillsMediaLinks(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("feed", "", "", "http://test.com/feed.xml", nil)
+	now := time.Now()
+
+	db.CreateItems([]Item{{
+		GUID:   "item",
+		FeedId: feed.Id,
+		Title:  "old title",
+		Date:   now,
+	}})
+	db.UpdateItemStatus(getItem(db, "item").Id, READ)
+
+	db.CreateItems([]Item{{
+		GUID:   "item",
+		FeedId: feed.Id,
+		Title:  "new title",
+		Date:   now,
+		MediaLinks: MediaLinks{{
+			URL:  "https://example.com/image.webp",
+			Type: "image",
+		}},
+	}})
+
+	item := getItem(db, "item")
+	wantMediaLinks := MediaLinks{{URL: "https://example.com/image.webp", Type: "image"}}
+	if !reflect.DeepEqual(wantMediaLinks, item.MediaLinks) {
+		t.Fatalf("media links were not backfilled\nwant: %#v\nhave: %#v", wantMediaLinks, item.MediaLinks)
+	}
+	if item.Status != READ {
+		t.Fatalf("item status should be preserved\nwant: %#v\nhave: %#v", READ, item.Status)
+	}
+	if item.Title != "old title" {
+		t.Fatalf("existing item content should not be overwritten\nwant: %#v\nhave: %#v", "old title", item.Title)
+	}
+}
+
 func TestListItemsPaginated(t *testing.T) {
 	db := testDB()
 	testItemsSetup(db)

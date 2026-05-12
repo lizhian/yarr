@@ -32,12 +32,17 @@ _Avoid_: Starred, 收藏
 A reading mode that extracts and displays the article body inside yarr.
 _Avoid_: Read Here, 阅读这里
 
+**缩略图**:
+A small image preview shown alongside an article in the article list.
+_Avoid_: Thumbnail, 预览图
+
 ## Relationships
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **星标** independently of whether it is read.
+- An **文章** can have a **缩略图** when it includes an image media link.
 - **正文模式** applies to one selected **文章**.
 
 ## Example dialogue

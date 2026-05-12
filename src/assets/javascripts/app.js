@@ -313,18 +313,6 @@ var vm = new Vue({
 
       return this.itemSelectedDetails.content || ''
     },
-    contentImages: function() {
-      if (!this.itemSelectedDetails) return []
-      return (this.itemSelectedDetails.media_links || []).filter(l => l.type === 'image')
-    },
-    contentAudios: function() {
-      if (!this.itemSelectedDetails) return []
-      return (this.itemSelectedDetails.media_links || []).filter(l => l.type === 'audio')
-    },
-    contentVideos: function() {
-      if (!this.itemSelectedDetails) return []
-      return (this.itemSelectedDetails.media_links || []).filter(l => l.type === 'video')
-    },
     refreshRateTitle: function () {
       const entry = this.refreshRateOptions.find(o => o.value === this.refreshRate)
       return entry ? entry.title : '0'
@@ -377,6 +365,7 @@ var vm = new Vue({
       if (this.$refs.content) this.$refs.content.scrollTop = 0
 
       api.items.get(newVal).then(function(item) {
+        if (this.itemSelected !== newVal) return
         this.itemSelectedDetails = item
         if (this.itemSelectedDetails.status == 'unread') {
           api.items.update(this.itemSelectedDetails.id, {status: 'read'}).then(function() {
@@ -386,6 +375,8 @@ var vm = new Vue({
             this.itemSelectedDetails.status = 'read'
           }.bind(this))
         }
+      }.bind(this)).catch(function() {
+        if (this.itemSelected === newVal) this.itemSelected = null
       }.bind(this))
     },
     'itemSearch': debounce(function(newVal) {
@@ -515,6 +506,12 @@ var vm = new Vue({
       if (this.loading.items) return
       if (this.itemListCloseToBottom()) return this.refreshItems(true)
       if (this.itemSelected && this.itemSelected === this.items[this.items.length - 1].id) return this.refreshItems(true)
+    },
+    itemImage: function(item) {
+      var link = (item.media_links || []).find(function(link) {
+        return link.type === 'image' && link.url
+      })
+      return link && link.url
     },
     markItemsRead: function() {
       var query = this.getItemsQuery()

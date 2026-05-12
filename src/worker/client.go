@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"errors"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -16,6 +18,14 @@ func (c *Client) get(url string) (*http.Response, error) {
 }
 
 func (c *Client) getConditional(url, lastModified, etag string) (*http.Response, error) {
+	res, err := c.doGetConditional(url, lastModified, etag)
+	if shouldRetryGet(err) {
+		return c.doGetConditional(url, lastModified, etag)
+	}
+	return res, err
+}
+
+func (c *Client) doGetConditional(url, lastModified, etag string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -28,6 +38,10 @@ func (c *Client) getConditional(url, lastModified, etag string) (*http.Response,
 		req.Header.Set("If-None-Match", etag)
 	}
 	return c.httpClient.Do(req)
+}
+
+func shouldRetryGet(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
 var client *Client

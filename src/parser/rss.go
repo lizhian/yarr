@@ -7,7 +7,9 @@ package parser
 import (
 	"encoding/xml"
 	"io"
+	"net/url"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -60,6 +62,28 @@ type rssEnclosure struct {
 	Length string `xml:"length,attr"`
 }
 
+func rssEnclosureImageURL(e rssEnclosure) string {
+	if e.URL == "" {
+		return ""
+	}
+	if strings.HasPrefix(e.Type, "image/") {
+		return e.URL
+	}
+	if e.Type != "" {
+		return ""
+	}
+
+	path := e.URL
+	if u, err := url.Parse(e.URL); err == nil && u.Path != "" {
+		path = u.Path
+	}
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".avif", ".apng", ".gif", ".jpg", ".jpeg", ".png", ".svg", ".webp":
+		return e.URL
+	}
+	return ""
+}
+
 func ParseRSS(r io.Reader) (*Feed, error) {
 	srcfeed := rssFeed{}
 
@@ -76,7 +100,9 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 	for _, srcitem := range srcfeed.Items {
 		mediaLinks := srcitem.mediaLinks()
 		for _, e := range srcitem.Enclosures {
-			if strings.HasPrefix(e.Type, "audio/") {
+			if imageURL := rssEnclosureImageURL(e); imageURL != "" {
+				mediaLinks = append(mediaLinks, MediaLink{URL: imageURL, Type: "image"})
+			} else if strings.HasPrefix(e.Type, "audio/") {
 				podcastURL := e.URL
 				if srcitem.OrigEnclosureLink != "" && strings.Contains(podcastURL, path.Base(srcitem.OrigEnclosureLink)) {
 					podcastURL = srcitem.OrigEnclosureLink

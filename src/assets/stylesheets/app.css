@@ -193,6 +193,18 @@ select.form-control:not([multiple]):not([size]) {
   color: #fff;
 }
 
+.item-list-text {
+  min-width: 0;
+}
+
+.item-list-image {
+  width: 72px;
+  height: 54px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
 .toolbar-item:hover,
 .toolbar-search:hover,
 .selectgroup-label:hover,
@@ -618,6 +630,11 @@ a,
   }
   #app.feed-selected #col-item-list {
     display: flex !important;
+  }
+
+  .item-list-image {
+    width: 56px;
+    height: 42px;
   }
 
   #app.item-selected #col-feed-list {

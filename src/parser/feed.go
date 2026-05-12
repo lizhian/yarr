@@ -108,7 +108,7 @@ func ParseWithEncoding(r io.Reader, fallbackEncoding string) (*Feed, error) {
 
 	feed, err := out.callback(r)
 	if feed != nil {
-		feed.cleanup()
+		feed.cleanup(out.feedType == "rss")
 	}
 	return feed, err
 }
@@ -124,7 +124,7 @@ func ParseAndFix(r io.Reader, baseURL, fallbackEncoding string) (*Feed, error) {
 	return feed, nil
 }
 
-func (feed *Feed) cleanup() {
+func (feed *Feed) cleanup(keepContentMediaImages bool) {
 	feed.Title = strings.TrimSpace(feed.Title)
 	feed.SiteURL = strings.TrimSpace(feed.SiteURL)
 
@@ -136,10 +136,17 @@ func (feed *Feed) cleanup() {
 
 		if len(feed.Items[i].MediaLinks) > 0 {
 			mediaLinks := make([]MediaLink, 0)
+			seen := make(map[string]struct{})
 			for _, link := range item.MediaLinks {
-				if !strings.Contains(item.Content, link.URL) {
-					mediaLinks = append(mediaLinks, link)
+				if !(link.Type == "image" && keepContentMediaImages) && strings.Contains(item.Content, link.URL) {
+					continue
 				}
+				key := link.Type + "\x00" + link.URL
+				if _, ok := seen[key]; ok {
+					continue
+				}
+				seen[key] = struct{}{}
+				mediaLinks = append(mediaLinks, link)
 			}
 			feed.Items[i].MediaLinks = mediaLinks
 		}

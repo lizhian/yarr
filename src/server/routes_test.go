@@ -112,3 +112,19 @@ func TestFeedIcons(t *testing.T) {
 		t.Fatal("got", response2.StatusCode)
 	}
 }
+
+func TestMissingItemReturnsNotFound(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	log.SetOutput(os.Stderr)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/api/items/1178", nil)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusNotFound {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+}

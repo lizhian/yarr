@@ -282,18 +282,27 @@
                 <label v-for="item in items" :key="item.id"
                        class="selectgroup">
                     <input type="radio" name="item" :value="item.id" v-model="itemSelected">
-                    <div class="selectgroup-label d-flex flex-column" :class="'item-status-'+item.status">
-                        <div style="line-height: 100%; opacity: .7; margin-bottom: .1rem;" class="d-flex align-items-center">
-                            <transition name="indicator">
-                                <span class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
-                                <span class="icon icon-small mr-1" v-if="item.status=='starred'">{% inline "star-full.svg" %}</span>
-                            </transition>
-                            <small class="flex-fill text-truncate mr-1">
-                                {{ (feedsById[item.feed_id] || {}).title }}
-                            </small>
-                            <small class="flex-shrink-0"><relative-time v-bind:title="formatDate(item.date)" :val="item.date"/></small>
+                    <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
+                        <div class="item-list-text flex-grow-1">
+                            <div style="line-height: 100%; opacity: .7; margin-bottom: .1rem;" class="d-flex align-items-center">
+                                <transition name="indicator">
+                                    <span class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
+                                    <span class="icon icon-small mr-1" v-if="item.status=='starred'">{% inline "star-full.svg" %}</span>
+                                </transition>
+                                <small class="flex-fill text-truncate mr-1">
+                                    {{ (feedsById[item.feed_id] || {}).title }}
+                                </small>
+                                <small class="flex-shrink-0"><relative-time v-bind:title="formatDate(item.date)" :val="item.date"/></small>
+                            </div>
+                            <div>{{ item.title || '无标题' }}</div>
                         </div>
-                        <div>{{ item.title || '无标题' }}</div>
+                        <img class="item-list-image ml-2"
+                             v-if="itemImage(item)"
+                             :src="itemImage(item)"
+                             alt=""
+                             loading="lazy"
+                             referrerpolicy="no-referrer"
+                             @error="$event.target.style.display='none'">
                     </div>
                 </label>
                 <button class="btn btn-link btn-block loading my-3" v-if="itemsHasMore"></button>
@@ -362,16 +371,6 @@
                         <time>{{ formatDate(itemSelectedDetails.date) }}</time>
                     </div>
                     <hr>
-                    <div v-if="!itemSelectedReadability">
-                        <div v-if="contentImages.length">
-                            <figure v-for="media in contentImages">
-                                <img :src="media.url" loading="lazy">
-                                <figcaption v-if="media.description">{{ media.description }}</figcaption>
-                            </figure>
-                        </div>
-                        <audio class="w-100" controls v-for="media in contentAudios" :src="media.url"></audio>
-                        <video class="w-100" controls v-for="media in contentVideos" :src="media.url"></video>
-                    </div>
                     <div v-html="itemSelectedContent"></div>
                 </div>
             </div>

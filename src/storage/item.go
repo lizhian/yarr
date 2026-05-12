@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -141,7 +142,13 @@ func (s *Storage) CreateItems(items []Item) bool {
 				?, ?,
 				?, ?
 			)
-			on conflict (feed_id, guid) do nothing`,
+			on conflict (feed_id, guid) do update set
+				media_links = case
+					when json_array_length(coalesce(items.media_links, '[]')) = 0
+					 and json_array_length(coalesce(excluded.media_links, '[]')) > 0
+					then excluded.media_links
+					else items.media_links
+				end`,
 			item.GUID, item.FeedId, item.Title, item.Link, item.Date,
 			item.Content, item.MediaLinks,
 			now, UNREAD,
@@ -305,6 +312,9 @@ func (s *Storage) GetItem(id int64) *Item {
 		&i.Date, &i.Status, &i.MediaLinks,
 	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
 		log.Print(err)
 		return nil
 	}

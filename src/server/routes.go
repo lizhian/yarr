@@ -317,7 +317,7 @@ func (s *Server) handleItem(c *router.Context) {
 	if c.Req.Method == "GET" {
 		item := s.db.GetItem(id)
 		if item == nil {
-			c.Out.WriteHeader(http.StatusBadRequest)
+			c.Out.WriteHeader(http.StatusNotFound)
 			return
 		}
 

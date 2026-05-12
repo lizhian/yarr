@@ -90,6 +90,31 @@ func TestRSSMediaContentThumbnail(t *testing.T) {
 	}
 }
 
+func TestRSSImageMediaPreservedWhenURLIsInContent(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+			<channel>
+				<item>
+					<title>Title</title>
+					<description><![CDATA[
+						<img src="https://example.com/image.jpg?size=large" data-lightense-src="https://example.com/image.jpg">
+					]]></description>
+					<media:content url="https://example.com/image.jpg" medium="image" type="image/jpeg"/>
+					<media:thumbnail url="https://example.com/image.jpg"/>
+					<enclosure url="https://example.com/image.jpg" type="image/jpeg"/>
+				</item>
+			</channel>
+		</rss>
+	`))
+	want := []MediaLink{{URL: "https://example.com/image.jpg", Type: "image"}}
+	if !reflect.DeepEqual(want, feed.Items[0].MediaLinks) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", feed.Items[0].MediaLinks)
+		t.FailNow()
+	}
+}
+
 func TestRSSWithLotsOfSpaces(t *testing.T) {
 	// https://pxlnv.com/: https://feedpress.me/pxlnv
 	feed, err := Parse(strings.NewReader(strings.ReplaceAll(`
@@ -145,6 +170,62 @@ func TestRSSPodcast(t *testing.T) {
 		t.Logf("want: %#v", want)
 		t.Logf("have: %#v", have)
 		t.FailNow()
+	}
+}
+
+func TestRSSImageEnclosure(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0">
+			<channel>
+				<item>
+					<enclosure length="100500" type="image/webp" url="https://example.com/image.webp"/>
+				</item>
+			</channel>
+		</rss>
+	`))
+	if len(feed.Items[0].MediaLinks) != 1 {
+		t.Fatal("Invalid media links")
+	}
+	have := feed.Items[0].MediaLinks[0]
+	want := MediaLink{
+		URL:  "https://example.com/image.webp",
+		Type: "image",
+	}
+	if !reflect.DeepEqual(want, have) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.FailNow()
+	}
+}
+
+func TestRSSImageEnclosureWithoutType(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0">
+			<channel>
+				<item>
+					<enclosure url="https://t.eryajf.net/imgs/2026/01/1769093502682.webp"/>
+				</item>
+				<item>
+					<enclosure url="https://t.eryajf.net/imgs/2026/04/1776611122185.jpg?size=large"/>
+				</item>
+			</channel>
+		</rss>
+	`))
+	want := []MediaLink{
+		{URL: "https://t.eryajf.net/imgs/2026/01/1769093502682.webp", Type: "image"},
+		{URL: "https://t.eryajf.net/imgs/2026/04/1776611122185.jpg?size=large", Type: "image"},
+	}
+	for i, item := range feed.Items {
+		if len(item.MediaLinks) != 1 {
+			t.Fatalf("Invalid media links for item %d", i)
+		}
+		if !reflect.DeepEqual(want[i], item.MediaLinks[0]) {
+			t.Logf("want: %#v", want[i])
+			t.Logf("have: %#v", item.MediaLinks[0])
+			t.FailNow()
+		}
 	}
 }
 
