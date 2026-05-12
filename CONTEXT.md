@@ -40,6 +40,10 @@ _Avoid_: Read
 An article state meaning the user intentionally saved the article for later attention.
 _Avoid_: Starred, 星标
 
+**全部**:
+An article list view that includes read, unread, and saved articles.
+_Avoid_: All
+
 **正文模式**:
 A reading mode that extracts and displays the article body inside yarr.
 _Avoid_: Read Here, 阅读这里
@@ -79,6 +83,7 @@ _Avoid_: Browser back, 返回上一页
 - **自动刷新** periodically checks **订阅源** for new **文章**.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **收藏** independently of whether it is read.
+- **全部** includes **已读**, **未读**, and **收藏** articles.
 - An **文章** can have a **缩略图** when it includes an image media link.
 - **正文模式** applies to one selected **文章**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
