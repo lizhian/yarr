@@ -5,7 +5,7 @@ on:
       - v*
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: nkanaev/yarr
+  IMAGE_NAME: lizhian/yarr
 
 jobs:
   build-and-push-image:
