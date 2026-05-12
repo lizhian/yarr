@@ -229,6 +229,74 @@ func TestRSSImageEnclosureWithoutType(t *testing.T) {
 	}
 }
 
+func TestRSSDescriptionImageFallback(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0">
+			<channel>
+				<item>
+					<title>这是什么马？？</title>
+					<description><iframe width="640" height="360" src="https://www.bilibili.com/blackboard/html5mobileplayer.html?aid=116510500589931&amp;cid=undefined&amp;bvid=BV1BM9fB8Eds" frameborder="0" allowfullscreen="" referrerpolicy="no-referrer"></iframe><br><img src="https://i1.hdslb.com/bfs/archive/14cbb8afc291500f2f5ff7d836a2b139a77d6262.jpg" referrerpolicy="no-referrer"><br>2026第372期 05.01 - 05.07 这是什么马？？ - 从赌马高手到基因工程</description>
+					<link>https://www.bilibili.com/video/BV1BM9fB8Eds</link>
+					<guid isPermaLink="false">https://www.bilibili.com/video/BV1BM9fB8Eds</guid>
+				</item>
+			</channel>
+		</rss>
+	`))
+	have := feed.Items[0].MediaLinks
+	want := []MediaLink{{URL: "https://i1.hdslb.com/bfs/archive/14cbb8afc291500f2f5ff7d836a2b139a77d6262.jpg", Type: "image"}}
+	if !reflect.DeepEqual(want, have) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.FailNow()
+	}
+}
+
+func TestRSSDescriptionImageFallbackPreservesAudio(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0">
+			<channel>
+				<item>
+					<description><![CDATA[<img src="https://example.com/cover.jpg">]]></description>
+					<enclosure length="100500" type="audio/mpeg" url="https://example.com/audio.mp3"/>
+				</item>
+			</channel>
+		</rss>
+	`))
+	have := feed.Items[0].MediaLinks
+	want := []MediaLink{
+		{URL: "https://example.com/audio.mp3", Type: "audio"},
+		{URL: "https://example.com/cover.jpg", Type: "image"},
+	}
+	if !reflect.DeepEqual(want, have) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.FailNow()
+	}
+}
+
+func TestRSSDescriptionImageFallbackSkippedWhenImageExists(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+			<channel>
+				<item>
+					<description><![CDATA[<img src="https://example.com/description.jpg">]]></description>
+					<media:thumbnail url="https://example.com/media.jpg"/>
+				</item>
+			</channel>
+		</rss>
+	`))
+	have := feed.Items[0].MediaLinks
+	want := []MediaLink{{URL: "https://example.com/media.jpg", Type: "image"}}
+	if !reflect.DeepEqual(want, have) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.FailNow()
+	}
+}
+
 func TestRSSOpusPodcast(t *testing.T) {
 	feed, _ := Parse(strings.NewReader(`
 		<?xml version="1.0" encoding="UTF-8"?>

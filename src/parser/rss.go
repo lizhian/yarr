@@ -11,6 +11,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 type rssFeed struct {
@@ -25,7 +27,7 @@ type rssItem struct {
 	GUID        rssGuid        `xml:"guid"`
 	Title       string         `xml:"title"`
 	Link        string         `xml:"rss link"`
-	Description string         `xml:"rss description"`
+	Description rssDescription `xml:"rss description"`
 	PubDate     string         `xml:"pubDate"`
 	Enclosures  []rssEnclosure `xml:"enclosure"`
 
@@ -41,6 +43,22 @@ type rssItem struct {
 type rssGuid struct {
 	GUID        string `xml:",chardata"`
 	IsPermaLink string `xml:"isPermaLink,attr"`
+}
+
+type rssDescription struct {
+	Text string `xml:",chardata"`
+	HTML string `xml:",innerxml"`
+}
+
+func (d rssDescription) String() string {
+	return firstNonEmpty(d.Text, d.HTML)
+}
+
+func (d rssDescription) FirstImageSrc() string {
+	if src := firstImageSrc(d.HTML); src != "" {
+		return src
+	}
+	return firstImageSrc(d.Text)
 }
 
 type rssLink struct {
@@ -84,6 +102,38 @@ func rssEnclosureImageURL(e rssEnclosure) string {
 	return ""
 }
 
+func firstImageSrc(content string) string {
+	tokenizer := html.NewTokenizer(strings.NewReader(content))
+	for {
+		tokenType := tokenizer.Next()
+		if tokenType == html.ErrorToken {
+			return ""
+		}
+		if tokenType != html.StartTagToken && tokenType != html.SelfClosingTagToken {
+			continue
+		}
+
+		token := tokenizer.Token()
+		if token.Data != "img" {
+			continue
+		}
+		for _, attr := range token.Attr {
+			if strings.EqualFold(attr.Key, "src") {
+				return strings.TrimSpace(attr.Val)
+			}
+		}
+	}
+}
+
+func hasImageMediaLink(links []MediaLink) bool {
+	for _, link := range links {
+		if link.Type == "image" {
+			return true
+		}
+	}
+	return false
+}
+
 func ParseRSS(r io.Reader) (*Feed, error) {
 	srcfeed := rssFeed{}
 
@@ -111,6 +161,11 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 				break
 			}
 		}
+		if !hasImageMediaLink(mediaLinks) {
+			if imageURL := srcitem.Description.FirstImageSrc(); imageURL != "" {
+				mediaLinks = append(mediaLinks, MediaLink{URL: imageURL, Type: "image"})
+			}
+		}
 
 		permalink := ""
 		if srcitem.GUID.IsPermaLink == "true" {
@@ -122,7 +177,7 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 			Date:       dateParse(firstNonEmpty(srcitem.DublinCoreDate, srcitem.PubDate)),
 			URL:        firstNonEmpty(srcitem.OrigLink, srcitem.Link, permalink),
 			Title:      srcitem.Title,
-			Content:    firstNonEmpty(srcitem.ContentEncoded, srcitem.Description, srcitem.firstMediaDescription()),
+			Content:    firstNonEmpty(srcitem.ContentEncoded, srcitem.Description.String(), srcitem.firstMediaDescription()),
 			MediaLinks: mediaLinks,
 		})
 	}
