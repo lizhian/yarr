@@ -47,3 +47,27 @@ func TestUpdateToolbarDisplay(t *testing.T) {
 		t.Fatalf("invalid toolbar display: %#v", got)
 	}
 }
+
+func TestArticleListLayoutDefault(t *testing.T) {
+	db := testDB()
+
+	if got := db.GetSettingsValue("article_list_layout"); got != "list" {
+		t.Fatalf("invalid article list layout default: %#v", got)
+	}
+
+	settings := db.GetSettings()
+	if got := settings["article_list_layout"]; got != "list" {
+		t.Fatalf("invalid article list layout setting: %#v", got)
+	}
+}
+
+func TestUpdateArticleListLayout(t *testing.T) {
+	db := testDB()
+
+	if !db.UpdateSettings(map[string]interface{}{"article_list_layout": "card"}) {
+		t.Fatal("did not update article list layout")
+	}
+	if got := db.GetSettingsValue("article_list_layout"); got != "card" {
+		t.Fatalf("invalid article list layout: %#v", got)
+	}
+}
