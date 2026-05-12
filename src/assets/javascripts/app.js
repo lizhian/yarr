@@ -259,6 +259,7 @@ var vm = new Vue({
 
       'refreshRateOptions': [
         { title: "0", value: 0 },
+        { title: "1m", value: 1 },
         { title: "10m", value: 10 },
         { title: "30m", value: 30 },
         { title: "1h", value: 60 },

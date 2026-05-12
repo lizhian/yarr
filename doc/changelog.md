@@ -1,7 +1,7 @@
 # upcoming
 
 - (new) serve on unix socket (thanks to @rvighne)
-- (new) more auto-refresh options: 12h & 24h (thanks to @aswerkljh for suggestion)
+- (new) more auto-refresh options: 1m, 12h & 24h (thanks to @aswerkljh for suggestion)
 - (fix) smooth scrolling on iOS (thanks to gatheraled)
 - (fix) displaying youtube shorts in "Read Here" (thanks to @Dean-Corso for the report)
 - (etc) theme-color support (thanks to @asimpson)

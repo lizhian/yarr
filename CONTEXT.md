@@ -8,6 +8,10 @@
 An RSS, Atom, RDF, or JSON Feed source that produces articles.
 _Avoid_: Feed, 源
 
+**自动刷新**:
+A setting that periodically checks subscription sources for new articles without user action.
+_Avoid_: Auto-refresh, 自动更新
+
 **文件夹**:
 A user-created grouping for subscription sources.
 _Avoid_: Folder, 分类
@@ -40,6 +44,7 @@ _Avoid_: Thumbnail, 预览图
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- **自动刷新** periodically checks **订阅源** for new **文章**.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **星标** independently of whether it is read.
 - An **文章** can have a **缩略图** when it includes an image media link.
