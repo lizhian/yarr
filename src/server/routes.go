@@ -231,22 +231,27 @@ func (s *Server) handleFeedList(c *router.Context) {
 			return
 		}
 
-		rsshubBaseUrl := s.db.GetSettingsValueString("rsshub_base_url")
-		if rsshub.IsLink(form.Url) && rsshubBaseUrl == "" {
-			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": "请先配置 RSSHub 基础链接。"})
-			return
-		}
-		requestUrl, err := rsshub.Resolve(form.Url, rsshubBaseUrl)
-		if err != nil {
-			log.Printf("Failed to resolve feed link %s: %s", form.Url, err)
-			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
-			return
+		if rsshub.IsLink(form.Url) {
+			bases, err := rsshub.EnabledBases(s.db.GetSettingsValueString("rsshub_base_url"))
+			if err != nil {
+				log.Printf("Failed to parse RSSHub base list: %s", err)
+				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
+				return
+			}
+			if len(bases) == 0 {
+				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": "请先配置启用的 RSSHub 基础链接。"})
+				return
+			}
 		}
 
-		result, err := worker.DiscoverFeedWithLink(requestUrl, form.Url)
+		result, err := s.worker.DiscoverFeed(form.Url)
 		switch {
 		case err != nil:
 			log.Printf("Faild to discover feed for %s: %s", form.Url, err)
+			if rsshub.IsLink(form.Url) {
+				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
+				return
+			}
 			c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
 		case len(result.Sources) > 0:
 			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
@@ -430,8 +435,12 @@ func (s *Server) handleSettings(c *router.Context) {
 			return
 		}
 		if s.db.UpdateSettings(settings) {
-			if _, ok := settings["refresh_rate"]; ok {
+			_, refreshRateChanged := settings["refresh_rate"]
+			if refreshRateChanged {
 				s.worker.SetRefreshRate(s.db.GetSettingsValueInt64("refresh_rate"))
+			}
+			if _, ok := settings["rsshub_base_url"]; ok && !refreshRateChanged {
+				s.worker.CheckRSSHubAvailability()
 			}
 			c.Out.WriteHeader(http.StatusOK)
 		} else {

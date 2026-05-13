@@ -16,12 +16,12 @@ func setRawSetting(t *testing.T, db *Storage, key string, val string) {
 func TestUpdateSettingsNormalizesRSSHubBaseURL(t *testing.T) {
 	db := testDB()
 
-	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "https://rsshub.rssforever.com/"}) {
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "https://rsshub.rssforever.com/\n# https://example.com/rsshub/"}) {
 		t.Fatal("update failed")
 	}
 
 	got := db.GetSettingsValueString("rsshub_base_url")
-	want := "https://rsshub.rssforever.com"
+	want := "https://rsshub.rssforever.com\n#https://example.com/rsshub"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -31,6 +31,14 @@ func TestUpdateSettingsRejectsInvalidRSSHubBaseURL(t *testing.T) {
 	db := testDB()
 
 	if db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "file:///tmp/rsshub"}) {
+		t.Fatal("expected update to fail")
+	}
+}
+
+func TestUpdateSettingsRejectsInvalidDisabledRSSHubBaseURL(t *testing.T) {
+	db := testDB()
+
+	if db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "# note"}) {
 		t.Fatal("expected update to fail")
 	}
 }

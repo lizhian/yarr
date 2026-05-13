@@ -109,7 +109,7 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 			if !ok {
 				return false
 			}
-			normalized, err := rsshub.NormalizeBase(sval)
+			normalized, err := rsshub.NormalizeBaseList(sval)
 			if err != nil {
 				log.Print(err)
 				return false
