@@ -72,6 +72,10 @@ _Avoid_: All
 A reading mode that extracts and displays the article body inside yarr.
 _Avoid_: Read Here, 阅读这里
 
+**正文选择器**:
+An optional subscription source setting that identifies the article body on original article pages for **正文模式**.
+_Avoid_: 内容选择器, 文章选择器, CSS selector
+
 **工具栏显示**:
 A user preference that controls whether top-level toolbar actions are shown as icons, text, or both.
 _Avoid_: 顶栏图标模式, 按钮样式
@@ -189,6 +193,10 @@ _Avoid_: Browser back, 返回上一页
 - The article list toolbar layout toggle remains available in **移动端视图** as an icon-only compact action.
 - The article list toolbar layout toggle indicates the layout it will switch to, not the current **文章列表布局**.
 - **正文模式** applies to one selected **文章**.
+- A **订阅源** can define one optional **正文选择器**.
+- A **正文选择器** applies to all **文章** produced by its **订阅源**.
+- **正文模式** uses the selected **文章**'s **订阅源** **正文选择器** when one is configured.
+- OPML import and export do not preserve **正文选择器**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
 - **层级返回** applies only in **移动端视图**.
 - **层级返回** applies whether the current layer was reached during the current browser session or restored from saved reader settings.
@@ -240,3 +248,4 @@ _Avoid_: Browser back, 返回上一页
 - `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
 - Top-level toolbar labels are short action labels, not full descriptions; full descriptions remain in button titles.
 - "订阅项设置" means **订阅源设置** for one **订阅源**, not a setting for articles in the **文章** list.
+- **正文选择器** is a **订阅源** setting, not a per-**文章** setting.

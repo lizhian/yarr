@@ -104,8 +104,10 @@
     logout: function() {
       return api('post', './logout')
     },
-    crawl: function(url) {
-      return api('get', './page?url=' + encodeURIComponent(url)).then(json)
+    crawl: function(url, feedId) {
+      var query = {url: url}
+      if (feedId) query.feed_id = feedId
+      return api('get', './page' + param(query)).then(json)
     }
   }
 })()

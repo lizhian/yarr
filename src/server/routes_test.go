@@ -151,3 +151,47 @@ func TestCreateRSSHubFeedRequiresBaseURL(t *testing.T) {
 		t.Fatalf("got %q", result["status"])
 	}
 }
+
+func TestUpdateFeedContentSelector(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"content_selector":".content__default"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.ContentSelector != ".content__default" {
+		t.Fatalf("got %q", feed.ContentSelector)
+	}
+}
+
+func TestUpdateFeedContentSelectorRejectsUnsupportedSelector(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"content_selector":"main .content"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.ContentSelector != "" {
+		t.Fatalf("got %q", feed.ContentSelector)
+	}
+}
