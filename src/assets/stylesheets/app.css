@@ -211,12 +211,22 @@ select.form-control:not([multiple]):not([size]) {
   object-fit: cover;
 }
 
-.article-list-layout-card #item-list-scroll {
-  padding: .5rem !important;
+.article-list-layout-list #item-list-scroll .selectgroup + .selectgroup {
+  margin-top: 0;
 }
 
-.article-list-layout-card .selectgroup + .selectgroup {
-  margin-top: .5rem;
+.article-list-layout-list #item-list-scroll .selectgroup + .selectgroup .selectgroup-label {
+  border-top: 1px solid var(--item-list-separator-color);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.article-list-layout-card #item-list-scroll {
+  padding: .75rem !important;
+}
+
+.article-list-layout-card #item-list-scroll .selectgroup + .selectgroup {
+  margin-top: .75rem;
 }
 
 .article-list-layout-card #item-list-scroll .selectgroup-label {
@@ -224,6 +234,8 @@ select.form-control:not([multiple]):not([size]) {
   align-items: stretch !important;
   padding: 0;
   border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: var(--article-card-shadow);
   overflow: hidden;
 }
 
@@ -251,7 +263,7 @@ select.form-control:not([multiple]):not([size]) {
   height: auto;
   aspect-ratio: 16 / 9;
   margin-left: 0 !important;
-  border-radius: 3px 3px 0 0;
+  border-radius: 5px 5px 0 0;
 }
 
 .toolbar-item:hover,
@@ -537,6 +549,8 @@ button.theme-light {
 .theme-light .form-control,
 .theme-light .modal-content,
 .theme-light .toolbar-search {
+  --article-card-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+  --item-list-separator-color: #e4e4df;
   background-color: #f7f7f5 !important;
 }
 .theme-light .content hr,
@@ -588,6 +602,8 @@ a,
 .theme-sepia .form-control,
 .theme-sepia .modal-content,
 .theme-sepia .toolbar-search {
+  --article-card-shadow: 0 2px 8px rgba(83, 67, 35, .12);
+  --item-list-separator-color: #e0d6ba;
   background-color: #f4f0e5 !important;
 }
 .theme-sepia .content hr,
@@ -627,6 +643,8 @@ a,
 .theme-night .modal-content,
 .theme-night .toolbar-search {
   --accent-color: #4aa8ff;
+  --article-card-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  --item-list-separator-color: #303030;
   color: #d1d1d1;
   background-color: #1f1f1f;
 }

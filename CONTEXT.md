@@ -142,6 +142,7 @@ _Avoid_: Browser back, 返回上一页
 - "顶栏图标显示对应的文字" refers to top-level toolbar actions, not icons inside menus or article/feed lists.
 - "卡片模型" means **卡片模式** in the **文章列表布局**, not a data model.
 - "快速切换卡片模式" means a top-level article list toolbar toggle, not a keyboard shortcut or settings menu option.
+- "文章列表紧凑模式" means **列表模式** in the **文章列表布局**, not **仅图标** toolbar display.
 - The **文章列表布局** toggle icon should represent **列表模式** or **卡片模式** directly, not reuse an unrelated layered-content icon.
 - **仅文字** is the default **工具栏显示** mode; **仅图标** preserves the previous compact toolbar behavior.
 - `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
