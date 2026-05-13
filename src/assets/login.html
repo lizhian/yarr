@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>yarr!</title>
+    <link href="https://fontsapi.zeoseven.com/292/main/result.css" onload="this.rel='stylesheet'" rel="preload" as="style" crossorigin>
     <link href="https://fontsapi.zeoseven.com/442/main/result.css" onload="this.rel='stylesheet'" rel="preload" as="style" crossorigin>
-    <noscript><link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css"></noscript>
+    <noscript>
+        <link rel="stylesheet" href="https://fontsapi.zeoseven.com/292/main/result.css">
+        <link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css">
+    </noscript>
     <link rel="stylesheet" href="./static/stylesheets/bootstrap.min.css">
     <link rel="stylesheet" href="./static/stylesheets/app.css">
     <link rel="icon" href="./static/graphicarts/favicon.svg" type="image/svg+xml">
@@ -24,7 +28,7 @@
         }
     </style>
 </head>
-<body class="theme-{% .settings.theme_name %}">
+<body class="theme-{% .settings.theme_name %} font-{% .settings.theme_font %}">
     <form action="" method="post">
         <img src="./static/graphicarts/anchor.svg" alt="">
         {% if .error %}

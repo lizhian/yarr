@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>yarr!</title>
+    <link href="https://fontsapi.zeoseven.com/292/main/result.css" onload="this.rel='stylesheet'" rel="preload" as="style" crossorigin>
     <link href="https://fontsapi.zeoseven.com/442/main/result.css" onload="this.rel='stylesheet'" rel="preload" as="style" crossorigin>
-    <noscript><link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css"></noscript>
+    <noscript>
+        <link rel="stylesheet" href="https://fontsapi.zeoseven.com/292/main/result.css">
+        <link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css">
+    </noscript>
     <link rel="stylesheet" href="./static/stylesheets/bootstrap.min.css">
     <link rel="stylesheet" href="./static/stylesheets/app.css">
     <link rel="icon" href="./static/graphicarts/favicon.svg" type="image/svg+xml">
@@ -18,7 +22,7 @@
         window.app.authenticated = {% .authenticated %}
     </script>
 </head>
-<body class="theme-{% .settings.theme_name %}">
+<body class="theme-{% .settings.theme_name %} font-{% .settings.theme_font %}">
     <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
@@ -79,6 +83,18 @@
                             <span class="icon" v-if="theme.name == t">{% inline "check.svg" %}</span>
                         </button>
                     </div>
+
+                    <div class="dropdown-divider"></div>
+
+                    <header class="dropdown-header" role="heading" aria-level="2">字体显示</header>
+                    <button class="dropdown-item d-flex align-items-center justify-content-between"
+                            :aria-pressed="theme.font == font.name"
+                            :class="{active: theme.font == font.name}"
+                            @click.stop="theme.font = font.name"
+                            v-for="font in fontOptions">
+                        <span>{{ font.title }}</span>
+                        <span class="icon ml-2" v-if="theme.font == font.name">{% inline "check.svg" %}</span>
+                    </button>
 
                     <div class="dropdown-divider"></div>
 

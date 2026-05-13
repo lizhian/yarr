@@ -51,6 +51,15 @@ function isMobileLayout() {
   return window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches
 }
 
+var FONT_OPTIONS = [
+  {name: 'lxgw-wenkai', title: '霞鹜文楷'},
+  {name: 'maple-mono-nf-cn', title: 'Maple Mono NF-CN'},
+]
+
+function normalizeThemeFont(font) {
+  return FONT_OPTIONS.some(function(option) { return option.name == font }) ? font : 'lxgw-wenkai'
+}
+
 Vue.component('drag', {
   props: ['width'],
   template: '<div class="drag"></div>',
@@ -215,7 +224,8 @@ var vm = new Vue({
     api.feeds.list_errors().then(function(errors) {
       vm.feed_errors = errors
     })
-    this.updateMetaTheme(app.settings.theme_name)
+    this.updateMetaTheme(this.theme.name)
+    this.updateBodyClass()
   },
   mounted: function() {
     this.initNavigationHistory()
@@ -255,6 +265,7 @@ var vm = new Vue({
       'feedStats': {},
       'theme': {
         'name': s.theme_name,
+        'font': normalizeThemeFont(s.theme_font),
         'size': s.theme_size,
       },
       'themeColors': {
@@ -264,6 +275,7 @@ var vm = new Vue({
       },
       'refreshRate': s.refresh_rate,
       'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
+      'fontOptions': FONT_OPTIONS,
       'authenticated': app.authenticated,
       'feed_errors': {},
       'navigationHistory': {
@@ -343,9 +355,10 @@ var vm = new Vue({
       deep: true,
       handler: function(theme) {
         this.updateMetaTheme(theme.name)
-        document.body.classList.value = 'theme-' + theme.name
+        this.updateBodyClass()
         api.settings.update({
           theme_name: theme.name,
+          theme_font: theme.font,
           theme_size: theme.size,
         })
       },
@@ -560,6 +573,9 @@ var vm = new Vue({
     },
     updateMetaTheme: function(theme) {
       document.querySelector("meta[name='theme-color']").content = this.themeColors[theme]
+    },
+    updateBodyClass: function() {
+      document.body.classList.value = 'theme-' + this.theme.name + ' font-' + this.theme.font
     },
     themeTitle: function(theme) {
       return {

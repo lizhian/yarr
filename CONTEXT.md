@@ -52,6 +52,18 @@ _Avoid_: Read Here, 阅读这里
 A user preference that controls whether top-level toolbar actions are shown as icons, text, or both.
 _Avoid_: 顶栏图标模式, 按钮样式
 
+**字体显示**:
+A user preference that controls the font family used across yarr's user interface and article reading surface.
+_Avoid_: 字体切换, 正文字体
+
+**霞鹜文楷**:
+The default **字体显示** option for yarr.
+_Avoid_: 霞鹭文楷, LXGW WenKai
+
+**Maple Mono NF-CN**:
+A **字体显示** option for users who prefer a monospaced interface font.
+_Avoid_: Maple Mono NF CN
+
 **仅图标**:
 A compact toolbar display mode where top-level toolbar actions show only their icon.
 _Avoid_: 图标模式, 紧凑模式
@@ -119,6 +131,10 @@ _Avoid_: Browser back, 返回上一页
 - **层级返回** does not expose the current layer in the address bar.
 - **工具栏显示** applies to most top-level toolbar actions.
 - **工具栏显示** can be **仅文字** or **仅图标**.
+- **字体显示** applies globally to yarr's interface and article reading surface.
+- **字体显示** can be **霞鹜文楷** or **Maple Mono NF-CN**.
+- **霞鹜文楷** is the default **字体显示** option.
+- **字体显示** is changed from the main settings menu, near **主题**.
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
 
@@ -145,5 +161,7 @@ _Avoid_: Browser back, 返回上一页
 - "文章列表紧凑模式" means **列表模式** in the **文章列表布局**, not **仅图标** toolbar display.
 - The **文章列表布局** toggle icon should represent **列表模式** or **卡片模式** directly, not reuse an unrelated layered-content icon.
 - **仅文字** is the default **工具栏显示** mode; **仅图标** preserves the previous compact toolbar behavior.
+- "字体切换功能" means the global **字体显示** preference, not an article-body-only font setting.
+- "霞鹭文楷" means **霞鹜文楷**; use the official font name in user-facing text.
 - `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
 - Top-level toolbar labels are short action labels, not full descriptions; full descriptions remain in button titles.
