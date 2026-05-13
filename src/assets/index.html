@@ -400,6 +400,10 @@
                         <span class="icon mr-2">{% inline "edit.svg" %}</span>
                         修改链接
                     </button>
+                    <button class="settings-dialog-action" @click="updateFeedContentSelector(settingsFeed)">
+                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
+                        修改正文选择器
+                    </button>
                 </div>
 
                 <hr>
@@ -459,6 +463,8 @@
                         <option value="">---</option>
                         <option :value="folder.id" v-for="folder in folders" :selected="folder.id === current.feed.folder_id || folder.id === current.folder.id">{{ folder.title }}</option>
                     </select>
+                    <label for="feed-content-selector" class="mt-3 d-block">正文选择器</label>
+                    <input id="feed-content-selector" name="content_selector" type="text" class="form-control" autocomplete="off" placeholder=".content__default">
                     <div class="mt-4" v-if="feedNewChoice.length">
                         <p class="mb-2">
                             找到多个订阅源，请选择一个：

@@ -61,6 +61,47 @@ func TestQueryMulti(t *testing.T) {
 	}
 }
 
+func TestQuerySimpleSelectorSubset(t *testing.T) {
+	node, _ := html.Parse(strings.NewReader(`
+		<!DOCTYPE html>
+		<html><body>
+			<div class="content other" id="main"><p>first</p></div>
+			<section class="content"><p>second</p></section>
+		</body></html>
+	`))
+
+	tests := []struct {
+		selector string
+		want     []string
+	}{
+		{".content", []string{"div", "section"}},
+		{"#main", []string{"div"}},
+		{"div.content", []string{"div"}},
+		{"div#main", []string{"div"}},
+		{"section.content", []string{"section"}},
+	}
+	for _, test := range tests {
+		nodes, err := QueryWithError(node, test.selector)
+		if err != nil {
+			t.Fatalf("%s: %v", test.selector, err)
+		}
+		if len(nodes) != len(test.want) {
+			t.Fatalf("%s: %#v", test.selector, nodes)
+		}
+		for i, want := range test.want {
+			if nodes[i].Data != want {
+				t.Fatalf("%s: %#v", test.selector, nodes)
+			}
+		}
+	}
+}
+
+func TestQueryRejectsUnsupportedSelector(t *testing.T) {
+	if _, err := CompileSelector("main .content"); err == nil {
+		t.Fatal("expected unsupported selector error")
+	}
+}
+
 func TestClosest(t *testing.T) {
 	html, _ := html.Parse(strings.NewReader(`
 		<!DOCTYPE html>

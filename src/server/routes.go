@@ -230,6 +230,13 @@ func (s *Server) handleFeedList(c *router.Context) {
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		form.ContentSelector = strings.TrimSpace(form.ContentSelector)
+		if form.ContentSelector != "" {
+			if _, err := htmlutil.CompileSelector(form.ContentSelector); err != nil {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
+				return
+			}
+		}
 
 		rsshubBaseUrl := s.db.GetSettingsValueString("rsshub_base_url")
 		if rsshub.IsLink(form.Url) && rsshubBaseUrl == "" {
@@ -251,11 +258,12 @@ func (s *Server) handleFeedList(c *router.Context) {
 		case len(result.Sources) > 0:
 			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
 		case result.Feed != nil:
-			feed := s.db.CreateFeed(
+			feed := s.db.CreateFeedWithContentSelector(
 				result.Feed.Title,
 				"",
 				result.Feed.SiteURL,
 				result.FeedLink,
+				form.ContentSelector,
 				form.FolderID,
 			)
 			items := worker.ConvertItems(result.Feed.Items, *feed)
@@ -310,6 +318,20 @@ func (s *Server) handleFeed(c *router.Context) {
 		if link, ok := body["feed_link"]; ok {
 			if reflect.TypeOf(link).Kind() == reflect.String {
 				s.db.UpdateFeedLink(id, link.(string))
+			}
+		}
+		if selector, ok := body["content_selector"]; ok {
+			if selector == nil {
+				s.db.UpdateFeedContentSelector(id, "")
+			} else if reflect.TypeOf(selector).Kind() == reflect.String {
+				selector := strings.TrimSpace(selector.(string))
+				if selector != "" {
+					if _, err := htmlutil.CompileSelector(selector); err != nil {
+						c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
+						return
+					}
+				}
+				s.db.UpdateFeedContentSelector(id, selector)
 			}
 		}
 		c.Out.WriteHeader(http.StatusOK)
@@ -516,6 +538,12 @@ func (s *Server) handleOPMLExport(c *router.Context) {
 
 func (s *Server) handlePageCrawl(c *router.Context) {
 	url := c.Req.URL.Query().Get("url")
+	var contentSelector string
+	if feedId, err := c.QueryInt64("feed_id"); err == nil && s.db != nil {
+		if feed := s.db.GetFeed(feedId); feed != nil {
+			contentSelector = strings.TrimSpace(feed.ContentSelector)
+		}
+	}
 
 	if newUrl := silo.RedirectURL(url); newUrl != "" {
 		url = newUrl
@@ -536,6 +564,18 @@ func (s *Server) handlePageCrawl(c *router.Context) {
 		log.Print(err)
 		c.Out.WriteHeader(http.StatusBadRequest)
 		return
+	}
+	if contentSelector != "" {
+		content, found, err := htmlutil.InnerHTMLBySelector(body, contentSelector)
+		if err != nil {
+			log.Printf("failed to extract content with selector %q for %s: %s", contentSelector, url, err)
+		} else if found {
+			content = sanitizer.Sanitize(url, content)
+			c.JSON(http.StatusOK, map[string]string{
+				"content": content,
+			})
+			return
+		}
 	}
 	content, err := readability.ExtractContent(strings.NewReader(body))
 	if err != nil {

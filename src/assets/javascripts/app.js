@@ -793,6 +793,18 @@ var vm = new Vue({
         })
       })
     },
+    updateFeedContentSelector: function(feed) {
+      this.promptDialog('请输入正文选择器', feed.content_selector || '').then(function(selector) {
+        if (selector === null) return
+        api.feeds.update(feed.id, {content_selector: selector}).then(function(res) {
+          if (res.ok) {
+            feed.content_selector = selector.trim()
+          } else {
+            vm.alertDialog('正文选择器格式不支持。')
+          }
+        })
+      })
+    },
     deleteFeed: function(feed) {
       this.confirmDialog('确定删除订阅源「' + feed.title + '」吗？', '删除订阅源').then(function(confirmed) {
         if (!confirmed) return
@@ -810,6 +822,7 @@ var vm = new Vue({
       var data = {
         url: form.querySelector('input[name=url]').value,
         folder_id: parseInt(form.querySelector('select[name=folder_id]').value) || null,
+        content_selector: form.querySelector('input[name=content_selector]').value,
       }
       if (this.feedNewChoiceSelected) {
         data.url = this.feedNewChoiceSelected
@@ -826,6 +839,8 @@ var vm = new Vue({
           vm.feedNewChoiceSelected = result.choice[0].url
         } else if (result.status === 'error') {
           vm.alertDialog(result.message || '无法添加订阅源。')
+        } else if (result.error) {
+          vm.alertDialog(result.error)
         } else {
           vm.alertDialog('未在给定 URL 找到订阅源。')
         }
@@ -881,7 +896,7 @@ var vm = new Vue({
       if (!item) return
       if (item.link) {
         this.loading.readability = true
-        api.crawl(item.link).then(function(data) {
+        api.crawl(item.link, item.feed_id).then(function(data) {
           vm.itemSelectedReadability = data && data.content
           vm.loading.readability = false
         })
