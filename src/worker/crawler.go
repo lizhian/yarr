@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"net/url"
@@ -145,7 +146,28 @@ func findFavicon(siteUrl, feedUrl string) (*[]byte, error) {
 }
 
 func (w *Worker) resolveLink(link string) (string, error) {
-	return rsshub.Resolve(link, w.db.GetSettingsValueString("rsshub_base_url"))
+	links, err := w.resolveLinks(link)
+	if err != nil {
+		return "", err
+	}
+	return links[0], nil
+}
+
+func (w *Worker) DiscoverFeed(link string) (*DiscoverResult, error) {
+	requestLinks, err := w.resolveLinks(link)
+	if err != nil {
+		return nil, err
+	}
+	var lastErr error
+	for _, requestLink := range requestLinks {
+		result, err := DiscoverFeedWithLink(requestLink, link)
+		if err == nil {
+			return result, nil
+		}
+		logCandidateFailure(link, requestLink, err)
+		lastErr = err
+	}
+	return nil, lastErr
 }
 
 func ConvertItems(items []parser.Item, feed storage.Feed) []storage.Item {
@@ -171,6 +193,14 @@ func ConvertItems(items []parser.Item, feed storage.Feed) []storage.Item {
 }
 
 func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
+	requestLinks, err := rsshub.ResolveWithBaseList(f.FeedLink, db.GetSettingsValueString("rsshub_base_url"), RSSHUB_MAX_ATTEMPTS)
+	if err != nil {
+		return nil, err
+	}
+	return listItemsFromLinks(f, requestLinks, db)
+}
+
+func listItemsFromLinks(f storage.Feed, requestLinks []string, db *storage.Storage) ([]storage.Item, error) {
 	lmod := ""
 	etag := ""
 	if state := db.GetHTTPState(f.Id); state != nil {
@@ -178,11 +208,19 @@ func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
 		etag = state.Etag
 	}
 
-	requestLink, err := rsshub.Resolve(f.FeedLink, db.GetSettingsValueString("rsshub_base_url"))
-	if err != nil {
-		return nil, err
+	var lastErr error
+	for _, requestLink := range requestLinks {
+		items, err := listItemsFromLink(f, requestLink, lmod, etag, db)
+		if err == nil {
+			return items, nil
+		}
+		logCandidateFailure(f.FeedLink, requestLink, err)
+		lastErr = err
 	}
+	return nil, lastErr
+}
 
+func listItemsFromLink(f storage.Feed, requestLink, lmod, etag string, db *storage.Storage) ([]storage.Item, error) {
 	res, err := client.getConditional(requestLink, lmod, etag)
 	if err != nil {
 		return nil, err
@@ -210,6 +248,12 @@ func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
 		db.SetHTTPState(f.Id, lmod, etag)
 	}
 	return ConvertItems(feed.Items, f), nil
+}
+
+func logCandidateFailure(link, requestLink string, err error) {
+	if link != requestLink {
+		log.Printf("Failed RSSHub candidate %s for %s: %s", requestLink, link, err)
+	}
 }
 
 func getCharset(res *http.Response) string {

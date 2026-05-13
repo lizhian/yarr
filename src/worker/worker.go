@@ -12,16 +12,24 @@ import (
 const NUM_WORKERS = 4
 
 type Worker struct {
-	db      *storage.Storage
-	pending *int32
-	refresh *time.Ticker
-	reflock sync.Mutex
-	stopper chan bool
+	db                 *storage.Storage
+	pending            *int32
+	refresh            *time.Ticker
+	reflock            sync.Mutex
+	stopper            chan bool
+	rsshubAvailability map[string]rsshubAvailability
+	rsshubMu           sync.RWMutex
+	rsshubRefresh      *time.Ticker
+	rsshubStopper      chan bool
 }
 
 func NewWorker(db *storage.Storage) *Worker {
 	pending := int32(0)
-	return &Worker{db: db, pending: &pending}
+	return &Worker{
+		db:                 db,
+		pending:            &pending,
+		rsshubAvailability: make(map[string]rsshubAvailability),
+	}
 }
 
 func (w *Worker) FeedsPending() int32 {
@@ -69,6 +77,7 @@ func (w *Worker) SetRefreshRate(minute int64) {
 		w.stopper <- true
 		w.stopper = nil
 	}
+	w.setRSSHubRefreshRate(minute)
 
 	if minute == 0 {
 		return
@@ -90,6 +99,7 @@ func (w *Worker) SetRefreshRate(minute int64) {
 			}
 		}
 	}(w.refresh.C, w.stopper, minute)
+
 }
 
 func (w *Worker) RefreshFeeds() {
@@ -142,7 +152,13 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 
 func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- []storage.Item) {
 	for feed := range srcqueue {
-		items, err := listItems(feed, w.db)
+		requestLinks, err := w.resolveLinks(feed.FeedLink)
+		if err != nil {
+			w.db.SetFeedError(feed.Id, err)
+			dstqueue <- nil
+			continue
+		}
+		items, err := listItemsFromLinks(feed, requestLinks, w.db)
 		if err != nil {
 			w.db.SetFeedError(feed.Id, err)
 		}

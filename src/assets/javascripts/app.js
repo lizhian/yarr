@@ -933,7 +933,7 @@ var vm = new Vue({
       this.settings = 'folder'
     },
     updateRSSHubBaseUrl: function(event) {
-      var value = event.target.querySelector('input[name=rsshub_base_url]').value
+      var value = event.target.querySelector('[name=rsshub_base_url]').value
       api.settings.update({rsshub_base_url: value}).then(function(res) {
         if (res.ok) {
           api.settings.get().then(function(settings) {
@@ -941,7 +941,7 @@ var vm = new Vue({
             vm.settings = ''
           })
         } else {
-          vm.alertDialog('RSSHub 基础链接必须是 HTTP(S) URL。')
+          vm.alertDialog('RSSHub 基础链接列表必须每行都是 HTTP(S) URL；以 # 开头的停用地址也必须是合法 URL。')
         }
       })
     },

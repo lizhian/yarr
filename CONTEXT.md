@@ -12,6 +12,22 @@ _Avoid_: Feed, 源
 The HTTP(S) base URL of the RSSHub provider used to resolve RSSHub subscription links.
 _Avoid_: RSSHub host, RSSHub provider URL
 
+**RSSHub 基础链接列表**:
+An ordered set of RSSHub base links used as candidates for resolving RSSHub subscription links.
+_Avoid_: RSSHub 地址池, RSSHub hosts
+
+**RSSHub 可用性**:
+Whether an RSSHub base link is reachable at its root URL with an HTTP success or redirect response.
+_Avoid_: RSSHub health, RSSHub status
+
+**未知 RSSHub 可用性**:
+The RSSHub availability state before an RSSHub base link has been checked.
+_Avoid_: Pending RSSHub status
+
+**停用的 RSSHub 基础链接**:
+An RSSHub base link kept in the RSSHub base link list but excluded from availability checks and article fetching.
+_Avoid_: Disabled RSSHub host, 注释地址
+
 **RSSHub 订阅链接**:
 A portable subscription source link beginning with `rsshub://` whose path is resolved against the RSSHub base URL.
 _Avoid_: RSSHub URL, RSSHub shortcut
@@ -125,9 +141,37 @@ _Avoid_: Browser back, 返回上一页
 - An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can be added or refreshed.
 - **RSSHub 快速添加** creates an **RSSHub 订阅链接** and then follows the normal **订阅源** creation flow.
 - **RSSHub 快速添加** supports Bilibili user videos by UID and Telegram channels by 频道 ID.
+- An **RSSHub 基础链接列表** contains one or more **RSSHub 基础链接**.
+- Users edit the **RSSHub 基础链接列表** as one **RSSHub 基础链接** per line.
+- A previous single **RSSHub 基础链接** configuration is treated as a one-line **RSSHub 基础链接列表**.
+- Blank lines and duplicate **RSSHub 基础链接** are ignored when saving the **RSSHub 基础链接列表**.
+- Duplicate **RSSHub 基础链接** entries are resolved by keeping the first normalized occurrence.
+- A line beginning with `#` in the **RSSHub 基础链接列表** is a **停用的 RSSHub 基础链接**.
+- A **停用的 RSSHub 基础链接** must still be a valid **RSSHub 基础链接** after removing the `#` prefix.
+- A **停用的 RSSHub 基础链接** is not used for **RSSHub 可用性** checks, adding **RSSHub 订阅链接**, or fetching **文章**.
+- A **RSSHub 基础链接列表** with no enabled **RSSHub 基础链接** is treated as unconfigured.
+- An **RSSHub 订阅链接** resolves through the global **RSSHub 基础链接列表**, not a per-**订阅源** RSSHub setting.
+- **RSSHub 可用性** is checked against each **RSSHub 基础链接** root URL; HTTP 2xx and 3xx responses mean available.
+- **RSSHub 可用性** can be unknown, available, or unavailable.
+- **RSSHub 可用性** is runtime state and does not need to survive application restarts.
+- **RSSHub 可用性** is not shown in the settings interface.
+- Changing the **RSSHub 基础链接列表** clears the previous **RSSHub 可用性** snapshot and starts a new availability check.
+- Fetching **文章** for an **RSSHub 订阅链接** tries available **RSSHub 基础链接** in **RSSHub 基础链接列表** order.
+- If no **RSSHub 基础链接** is known to be available, fetching **文章** falls back to enabled **RSSHub 基础链接** in **RSSHub 基础链接列表** order, including links with **未知 RSSHub 可用性**.
+- Fetching **文章** for one **RSSHub 订阅链接** tries at most five **RSSHub 基础链接**.
+- Failed **文章** fetching does not change **RSSHub 可用性**; only the availability check updates it.
+- Adding an **RSSHub 订阅链接** uses the same **RSSHub 基础链接列表** ordering and five-link attempt limit as fetching **文章**.
+- Adding an **RSSHub 订阅链接** stores the portable **RSSHub 订阅链接**, not the resolved HTTP(S) URL that succeeded.
+- If all attempted **RSSHub 基础链接** fail, users see the last request error while logs keep the candidate-level failures.
 - OPML import and export preserve **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
 - **自动刷新** can be disabled or set to 1m, 5m, 10m, 30m, or 1h from settings.
+- RSSHub availability checks run on the same interval as **自动刷新**.
+- RSSHub availability checks cover all enabled **RSSHub 基础链接**.
+- Disabling **自动刷新** also disables RSSHub availability checks.
+- RSSHub availability checks and **自动刷新** are separate scheduled tasks.
+- RSSHub availability checks run once immediately when the scheduled task starts, then on the **自动刷新** interval.
+- **自动刷新** reads the current **RSSHub 可用性** snapshot and does not wait for an availability check to finish.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **收藏** independently of whether it is read.
 - **全部** includes **已读**, **未读**, and **收藏** articles.
@@ -179,6 +223,9 @@ _Avoid_: Browser back, 返回上一页
 - `rsshub://...` is an **RSSHub 订阅链接** stored in portable form, not a one-time import shortcut expanded to HTTP(S) at creation time.
 - "快速添加 RSSHub" means **RSSHub 快速添加**, not a separate subscription source type or a bypass of the normal creation flow.
 - **RSSHub 基础链接** means an HTTP(S) base URL normalized without a trailing slash.
+- "RSSHub 地址支持多个地址" means a global **RSSHub 基础链接列表**, not a per-**订阅源** address list.
+- A `#` prefix in **RSSHub 基础链接列表** means a **停用的 RSSHub 基础链接**, not a free-form comment.
+- Leading and trailing spaces around lines in **RSSHub 基础链接列表** are ignored.
 - "WAP 页面" means **移动端视图**: the narrow-screen responsive layout, not a separate page or server route.
 - "返回" means **层级返回** inside yarr before browser-level history navigation.
 - "Starred" is translated as **收藏** in user-facing UI, not "星标".
