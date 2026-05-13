@@ -126,11 +126,27 @@
         <div id="col-item-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: itemListWidth+'px'}">
             <drag :width="itemListWidth" @resize="resizeItemList"></drag>
             <div class="px-2 toolbar d-flex align-items-center">
-                <button class="toolbar-item mr-2 d-block d-md-none"
+                <button class="toolbar-item toolbar-item-icon-only mr-2 d-block d-md-none"
                         @click="showFeedList()"
+                        aria-label="显示订阅源"
                         title="显示订阅源">
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
-                    <span class="toolbar-label">返回</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only mr-1 d-flex d-md-none"
+                        :class="{active: filterSelected == ''}"
+                        :aria-pressed="filterSelected == ''"
+                        title="全部"
+                        @click="filterSelected = ''">
+                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
+                    <span class="toolbar-label">全部</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only mr-2 d-flex d-md-none"
+                        :class="{active: filterSelected == 'unread'}"
+                        :aria-pressed="filterSelected == 'unread'"
+                        title="未读"
+                        @click="filterSelected = 'unread'">
+                    <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
+                    <span class="toolbar-label">未读</span>
                 </button>
                 <div class="input-icon flex-grow-1">
                     <span class="icon">{% inline "search.svg" %}</span>

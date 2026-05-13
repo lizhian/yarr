@@ -198,6 +198,14 @@ _Avoid_: Browser back, 返回上一页
 - **正文模式** uses the selected **文章**'s **订阅源** **正文选择器** when one is configured.
 - OPML import and export do not preserve **正文选择器**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
+- In **移动端视图**, the **文章** list toolbar exposes a quick switch between **全部** and **未读** without returning to the **订阅源** list.
+- The **移动端视图** quick switch includes **全部** and **未读**, not **收藏**.
+- The **移动端视图** quick switch uses separate **全部** and **未读** actions, not one toggle action.
+- The **移动端视图** quick switch uses icon-only actions.
+- In the **文章** list toolbar, the **移动端视图** quick switch appears after **层级返回** and before search.
+- The **移动端视图** quick switch changes only the article list filter and keeps the current **订阅源** or **文件夹** selection.
+- The **移动端视图** quick switch keeps the current article list search text.
+- When the current article list filter is **收藏**, the **移动端视图** quick switch shows neither **全部** nor **未读** as selected.
 - **层级返回** applies only in **移动端视图**.
 - **层级返回** applies whether the current layer was reached during the current browser session or restored from saved reader settings.
 - **层级返回** treats selected article details as a single layer; moving between articles does not create per-article Back steps.
