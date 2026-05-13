@@ -396,11 +396,11 @@ select.form-control:not([multiple]):not([size]) {
 
 .toolbar-display-icon .toolbar-label,
 .toolbar-display-text .toolbar-icon,
-.toolbar-narrow .toolbar-label {
+.toolbar-narrow #col-item .toolbar-label {
   display: none;
 }
 
-.toolbar-narrow .toolbar-icon {
+.toolbar-narrow #col-item .toolbar-icon {
   display: inline-block;
 }
 
@@ -967,10 +967,10 @@ a,
   .toolbar-search {
     padding: .5rem;
   }
-  .toolbar-label {
+  #col-item .toolbar-label {
     display: none;
   }
-  .toolbar-display-text .toolbar-icon {
+  .toolbar-display-text #col-item .toolbar-icon {
     display: inline-block;
   }
 }
