@@ -113,6 +113,7 @@ _Avoid_: Browser back, 返回上一页
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
 - **文章详情** presents one selected **文章**.
+- **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
 - **文章详情** centers article images.
 - An **RSSHub 订阅链接** is stored as the **订阅源** link and resolves through the current **RSSHub 基础链接** when yarr fetches it.

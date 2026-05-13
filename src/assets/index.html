@@ -241,7 +241,11 @@
                  class="content px-4 pt-3 pb-5 border-top overflow-auto scroll-touch"
                  :style="{'font-size': theme.size + 'rem'}">
                 <div class="content-wrapper">
-                    <h1><b>{{ itemSelectedDetails.title || '无标题' }}</b></h1>
+                    <h1>
+                        <a class="content-title-link" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
+                            <b>{{ itemSelectedDetails.title || '无标题' }}</b>
+                        </a>
+                    </h1>
                     <div class="text-muted">
                         <div>
                             <span class="cursor-pointer" @click="feedSelected = 'feed:'+(feedsById[itemSelectedDetails.feed_id] || {}).id">
@@ -252,6 +256,11 @@
                     </div>
                     <hr>
                     <div v-html="itemSelectedContent"></div>
+                    <div class="content-open-original">
+                        <a class="btn btn-outline" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
+                            打开原文
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
