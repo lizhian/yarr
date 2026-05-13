@@ -28,6 +28,10 @@ _Avoid_: Folder, 分类
 A single item published by a subscription source.
 _Avoid_: Item, 条目
 
+**文章详情**:
+The reading view for one selected article.
+_Avoid_: 详情页, Item detail
+
 **未读**:
 An article state meaning the user has not marked or consumed the article as read.
 _Avoid_: Unread
@@ -88,6 +92,9 @@ _Avoid_: Browser back, 返回上一页
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- **文章详情** presents one selected **文章**.
+- **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
+- **文章详情** centers article images.
 - An **RSSHub 订阅链接** is stored as the **订阅源** link and resolves through the current **RSSHub 基础链接** when yarr fetches it.
 - Changing the **RSSHub 基础链接** changes where all saved **RSSHub 订阅链接** resolve without rewriting those links.
 - An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can be added or refreshed.

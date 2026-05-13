@@ -465,9 +465,16 @@ select.form-control:not([multiple]):not([size]) {
   margin: 0 auto;
 }
 
-.content img, .content video {
+.content img,
+.content video {
   max-width: 100%;
   height: auto;
+}
+
+.content img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .content iframe {
@@ -535,6 +542,11 @@ select.form-control:not([multiple]):not([size]) {
 .content p {
   margin-top: 1rem;
   margin-bottom: 1rem;
+  text-indent: 2em;
+}
+
+.content p:has(img, picture, video, audio, iframe, figure, table, ul, ol, pre, blockquote, object, embed, svg) {
+  text-indent: 0;
 }
 
 /* theme: light */
