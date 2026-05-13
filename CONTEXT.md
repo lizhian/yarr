@@ -16,6 +16,10 @@ _Avoid_: RSSHub host, RSSHub provider URL
 A portable subscription source link beginning with `rsshub://` whose path is resolved against the RSSHub base URL.
 _Avoid_: RSSHub URL, RSSHub shortcut
 
+**RSSHub 快速添加**:
+A settings action that creates an RSSHub subscription link from a supported service template and a user-entered identifier.
+_Avoid_: RSSHub preset, RSSHub shortcut
+
 **自动刷新**:
 A setting that periodically checks subscription sources for new articles without user action.
 _Avoid_: Auto-refresh, 自动更新
@@ -118,6 +122,8 @@ _Avoid_: Browser back, 返回上一页
 - An **RSSHub 订阅链接** is stored as the **订阅源** link and resolves through the current **RSSHub 基础链接** when yarr fetches it.
 - Changing the **RSSHub 基础链接** changes where all saved **RSSHub 订阅链接** resolve without rewriting those links.
 - An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can be added or refreshed.
+- **RSSHub 快速添加** creates an **RSSHub 订阅链接** and then follows the normal **订阅源** creation flow.
+- **RSSHub 快速添加** supports Bilibili user videos by UID and Telegram channels by 频道 ID.
 - OPML import and export preserve **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
 - **自动刷新** can be disabled or set to 1m, 5m, 10m, 30m, or 1h from settings.
@@ -170,6 +176,7 @@ _Avoid_: Browser back, 返回上一页
 - "Feed" is translated as **订阅源** in user-facing UI, not "源".
 - "Item" and "Article" are translated as **文章** in user-facing UI, not "条目".
 - `rsshub://...` is an **RSSHub 订阅链接** stored in portable form, not a one-time import shortcut expanded to HTTP(S) at creation time.
+- "快速添加 RSSHub" means **RSSHub 快速添加**, not a separate subscription source type or a bypass of the normal creation flow.
 - **RSSHub 基础链接** means an HTTP(S) base URL normalized without a trailing slash.
 - "WAP 页面" means **移动端视图**: the narrow-screen responsive layout, not a separate page or server route.
 - "返回" means **层级返回** inside yarr before browser-level history navigation.

@@ -814,6 +814,9 @@ var vm = new Vue({
       if (this.feedNewChoiceSelected) {
         data.url = this.feedNewChoiceSelected
       }
+      this.createFeedFromData(data, true)
+    },
+    createFeedFromData: function(data, allowChoice) {
       this.loading.newfeed = true
       api.feeds.create(data).then(function(result) {
         if (result.status === 'success') {
@@ -821,7 +824,7 @@ var vm = new Vue({
           vm.refreshStats()
           vm.settings = ''
           vm.feedSelected = 'feed:' + result.feed.id
-        } else if (result.status === 'multiple') {
+        } else if (allowChoice && result.status === 'multiple') {
           vm.feedNewChoice = result.choice
           vm.feedNewChoiceSelected = result.choice[0].url
         } else if (result.status === 'error') {
@@ -830,6 +833,30 @@ var vm = new Vue({
           vm.alertDialog('未在给定 URL 找到订阅源。')
         }
         vm.loading.newfeed = false
+      })
+    },
+    createRSSHubFeed: function(kind) {
+      var config = {
+        bilibili: {
+          prompt: '请输入 Bilibili UID',
+          link: function(value) { return 'rsshub://bilibili/user/video/' + value },
+        },
+        telegram: {
+          prompt: '请输入 Telegram 频道 ID',
+          link: function(value) { return 'rsshub://telegram/channel/' + value },
+        },
+      }[kind]
+      if (!config) return
+
+      this.promptDialog(config.prompt).then(function(value) {
+        value = (value || '').trim()
+        if (!value) return
+
+        var folderId = vm.current.feed.folder_id || vm.current.folder.id || null
+        vm.createFeedFromData({
+          url: config.link(value),
+          folder_id: folderId,
+        }, false)
       })
     },
     toggleItemStatus: function(item, targetstatus, fallbackstatus) {
