@@ -141,7 +141,7 @@ Vue.component('dropdown', {
 Vue.component('modal', {
   props: ['open'],
   template: `
-    <div class="modal custom-modal" tabindex="-1" v-if="$props.open">
+    <div class="modal custom-modal" tabindex="-1" role="dialog" aria-modal="true" v-if="$props.open">
       <div class="modal-dialog">
         <div class="modal-content" ref="content">
           <div class="modal-body">
@@ -170,6 +170,7 @@ Vue.component('modal', {
         this.opening = false
         return
       }
+      if (e.target.closest('.custom-modal') !== this.$el) return
       if (e.target.closest('.modal-content') == null) this.$emit('hide')
     },
   },
@@ -256,6 +257,20 @@ var vm = new Vue({
       'filteredTotalStats': null,
 
       'settings': '',
+      'settingsFeed': null,
+      'settingsFolder': null,
+      'dialog': {
+        open: false,
+        type: 'alert',
+        title: '',
+        message: '',
+        inputValue: '',
+        inputType: 'text',
+        confirmText: '确定',
+        cancelText: '取消',
+        danger: false,
+        resolve: null,
+      },
       'loading': {
         'feeds': 0,
         'newfeed': false,
@@ -288,13 +303,10 @@ var vm = new Vue({
       'refreshRateOptions': [
         { title: "0", value: 0 },
         { title: "1m", value: 1 },
+        { title: "5m", value: 5 },
         { title: "10m", value: 10 },
         { title: "30m", value: 30 },
         { title: "1h", value: 60 },
-        { title: "2h", value: 120 },
-        { title: "4h", value: 240 },
-        { title: "12h", value: 720 },
-        { title: "24h", value: 1440 },
       ],
     }
   },
@@ -341,10 +353,6 @@ var vm = new Vue({
         return this.itemSelectedReadability
 
       return this.itemSelectedDetails.content || ''
-    },
-    refreshRateTitle: function () {
-      const entry = this.refreshRateOptions.find(o => o.value === this.refreshRate)
-      return entry ? entry.title : '0'
     },
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
@@ -719,73 +727,83 @@ var vm = new Vue({
       })
     },
     moveFeedToNewFolder: function(feed) {
-      var title = prompt('请输入文件夹名称：')
-      if (!title) return
-      api.folders.create({'title': title}).then(function(folder) {
-        api.feeds.update(feed.id, {folder_id: folder.id}).then(function() {
-          vm.refreshFeeds().then(function() {
-            vm.refreshStats()
+      this.promptDialog('请输入文件夹名称：').then(function(title) {
+        if (!title) return
+        api.folders.create({'title': title}).then(function(folder) {
+          api.feeds.update(feed.id, {folder_id: folder.id}).then(function() {
+            feed.folder_id = folder.id
+            vm.settings = ''
+            vm.refreshFeeds().then(function() {
+              vm.refreshStats()
+            })
           })
         })
       })
     },
     createNewFeedFolder: function() {
-      var title = prompt('请输入文件夹名称：')
-      if (!title) return
-      api.folders.create({'title': title}).then(function(result) {
-        vm.refreshFeeds().then(function() {
-          vm.$nextTick(function() {
-            if (vm.$refs.newFeedFolder) {
-              vm.$refs.newFeedFolder.value = result.id
-            }
+      this.promptDialog('请输入文件夹名称：').then(function(title) {
+        if (!title) return
+        api.folders.create({'title': title}).then(function(result) {
+          vm.refreshFeeds().then(function() {
+            vm.$nextTick(function() {
+              if (vm.$refs.newFeedFolder) {
+                vm.$refs.newFeedFolder.value = result.id
+              }
+            })
           })
         })
       })
     },
     renameFolder: function(folder) {
-      var newTitle = prompt('请输入新名称', folder.title)
-      if (newTitle) {
+      this.promptDialog('请输入新名称', folder.title).then(function(newTitle) {
+        if (!newTitle) return
         api.folders.update(folder.id, {title: newTitle}).then(function() {
           folder.title = newTitle
           this.folders.sort(function(a, b) {
             return a.title.localeCompare(b.title)
           })
         }.bind(this))
-      }
+      }.bind(this))
     },
     deleteFolder: function(folder) {
-      if (confirm('确定删除文件夹「' + folder.title + '」吗？')) {
+      this.confirmDialog('确定删除文件夹「' + folder.title + '」吗？', '删除文件夹').then(function(confirmed) {
+        if (!confirmed) return
         api.folders.delete(folder.id).then(function() {
+          vm.settings = ''
+          vm.settingsFolder = null
           vm.feedSelected = null
           vm.refreshStats()
           vm.refreshFeeds()
         })
-      }
+      })
     },
     updateFeedLink: function(feed) {
-      var newLink = prompt('请输入订阅源链接', feed.feed_link)
-      if (newLink) {
+      this.promptDialog('请输入订阅源链接', feed.feed_link).then(function(newLink) {
+        if (!newLink) return
         api.feeds.update(feed.id, {feed_link: newLink}).then(function() {
           feed.feed_link = newLink
         })
-      }
+      })
     },
     renameFeed: function(feed) {
-      var newTitle = prompt('请输入新名称', feed.title)
-      if (newTitle) {
+      this.promptDialog('请输入新名称', feed.title).then(function(newTitle) {
+        if (!newTitle) return
         api.feeds.update(feed.id, {title: newTitle}).then(function() {
           feed.title = newTitle
         })
-      }
+      })
     },
     deleteFeed: function(feed) {
-      if (confirm('确定删除订阅源「' + feed.title + '」吗？')) {
+      this.confirmDialog('确定删除订阅源「' + feed.title + '」吗？', '删除订阅源').then(function(confirmed) {
+        if (!confirmed) return
         api.feeds.delete(feed.id).then(function() {
+          vm.settings = ''
+          vm.settingsFeed = null
           vm.feedSelected = null
           vm.refreshStats()
           vm.refreshFeeds()
         })
-      }
+      })
     },
     createFeed: function(event) {
       var form = event.target
@@ -807,9 +825,9 @@ var vm = new Vue({
           vm.feedNewChoice = result.choice
           vm.feedNewChoiceSelected = result.choice[0].url
         } else if (result.status === 'error') {
-          alert(result.message || '无法添加订阅源。')
+          vm.alertDialog(result.message || '无法添加订阅源。')
         } else {
-          alert('未在给定 URL 找到订阅源。')
+          vm.alertDialog('未在给定 URL 找到订阅源。')
         }
         vm.loading.newfeed = false
       })
@@ -842,7 +860,7 @@ var vm = new Vue({
     importOPML: function(event) {
       var input = event.target
       var form = document.querySelector('#opml-import-form')
-      this.$refs.menuDropdown.hide()
+      this.settings = ''
       api.upload_opml(form).then(function() {
         input.value = ''
         vm.refreshFeeds()
@@ -877,6 +895,16 @@ var vm = new Vue({
         vm.feedNewChoiceSelected = ''
       }
     },
+    showFeedSettings: function(feed) {
+      this.settingsFeed = feed
+      this.settingsFolder = null
+      this.settings = 'feed'
+    },
+    showFolderSettings: function(folder) {
+      this.settingsFolder = folder
+      this.settingsFeed = null
+      this.settings = 'folder'
+    },
     updateRSSHubBaseUrl: function(event) {
       var value = event.target.querySelector('input[name=rsshub_base_url]').value
       api.settings.update({rsshub_base_url: value}).then(function(res) {
@@ -886,8 +914,70 @@ var vm = new Vue({
             vm.settings = ''
           })
         } else {
-          alert('RSSHub 基础链接必须是 HTTP(S) URL。')
+          vm.alertDialog('RSSHub 基础链接必须是 HTTP(S) URL。')
         }
+      })
+    },
+    openDialog: function(options) {
+      return new Promise(function(resolve) {
+        this.dialog = {
+          open: true,
+          type: options.type || 'alert',
+          title: options.title || '提示',
+          message: options.message || '',
+          inputValue: options.inputValue || '',
+          inputType: options.inputType || 'text',
+          confirmText: options.confirmText || '确定',
+          cancelText: options.cancelText || '取消',
+          danger: !!options.danger,
+          resolve: resolve,
+        }
+      }.bind(this))
+    },
+    resolveDialog: function(value) {
+      if (!this.dialog.open) return
+      var resolve = this.dialog.resolve
+      this.dialog.open = false
+      this.dialog.resolve = null
+      if (resolve) resolve(value)
+    },
+    submitDialog: function() {
+      if (this.dialog.type === 'prompt') {
+        this.resolveDialog(this.dialog.inputValue)
+      } else {
+        this.resolveDialog(true)
+      }
+    },
+    cancelDialog: function() {
+      if (this.dialog.type === 'confirm') return this.resolveDialog(false)
+      if (this.dialog.type === 'prompt') return this.resolveDialog(null)
+      this.resolveDialog(true)
+    },
+    alertDialog: function(message, title) {
+      return this.openDialog({
+        type: 'alert',
+        title: title || '提示',
+        message: message,
+      })
+    },
+    confirmDialog: function(message, title) {
+      return this.openDialog({
+        type: 'confirm',
+        title: title || '确认',
+        message: message,
+        confirmText: '确定',
+        cancelText: '取消',
+        danger: true,
+      })
+    },
+    promptDialog: function(message, value) {
+      return this.openDialog({
+        type: 'prompt',
+        title: '输入',
+        message: message,
+        inputValue: value || '',
+        confirmText: '确定',
+        cancelText: '取消',
       })
     },
     feedLinkHref: function(link) {
@@ -1005,12 +1095,6 @@ var vm = new Vue({
 
         if (target && scroll) scrollto(target, scroll)
       })
-    },
-    changeRefreshRate: function(offset) {
-      const curIdx = this.refreshRateOptions.findIndex(o => o.value === this.refreshRate)
-      if (curIdx <= 0 && offset < 0) return
-      if (curIdx >= (this.refreshRateOptions.length - 1) && offset > 0) return
-      this.refreshRate = this.refreshRateOptions[curIdx + offset].value
     },
     mustHideFolder: function (folder) {
       return this.filterSelected

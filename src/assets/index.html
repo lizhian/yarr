@@ -55,114 +55,11 @@
                     <span class="toolbar-label">收藏</span>
                 </button>
                 <div class="flex-grow-1"></div>
-                <dropdown class="settings-dropdown" toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2" ref="menuDropdown" drop="right" title="设置">
-                    <template v-slot:button>
-                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
-                    </template>
-
-                    <button class="dropdown-item" @click="showSettings('create')">
-                        <span class="icon mr-1">{% inline "plus.svg" %}</span>
-                        新订阅源
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item" @click="fetchAllFeeds()">
-                        <span class="icon mr-1">{% inline "rotate-cw.svg" %}</span>
-                        刷新订阅源
-                    </button>
-
-                    <div class="dropdown-divider"></div>
-
-                    <header class="dropdown-header" role="heading" aria-level="2">主题</header>
-                    <div class="row text-center m-0">
-                        <button class="btn btn-link col-4 px-0 rounded-0"
-                                :class="'theme-'+t"
-                                :aria-label="themeTitle(t)"
-                                :aria-pressed="theme.name == t"
-                                @click.stop="theme.name = t"
-                                v-for="t in ['light', 'sepia', 'night']">
-                            <span class="icon" v-if="theme.name == t">{% inline "check.svg" %}</span>
-                        </button>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <header class="dropdown-header" role="heading" aria-level="2">字体显示</header>
-                    <button class="dropdown-item d-flex align-items-center justify-content-between"
-                            :aria-pressed="theme.font == font.name"
-                            :class="{active: theme.font == font.name}"
-                            @click.stop="theme.font = font.name"
-                            v-for="font in fontOptions">
-                        <span>{{ font.title }}</span>
-                        <span class="icon ml-2" v-if="theme.font == font.name">{% inline "check.svg" %}</span>
-                    </button>
-
-                    <div class="dropdown-divider"></div>
-
-                    <header class="dropdown-header" role="heading" aria-level="2">自动刷新</header>
-                    <div class="row text-center m-0">
-                        <button class="dropdown-item col-4 px-0"
-                                @click.stop="changeRefreshRate(-1)"
-                                :disabled="!refreshRate">
-                            <span class="icon">
-                                {% inline "chevron-down.svg" %}
-                            </span>
-                        </button>
-                        <div class="col-4 d-flex align-items-center justify-content-center">{{ refreshRateTitle }}</div>
-                        <button class="dropdown-item col-4 px-0"
-                                @click.stop="changeRefreshRate(1)" :disabled="refreshRate === refreshRateOptions.at(-1).value">
-                            <span class="icon">
-                                {% inline "chevron-up.svg" %}
-                            </span>
-                        </button>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <header class="dropdown-header" role="heading" aria-level="2">工具栏显示</header>
-                    <div class="d-flex text-center">
-                        <button class="dropdown-item px-0" :aria-pressed="toolbarDisplay == 'text'" :class="{active: toolbarDisplay == 'text'}" @click.stop="toolbarDisplay='text'">仅文字</button>
-                        <button class="dropdown-item px-0" :aria-pressed="toolbarDisplay == 'icon'" :class="{active: toolbarDisplay == 'icon'}" @click.stop="toolbarDisplay='icon'">仅图标</button>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <header class="dropdown-header" role="heading" aria-level="2">优先显示</header>
-                    <div class="d-flex text-center">
-                        <button class="dropdown-item px-0" :aria-pressed="itemSortNewestFirst"  :class="{active: itemSortNewestFirst}"  @click.stop="itemSortNewestFirst=true">最新</button>
-                        <button class="dropdown-item px-0" :aria-pressed="!itemSortNewestFirst" :class="{active: !itemSortNewestFirst}" @click.stop="itemSortNewestFirst=false">最早</button>
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <header class="dropdown-header" role="heading" aria-level="2">订阅</header>
-                    <form id="opml-import-form" enctype="multipart/form-data" tabindex="-1">
-                        <input type="file"
-                               id="opml-import"
-                               @change="importOPML"
-                               name="opml"
-                               style="opacity: 0; width: 1px; height: 0; position: absolute; z-index: -1;">
-                        <label class="dropdown-item mb-0 cursor-pointer" for="opml-import" @click.stop="">
-                            <span class="icon mr-1">{% inline "download.svg" %}</span>
-                            导入
-                        </label>
-                    </form>
-                    <a class="dropdown-item" href="./opml/export">
-                        <span class="icon mr-1">{% inline "upload.svg" %}</span>
-                        导出
-                    </a>
-                    <button class="dropdown-item" @click="showSettings('rsshub')">
-                        <span class="icon mr-1">{% inline "rss.svg" %}</span>
-                        RSSHub
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item" @click="showSettings('shortcuts')">
-                        <span class="icon mr-1">{% inline "help-circle.svg" %}</span>
-                        快捷键
-                    </button>
-                    <div class="dropdown-divider" v-if="authenticated"></div>
-                    <button class="dropdown-item" v-if="authenticated" @click="logout()">
-                        <span class="icon mr-1">{% inline "log-out.svg" %}</span>
-                        退出登录
-                    </button>
-                </dropdown>
+                <button class="btn btn-link toolbar-item toolbar-item-icon-only px-2"
+                        title="设置"
+                        @click="showSettings('menu')">
+                    <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
+                </button>
             </div>
             <div id="feed-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1">
                 <label class="selectgroup">
@@ -188,6 +85,11 @@
                             </span>
                             <span class="flex-fill text-left text-truncate">{{ folder.title }}</span>
                             <span class="counter text-right">{{ filteredFolderStats[folder.id] || '' }}</span>
+                            <button class="selectgroup-action ml-1"
+                                    title="文件夹设置"
+                                    @click.prevent.stop="showFolderSettings(folder)">
+                                <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                            </button>
                         </div>
                     </label>
                     <div v-show="!folder.id || folder.is_expanded" class="mt-1" :class="{'pl-3': folder.id}">
@@ -205,6 +107,11 @@
                                       v-if="!filterSelected && feed_errors[feed.id]">
                                     {% inline "alert-circle.svg" %}
                                 </span>
+                                <button class="selectgroup-action ml-1"
+                                        title="订阅源设置"
+                                        @click.prevent.stop="showFeedSettings(feed)">
+                                    <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                                </button>
                             </div>
                         </label>
                     </div>
@@ -243,79 +150,6 @@
                         title="全部标为已读">
                     <span class="icon toolbar-icon">{% inline "check.svg" %}</span>
                 </button>
-
-
-                <button class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2" v-if="!current.type" disabled>
-                    <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
-                </button>
-                <dropdown class="settings-dropdown"
-                          toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2"
-                          drop="right"
-                          title="订阅源设置"
-                          v-if="current.type == 'feed'">
-                    <template v-slot:button>
-                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
-                    </template>
-                    <header class="dropdown-header" role="heading" aria-level="2">{{ current.feed.title }}</header>
-                    <a class="dropdown-item" :href="current.feed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="current.feed.link">
-                        <span class="icon mr-1">{% inline "globe.svg" %}</span>
-                        网站
-                    </a>
-                    <a class="dropdown-item" :href="feedLinkHref(current.feed.feed_link)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="feedLinkHref(current.feed.feed_link)">
-                        <span class="icon mr-1">{% inline "rss.svg" %}</span>
-                        订阅源链接
-                    </a>
-                    <div class="dropdown-divider" v-if="current.feed.link || current.feed.feed_link"></div>
-                    <button class="dropdown-item" @click="renameFeed(current.feed)">
-                        <span class="icon mr-1">{% inline "edit.svg" %}</span>
-                        重命名
-                    </button>
-                    <button class="dropdown-item" @click="updateFeedLink(current.feed)" v-if="current.feed.feed_link">
-                        <span class="icon mr-1">{% inline "edit.svg" %}</span>
-                        修改链接
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <header class="dropdown-header" role="heading" aria-level="2">移动到...</header>
-                    <button class="dropdown-item"
-                        v-if="folder.id != current.feed.folder_id"
-                        v-for="folder in folders"
-                        @click="moveFeed(current.feed, folder)">
-                        <span class="icon mr-1">{% inline "folder.svg" %}</span>
-                        {{ folder.title }}
-                    </button>
-                    <button class="dropdown-item text-muted" @click="moveFeed(current.feed, null)" v-if="current.feed.folder_id">
-                        <span class="icon mr-1">{% inline "folder-minus.svg" %}</span>
-                        ──
-                    </button>
-                    <button class="dropdown-item text-muted" @click="moveFeedToNewFolder(current.feed)">
-                        <span class="icon mr-1">{% inline "folder-plus.svg" %}</span>
-                        新文件夹
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item text-danger" @click.prevent="deleteFeed(current.feed)">
-                        <span class="icon mr-1">{% inline "trash.svg" %}</span>
-                        删除
-                    </button>
-                </dropdown>
-                <dropdown class="settings-dropdown"
-                          toggle-class="btn btn-link toolbar-item toolbar-item-icon-only px-2 ml-2"
-                          title="文件夹设置"
-                          drop="right"
-                          v-if="current.type == 'folder'">
-                    <template v-slot:button>
-                        <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
-                    </template>
-                    <header class="dropdown-header" role="heading" aria-level="2">{{ current.folder.title }}</header>
-                    <button class="dropdown-item" @click="renameFolder(current.folder)">
-                        <span class="icon mr-1">{% inline "edit.svg" %}</span>
-                        重命名
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item text-danger" @click="deleteFolder(current.folder)">
-                        <span class="icon mr-1">{% inline "trash.svg" %}</span>
-                        删除
-                    </button>
-                </dropdown>
             </div>
             <div id="item-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1" v-scroll="loadMoreItems" ref="itemlist">
                 <label v-for="item in items" :key="item.id"
@@ -421,11 +255,189 @@
                 </div>
             </div>
         </div>
-        <modal :open="!!settings" @hide="settings = ''">
+        <modal class="settings-modal" :open="!!settings" @hide="settings = ''">
             <button class="btn btn-link outline-none float-right p-2 mr-n2 mt-n2" style="line-height: 1" @click="settings = ''">
                 <span class="icon">{% inline "x.svg" %}</span>
             </button>
-            <div v-if="settings=='create'">
+            <div v-if="settings=='menu'" class="settings-dialog">
+                <p class="cursor-default"><b>设置</b></p>
+
+                <div class="settings-dialog-actions settings-dialog-actions-inline mt-3">
+                    <button class="settings-dialog-action" @click="showSettings('create')">
+                        <span class="icon mr-2">{% inline "plus.svg" %}</span>
+                        新订阅源
+                    </button>
+                    <button class="settings-dialog-action" @click="fetchAllFeeds(); settings = ''">
+                        <span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>
+                        刷新订阅源
+                    </button>
+                </div>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>主题</header>
+                    <div class="settings-segmented theme-picker">
+                        <button class="btn btn-link"
+                                :aria-label="themeTitle(t)"
+                                :aria-pressed="theme.name == t"
+                                :class="{active: theme.name == t}"
+                                @click="theme.name = t"
+                                v-for="t in ['light', 'sepia', 'night']">
+                            {{ themeTitle(t) }}
+                        </button>
+                    </div>
+                </section>
+
+                <section class="settings-dialog-section">
+                    <header>字体显示</header>
+                    <div class="settings-segmented">
+                        <button class="btn btn-link"
+                                :aria-pressed="theme.font == font.name"
+                                :class="{active: theme.font == font.name}"
+                                @click="theme.font = font.name"
+                                v-for="font in fontOptions">
+                            {{ font.title }}
+                        </button>
+                    </div>
+                </section>
+
+                <section class="settings-dialog-section">
+                    <header>自动刷新</header>
+                    <div class="settings-segmented settings-segmented-compact refresh-rate-picker">
+                        <button class="btn btn-link"
+                                :aria-pressed="refreshRate == option.value"
+                                :class="{active: refreshRate == option.value}"
+                                @click="refreshRate = option.value"
+                                v-for="option in refreshRateOptions">
+                            {{ option.title }}
+                        </button>
+                    </div>
+                </section>
+
+                <div class="settings-dialog-section-row">
+                    <section class="settings-dialog-section">
+                        <header>工具栏显示</header>
+                        <div class="settings-segmented settings-segmented-compact">
+                            <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'text'" :class="{active: toolbarDisplay == 'text'}" @click="toolbarDisplay='text'">文字</button>
+                            <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'icon'" :class="{active: toolbarDisplay == 'icon'}" @click="toolbarDisplay='icon'">图标</button>
+                        </div>
+                    </section>
+
+                    <section class="settings-dialog-section">
+                        <header>优先显示</header>
+                        <div class="settings-segmented settings-segmented-compact">
+                            <button class="btn btn-link" :aria-pressed="itemSortNewestFirst" :class="{active: itemSortNewestFirst}" @click="itemSortNewestFirst=true">最新</button>
+                            <button class="btn btn-link" :aria-pressed="!itemSortNewestFirst" :class="{active: !itemSortNewestFirst}" @click="itemSortNewestFirst=false">最早</button>
+                        </div>
+                    </section>
+                </div>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>订阅</header>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <form id="opml-import-form" enctype="multipart/form-data" tabindex="-1">
+                            <input type="file"
+                                   id="opml-import"
+                                   @change="importOPML"
+                                   name="opml"
+                                   style="opacity: 0; width: 1px; height: 0; position: absolute; z-index: -1;">
+                            <label class="settings-dialog-action mb-0 cursor-pointer" for="opml-import">
+                                <span class="icon mr-2">{% inline "download.svg" %}</span>
+                                导入
+                            </label>
+                        </form>
+                        <a class="settings-dialog-action" href="./opml/export">
+                            <span class="icon mr-2">{% inline "upload.svg" %}</span>
+                            导出
+                        </a>
+                    </div>
+                </section>
+
+                <div class="settings-dialog-actions settings-dialog-actions-inline mt-1">
+                    <button class="settings-dialog-action" @click="showSettings('rsshub')">
+                        <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                        RSSHub
+                    </button>
+                    <button class="settings-dialog-action" @click="showSettings('shortcuts')">
+                        <span class="icon mr-2">{% inline "help-circle.svg" %}</span>
+                        快捷键
+                    </button>
+                    <button class="settings-dialog-action" v-if="authenticated" @click="logout()">
+                        <span class="icon mr-2">{% inline "log-out.svg" %}</span>
+                        退出登录
+                    </button>
+                </div>
+            </div>
+            <div v-else-if="settings=='feed' && settingsFeed" class="settings-dialog">
+                <p class="cursor-default"><b>{{ settingsFeed.title }}</b></p>
+
+                <div class="settings-dialog-actions mt-3">
+                    <a class="settings-dialog-action" :href="settingsFeed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.link">
+                        <span class="icon mr-2">{% inline "globe.svg" %}</span>
+                        网站
+                    </a>
+                    <a class="settings-dialog-action" :href="feedLinkHref(settingsFeed.feed_link)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="feedLinkHref(settingsFeed.feed_link)">
+                        <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                        订阅源链接
+                    </a>
+                    <button class="settings-dialog-action" @click="renameFeed(settingsFeed)">
+                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
+                        重命名
+                    </button>
+                    <button class="settings-dialog-action" @click="updateFeedLink(settingsFeed)" v-if="settingsFeed.feed_link">
+                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
+                        修改链接
+                    </button>
+                </div>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>移动到</header>
+                    <div class="settings-dialog-actions">
+                        <button class="settings-dialog-action"
+                                v-if="folder.id != settingsFeed.folder_id"
+                                v-for="folder in folders"
+                                @click="moveFeed(settingsFeed, folder); settings = ''">
+                            <span class="icon mr-2">{% inline "folder.svg" %}</span>
+                            {{ folder.title }}
+                        </button>
+                        <button class="settings-dialog-action text-muted" @click="moveFeed(settingsFeed, null); settings = ''" v-if="settingsFeed.folder_id">
+                            <span class="icon mr-2">{% inline "folder-minus.svg" %}</span>
+                            无文件夹
+                        </button>
+                        <button class="settings-dialog-action text-muted" @click="moveFeedToNewFolder(settingsFeed)">
+                            <span class="icon mr-2">{% inline "folder-plus.svg" %}</span>
+                            新文件夹
+                        </button>
+                    </div>
+                </section>
+
+                <hr>
+
+                <button class="settings-dialog-action text-danger" @click.prevent="deleteFeed(settingsFeed)">
+                    <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                    删除
+                </button>
+            </div>
+            <div v-else-if="settings=='folder' && settingsFolder" class="settings-dialog">
+                <p class="cursor-default"><b>{{ settingsFolder.title }}</b></p>
+
+                <div class="settings-dialog-actions mt-3">
+                    <button class="settings-dialog-action" @click="renameFolder(settingsFolder)">
+                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
+                        重命名
+                    </button>
+                    <button class="settings-dialog-action text-danger" @click="deleteFolder(settingsFolder)">
+                        <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                        删除
+                    </button>
+                </div>
+            </div>
+            <div v-else-if="settings=='create'">
                 <p class="cursor-default"><b>新订阅源</b></p>
                 <form action="" @submit.prevent="createFeed(event)" class="mt-4">
                     <label for="feed-url">URL</label>
@@ -485,6 +497,22 @@
                     </tr>
                 </table>
             </div>
+        </modal>
+        <modal :open="dialog.open" @hide="cancelDialog()">
+            <form @submit.prevent="submitDialog()">
+                <p class="cursor-default"><b>{{ dialog.title }}</b></p>
+                <p class="mt-4 mb-0 text-break">{{ dialog.message }}</p>
+                <input v-if="dialog.type == 'prompt'"
+                       class="form-control mt-3"
+                       :type="dialog.inputType"
+                       v-model="dialog.inputValue"
+                       autocomplete="off"
+                       v-focus>
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-link mr-2" type="button" @click="cancelDialog()" v-if="dialog.type != 'alert'">{{ dialog.cancelText }}</button>
+                    <button class="btn btn-default" :class="{'text-danger': dialog.danger}" type="submit">{{ dialog.confirmText }}</button>
+                </div>
+            </form>
         </modal>
     </div>
     <!-- external -->

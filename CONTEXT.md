@@ -84,6 +84,14 @@ _Avoid_: Thumbnail, 预览图
 A user preference that controls whether articles are shown as a list or as cards in the article list.
 _Avoid_: 卡片模型, Item layout
 
+**订阅源设置**:
+A group of actions for one subscription source, including opening source links, renaming, moving, and deleting it.
+_Avoid_: 订阅项设置, Feed settings
+
+**文件夹设置**:
+A group of actions for one folder, including renaming and deleting it.
+_Avoid_: Folder settings
+
 **卡片模式**:
 A variable-height article list layout where articles with thumbnails show the thumbnail above the title and articles without thumbnails show as text-only cards.
 _Avoid_: 卡片模型, Grid mode
@@ -112,6 +120,7 @@ _Avoid_: Browser back, 返回上一页
 - An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can be added or refreshed.
 - OPML import and export preserve **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
+- **自动刷新** can be disabled or set to 1m, 5m, 10m, 30m, or 1h from settings.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **收藏** independently of whether it is read.
 - **全部** includes **已读**, **未读**, and **收藏** articles.
@@ -144,6 +153,9 @@ _Avoid_: Browser back, 返回上一页
 - **字体显示** is changed from the main settings menu, near **主题**.
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
+- **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
+- **文件夹设置** is opened from the corresponding **文件夹** row in the subscription source list.
+- **订阅源设置** and **文件夹设置** are not article list toolbar actions.
 
 ## Example dialogue
 
@@ -172,3 +184,4 @@ _Avoid_: Browser back, 返回上一页
 - "霞鹭文楷" means **霞鹜文楷**; use the official font name in user-facing text.
 - `设置`, `上篇`, `下篇`, `关闭`, and `已读` are compact toolbar actions and remain icon-only.
 - Top-level toolbar labels are short action labels, not full descriptions; full descriptions remain in button titles.
+- "订阅项设置" means **订阅源设置** for one **订阅源**, not a setting for articles in the **文章** list.
