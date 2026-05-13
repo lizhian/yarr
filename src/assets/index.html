@@ -135,18 +135,18 @@
                 <button class="toolbar-item toolbar-item-icon-only mr-1 d-flex d-md-none"
                         :class="{active: filterSelected == ''}"
                         :aria-pressed="filterSelected == ''"
+                        aria-label="全部"
                         title="全部"
                         @click="filterSelected = ''">
                     <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
-                    <span class="toolbar-label">全部</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only mr-2 d-flex d-md-none"
                         :class="{active: filterSelected == 'unread'}"
                         :aria-pressed="filterSelected == 'unread'"
+                        aria-label="未读"
                         title="未读"
                         @click="filterSelected = 'unread'">
                     <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
-                    <span class="toolbar-label">未读</span>
                 </button>
                 <div class="input-icon flex-grow-1">
                     <span class="icon">{% inline "search.svg" %}</span>
