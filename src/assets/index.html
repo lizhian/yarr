@@ -482,6 +482,19 @@
                     <input id="rsshub-base-url" name="rsshub_base_url" type="url" class="form-control" autocomplete="off" :value="rsshubBaseUrl" placeholder="https://rsshub.rssforever.com" v-focus>
                     <button class="btn btn-block btn-default mt-3" type="submit">保存</button>
                 </form>
+                <section class="settings-dialog-section mt-3">
+                    <header>快速添加</header>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <button class="settings-dialog-action" @click="createRSSHubFeed('bilibili')">
+                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                            bilibili
+                        </button>
+                        <button class="settings-dialog-action" @click="createRSSHubFeed('telegram')">
+                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                            telegram
+                        </button>
+                    </div>
+                </section>
             </div>
             <div v-else-if="settings=='shortcuts'">
                 <p class="cursor-default"><b>键盘快捷键</b></p>
