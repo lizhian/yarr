@@ -230,6 +230,14 @@ var vm = new Vue({
   },
   mounted: function() {
     this.initNavigationHistory()
+    if (this.$refs.itemlist) {
+      this.$refs.itemlist.addEventListener('scroll', this.handleItemListScroll, {passive: true})
+    }
+  },
+  beforeDestroy: function() {
+    if (this.$refs.itemlist) {
+      this.$refs.itemlist.removeEventListener('scroll', this.handleItemListScroll)
+    }
   },
   data: function() {
     var s = app.settings
@@ -243,6 +251,9 @@ var vm = new Vue({
       'feedNewChoiceSelected': '',
       'items': [],
       'itemsHasMore': true,
+      'itemsAutoReadSeen': {},
+      'itemsAutoReadPending': {},
+      'itemListLastScrollTop': 0,
       'itemSelected': null,
       'itemSelectedDetails': null,
       'itemSelectedReadability': '',
@@ -357,6 +368,12 @@ var vm = new Vue({
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
     },
+    showBottomMarkItemsRead: function() {
+      return this.filterSelected == 'unread' &&
+        this.items.length > 0 &&
+        !this.itemsHasMore &&
+        !this.loading.items
+    },
   },
   watch: {
     'theme': {
@@ -412,14 +429,7 @@ var vm = new Vue({
       api.items.get(newVal).then(function(item) {
         if (this.itemSelected !== newVal) return
         this.itemSelectedDetails = item
-        if (this.itemSelectedDetails.status == 'unread') {
-          api.items.update(this.itemSelectedDetails.id, {status: 'read'}).then(function() {
-            this.feedStats[this.itemSelectedDetails.feed_id].unread -= 1
-            var itemInList = this.items.find(function(i) { return i.id == item.id })
-            if (itemInList) itemInList.status = 'read'
-            this.itemSelectedDetails.status = 'read'
-          }.bind(this))
-        }
+        this.markItemRead(this.itemSelectedDetails)
       }.bind(this)).catch(function() {
         if (this.itemSelected === newVal) this.itemSelected = null
       }.bind(this))
@@ -645,12 +655,15 @@ var vm = new Vue({
       if (this.feedSelected === null) {
         vm.items = []
         vm.itemsHasMore = false
+        vm.resetItemListAutoRead()
         return
       }
 
       var query = this.getItemsQuery()
       if (loadMore) {
         query.after = vm.items[vm.items.length-1].id
+      } else {
+        this.resetItemListAutoRead()
       }
 
       this.loading.items = true
@@ -665,6 +678,7 @@ var vm = new Vue({
 
         // load more if there's some space left at the bottom of the item list.
         vm.$nextTick(function() {
+          vm.updateItemListAutoReadSeen()
           if (vm.itemsHasMore && !vm.loading.items && vm.itemListCloseToBottom()) {
             vm.refreshItems(true)
           }
@@ -689,6 +703,63 @@ var vm = new Vue({
       if (this.itemListCloseToBottom()) return this.refreshItems(true)
       if (this.itemSelected && this.itemSelected === this.items[this.items.length - 1].id) return this.refreshItems(true)
     },
+    handleItemListScroll: function(event) {
+      this.markScrolledItemsRead(event.currentTarget)
+    },
+    resetItemListAutoRead: function() {
+      this.itemsAutoReadSeen = {}
+      this.itemsAutoReadPending = {}
+      this.itemListLastScrollTop = this.$refs.itemlist ? this.$refs.itemlist.scrollTop : 0
+    },
+    updateItemListAutoReadSeen: function(el) {
+      el = el || this.$refs.itemlist
+      if (!el || !isMobileLayout()) return
+      if (this.currentNavigationLayer() !== 'items') return
+      if (this.filterSelected != '' && this.filterSelected != 'unread') return
+
+      var scrollRect = el.getBoundingClientRect()
+      var labels = el.querySelectorAll('.selectgroup[data-item-id]')
+      for (var i = 0; i < labels.length; i++) {
+        var label = labels[i]
+        var item = this.items.find(function(item) { return item.id == label.dataset.itemId })
+        if (!item || item.status != 'unread') continue
+
+        var labelRect = label.getBoundingClientRect()
+        var visibleHeight = Math.min(labelRect.bottom, scrollRect.bottom) - Math.max(labelRect.top, scrollRect.top)
+        if (visibleHeight >= labelRect.height / 2) {
+          this.itemsAutoReadSeen[item.id] = true
+        }
+      }
+    },
+    markScrolledItemsRead: function(el) {
+      el = el || this.$refs.itemlist
+      if (!el) return
+
+      var scrollTop = el.scrollTop
+      var scrollingDown = scrollTop > this.itemListLastScrollTop
+      this.itemListLastScrollTop = scrollTop
+
+      if (!isMobileLayout()) return
+      if (this.currentNavigationLayer() !== 'items') return
+      if (this.filterSelected != '' && this.filterSelected != 'unread') return
+
+      var scrollRect = el.getBoundingClientRect()
+      var labels = el.querySelectorAll('.selectgroup[data-item-id]')
+      if (scrollingDown) {
+        for (var i = 0; i < labels.length; i++) {
+          var label = labels[i]
+          if (label.getBoundingClientRect().bottom > scrollRect.top) continue
+
+          var item = this.items.find(function(item) { return item.id == label.dataset.itemId })
+          if (!item || item.status != 'unread') continue
+          if (!this.itemsAutoReadSeen[item.id]) continue
+
+          this.markItemRead(item)
+        }
+      }
+
+      this.updateItemListAutoReadSeen(el)
+    },
     itemImage: function(item) {
       var link = (item.media_links || []).find(function(link) {
         return link.type === 'image' && link.url
@@ -705,6 +776,7 @@ var vm = new Vue({
         vm.itemsPage = {'cur': 1, 'num': 1}
         vm.itemSelected = null
         vm.itemsHasMore = false
+        vm.resetItemListAutoRead()
         vm.refreshStats()
       })
     },
@@ -891,6 +963,28 @@ var vm = new Vue({
         var itemInList = this.items.find(function(i) { return i.id == item.id })
         if (itemInList) itemInList.status = newstatus
         item.status = newstatus
+      }.bind(this))
+    },
+    markItemRead: function(item) {
+      if (!item || item.status != 'unread') return Promise.resolve()
+      if (this.itemsAutoReadPending[item.id]) return Promise.resolve()
+
+      this.itemsAutoReadPending[item.id] = true
+
+      return api.items.update(item.id, {status: 'read'}).then(function() {
+        var feedStats = this.feedStats[item.feed_id]
+        if (feedStats && feedStats.unread > 0) feedStats.unread -= 1
+
+        var itemInList = this.items.find(function(i) { return i.id == item.id })
+        if (itemInList) itemInList.status = 'read'
+        if (this.itemSelectedDetails && this.itemSelectedDetails.id == item.id) {
+          this.itemSelectedDetails.status = 'read'
+        }
+        item.status = 'read'
+      }.bind(this)).catch(function() {
+        // Keep the article unread; a later scroll or selection can retry.
+      }).then(function() {
+        delete this.itemsAutoReadPending[item.id]
       }.bind(this))
     },
     toggleItemStarred: function(item) {

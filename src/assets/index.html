@@ -169,6 +169,7 @@
             </div>
             <div id="item-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1" v-scroll="loadMoreItems" ref="itemlist">
                 <label v-for="item in items" :key="item.id"
+                       :data-item-id="item.id"
                        class="selectgroup">
                     <input type="radio" name="item" :value="item.id" v-model="itemSelected">
                     <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
@@ -195,6 +196,9 @@
                     </div>
                 </label>
                 <button class="btn btn-link btn-block loading my-3" v-if="itemsHasMore"></button>
+                <button class="btn btn-default btn-block my-3" @click="markItemsRead()" v-if="showBottomMarkItemsRead">
+                    全部设为已读
+                </button>
             </div>
             <div class="px-3 py-2 border-top text-danger text-break" v-if="feed_errors[current.feed.id]">
                 {{ feed_errors[current.feed.id] }}

@@ -449,6 +449,7 @@ func (s *Server) handleItemList(c *router.Context) {
 			"has_more": hasMore,
 		})
 	} else if c.Req.Method == "PUT" {
+		query := c.Req.URL.Query()
 		filter := storage.MarkFilter{}
 
 		if folderID, err := c.QueryInt64("folder_id"); err == nil {
@@ -456,6 +457,9 @@ func (s *Server) handleItemList(c *router.Context) {
 		}
 		if feedID, err := c.QueryInt64("feed_id"); err == nil {
 			filter.FeedID = &feedID
+		}
+		if search := query.Get("search"); len(search) != 0 {
+			filter.Search = &search
 		}
 		s.db.MarkItemsRead(filter)
 		c.Out.WriteHeader(http.StatusOK)

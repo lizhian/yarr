@@ -308,6 +308,22 @@ func TestMarkItemsRead(t *testing.T) {
 		t.Logf("have: %#v", have)
 		t.Fail()
 	}
+
+	db4 := testDB()
+	testItemsSetup(db4)
+	db4.SyncSearch()
+	search := "title111"
+	db4.MarkItemsRead(MarkFilter{Search: &search})
+	have = getItemGuids(db4.ListItems(ItemFilter{Status: &read}, 10, false, false))
+	want = []string{
+		"item111", "item112", "item122",
+		"item211", "item012",
+	}
+	if !reflect.DeepEqual(have, want) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.Fail()
+	}
 }
 
 func TestDeleteOldItems(t *testing.T) {

@@ -96,6 +96,7 @@ type ItemFilter struct {
 type MarkFilter struct {
 	FolderID *int64
 	FeedID   *int64
+	Search   *string
 
 	Before *time.Time
 }
@@ -330,6 +331,7 @@ func (s *Storage) MarkItemsRead(filter MarkFilter) bool {
 	predicate, args := listQueryPredicate(ItemFilter{
 		FolderID: filter.FolderID,
 		FeedID:   filter.FeedID,
+		Search:   filter.Search,
 		Before:   filter.Before,
 	}, false)
 	query := fmt.Sprintf(`
