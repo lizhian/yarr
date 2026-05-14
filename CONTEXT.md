@@ -52,6 +52,14 @@ _Avoid_: Item, 条目
 The reading view for one selected article.
 _Avoid_: 详情页, Item detail
 
+**内容方式**:
+The default way articles from one subscription source are shown in **文章详情**.
+_Avoid_: 阅读方式, 内容模式
+
+**普通模式**:
+A content display mode that shows the article content provided by the subscription source.
+_Avoid_: 默认模式, 订阅源内容
+
 **未读**:
 An article state meaning the user has not marked or consumed the article as read.
 _Avoid_: Unread
@@ -71,6 +79,10 @@ _Avoid_: All
 **正文模式**:
 A reading mode that extracts and displays the article body inside yarr.
 _Avoid_: Read Here, 阅读这里
+
+**嵌入模式**:
+A content display mode that embeds the original article link inside **文章详情**.
+_Avoid_: iframe 模式, 原网页模式
 
 **正文选择器**:
 An optional subscription source setting that identifies the article body on original article pages for **正文模式**.
@@ -159,6 +171,16 @@ _Avoid_: Browser back, 返回上一页
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
 - **文章详情** centers article images.
+- A **订阅源** has one **内容方式**.
+- The default **内容方式** for a **订阅源** is **普通模式**.
+- Opening an **文章** in **文章详情** uses its **订阅源** **内容方式**.
+- **文章详情** lets users switch between **普通模式**, **正文模式**, and **嵌入模式** for the selected **文章**.
+- Switching **内容方式** from **文章详情** affects only the selected **文章** reading session and does not change the **订阅源** **内容方式**.
+- Moving from one **文章** to another in **文章详情** uses the new **文章**'s **订阅源** **内容方式**.
+- **普通模式**, **正文模式**, and **嵌入模式** change only the article body area in **文章详情**; article metadata and navigation stay visible.
+- If **正文模式** cannot fetch or extract content, yarr keeps the selected **内容方式** and lets the user switch modes or open the original article.
+- If an original article page cannot be shown in **嵌入模式**, yarr keeps the selected **内容方式** and lets the user switch modes or open the original article.
+- OPML import and export do not preserve **内容方式**.
 - An **RSSHub 订阅链接** is stored as the **订阅源** subscription link before it is first fetched successfully.
 - Changing the **RSSHub 基础链接** changes where unfetched **RSSHub 订阅链接** resolve without rewriting those links.
 - An **RSSHub 订阅链接** can be added without checking whether it can currently be reached.
@@ -220,6 +242,7 @@ _Avoid_: Browser back, 返回上一页
 - A **订阅源** can define one optional **正文选择器**.
 - A **正文选择器** applies to all **文章** produced by its **订阅源**.
 - **正文模式** uses the selected **文章**'s **订阅源** **正文选择器** when one is configured.
+- A **正文选择器** can be configured regardless of the **订阅源** **内容方式**.
 - OPML import and export do not preserve **正文选择器**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
 - In **移动端视图**, the **文章** list toolbar exposes a quick switch between **全部** and **未读** without returning to the **订阅源** list.

@@ -20,6 +20,7 @@ var migrations = []func(*sql.Tx) error{
 	m10_add_item_medialinks,
 	m11_add_feed_content_selector,
 	m12_replace_feed_icon_with_icon_url,
+	m13_add_feed_content_mode,
 }
 
 var maxVersion = int64(len(migrations))
@@ -344,6 +345,14 @@ func m12_replace_feed_icon_with_icon_url(tx *sql.Tx) error {
 	sql := `
 		alter table feeds add column icon_url text not null default '';
 		alter table feeds drop column icon;
+	`
+	_, err := tx.Exec(sql)
+	return err
+}
+
+func m13_add_feed_content_mode(tx *sql.Tx) error {
+	sql := `
+		alter table feeds add column content_mode text not null default 'normal';
 	`
 	_, err := tx.Exec(sql)
 	return err

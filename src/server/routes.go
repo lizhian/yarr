@@ -177,6 +177,14 @@ func (s *Server) handleFeedList(c *router.Context) {
 			return
 		}
 		form.ContentSelector = strings.TrimSpace(form.ContentSelector)
+		form.ContentMode = strings.TrimSpace(form.ContentMode)
+		if form.ContentMode == "" {
+			form.ContentMode = storage.FeedContentModeNormal
+		}
+		if !storage.ValidFeedContentMode(form.ContentMode) {
+			c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
+			return
+		}
 		if form.ContentSelector != "" {
 			if _, err := htmlutil.CompileSelector(form.ContentSelector); err != nil {
 				c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
@@ -189,7 +197,7 @@ func (s *Server) handleFeedList(c *router.Context) {
 				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
 				return
 			}
-			feed := s.db.CreateFeedWithContentSelector("", "", "", form.Url, form.ContentSelector, form.FolderID)
+			feed := s.db.CreateFeedWithContentMode("", "", "", form.Url, form.ContentSelector, form.ContentMode, form.FolderID)
 			c.JSON(http.StatusOK, map[string]interface{}{
 				"status": "success",
 				"feed":   feed,
@@ -209,12 +217,13 @@ func (s *Server) handleFeedList(c *router.Context) {
 		case len(result.Sources) > 0:
 			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
 		case result.Feed != nil:
-			feed := s.db.CreateFeedWithContentSelector(
+			feed := s.db.CreateFeedWithContentMode(
 				result.Feed.Title,
 				"",
 				result.Feed.SiteURL,
 				result.FeedLink,
 				form.ContentSelector,
+				form.ContentMode,
 				form.FolderID,
 			)
 			items := worker.ConvertItems(result.Feed.Items, *feed)
@@ -301,6 +310,17 @@ func (s *Server) handleFeed(c *router.Context) {
 					}
 				}
 				s.db.UpdateFeedContentSelector(id, selector)
+			}
+		}
+		if mode, ok := body["content_mode"]; ok {
+			if mode == nil || reflect.TypeOf(mode).Kind() != reflect.String {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
+				return
+			}
+			mode := strings.TrimSpace(mode.(string))
+			if !s.db.UpdateFeedContentMode(id, mode) {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
+				return
 			}
 		}
 		if iconURL, ok := body["icon_url"]; ok {

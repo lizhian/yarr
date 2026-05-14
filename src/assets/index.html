@@ -234,13 +234,30 @@
                         <button class="dropdown-item" style="font-size: 1.2rem" @click.stop="incrFont(1)">A</button>
                     </div>
                 </dropdown>
-                <button class="toolbar-item"
-                        :class="{active: itemSelectedReadability}"
-                        @click="toggleReadability()"
-                        title="正文模式">
-                    <span class="icon toolbar-icon" :class="{'icon-loading': loading.readability}">{% inline "book-open.svg" %}</span>
-                    <span class="toolbar-label">正文</span>
-                </button>
+                <div class="content-mode-switch" role="group" aria-label="内容方式">
+                    <button class="toolbar-item"
+                            :class="{active: itemSelectedContentMode == 'normal'}"
+                            :aria-pressed="itemSelectedContentMode == 'normal'"
+                            @click="setItemSelectedContentMode('normal')"
+                            title="普通">
+                        <span>普通</span>
+                    </button>
+                    <button class="toolbar-item"
+                            :class="{active: itemSelectedContentMode == 'readability'}"
+                            :aria-pressed="itemSelectedContentMode == 'readability'"
+                            @click="setItemSelectedContentMode('readability')"
+                            title="正文">
+                        <span class="icon toolbar-icon" :class="{'icon-loading': loading.readability}">{% inline "book-open.svg" %}</span>
+                        <span>正文</span>
+                    </button>
+                    <button class="toolbar-item"
+                            :class="{active: itemSelectedContentMode == 'embed'}"
+                            :aria-pressed="itemSelectedContentMode == 'embed'"
+                            @click="setItemSelectedContentMode('embed')"
+                            title="嵌入">
+                        <span>嵌入</span>
+                    </button>
+                </div>
                 <a class="toolbar-item" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
                     <span class="icon toolbar-icon">{% inline "external-link.svg" %}</span>
                     <span class="toolbar-label">打开</span>
@@ -275,7 +292,14 @@
                         <time>{{ formatDate(itemSelectedDetails.date) }}</time>
                     </div>
                     <hr>
-                    <div v-html="itemSelectedContent"></div>
+                    <div v-if="itemSelectedContentMode == 'embed'">
+                        <iframe class="content-embed" :src="itemSelectedDetails.link" referrerpolicy="no-referrer" v-if="itemSelectedDetails.link"></iframe>
+                        <p class="content-mode-message" v-else>当前文章没有原文链接，无法嵌入。</p>
+                    </div>
+                    <p class="content-mode-message" v-else-if="itemSelectedContentMode == 'readability' && itemSelectedReadabilityError">
+                        {{ itemSelectedReadabilityError }}
+                    </p>
+                    <div v-else v-html="itemSelectedContent"></div>
                     <div class="content-open-original">
                         <button class="btn btn-outline content-open-original-prev"
                                 type="button"
@@ -440,6 +464,18 @@
                             <span class="settings-dialog-field-label">图标链接</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.icon_url || '未设置' }}</span>
                         </button>
+                        <div class="settings-dialog-field settings-dialog-field-choice">
+                            <span class="settings-dialog-field-label">内容方式</span>
+                            <div class="settings-segmented settings-segmented-compact content-mode-picker">
+                                <button class="btn btn-link"
+                                        :aria-pressed="normalizeContentMode(settingsFeed.content_mode) == option.name"
+                                        :class="{active: normalizeContentMode(settingsFeed.content_mode) == option.name}"
+                                        @click="updateFeedContentMode(settingsFeed, option.name)"
+                                        v-for="option in contentModeOptions">
+                                    {{ option.title }}
+                                </button>
+                            </div>
+                        </div>
                         <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedContentSelector(settingsFeed)">
                             <span class="settings-dialog-field-label">正文选择器</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
@@ -504,6 +540,15 @@
                         <option value="">---</option>
                         <option :value="folder.id" v-for="folder in folders" :selected="folder.id === current.feed.folder_id || folder.id === current.folder.id">{{ folder.title }}</option>
                     </select>
+                    <label class="mt-3 d-block">内容方式</label>
+                    <div class="settings-segmented content-mode-picker">
+                        <label class="btn btn-link mb-0"
+                               :class="{active: feedNewContentMode == option.name}"
+                               v-for="option in contentModeOptions">
+                            <input type="radio" name="content_mode" :value="option.name" v-model="feedNewContentMode">
+                            {{ option.title }}
+                        </label>
+                    </div>
                     <label for="feed-content-selector" class="mt-3 d-block">正文选择器</label>
                     <input id="feed-content-selector" name="content_selector" type="text" class="form-control" autocomplete="off" placeholder=".content__default">
                     <div class="mt-4" v-if="feedNewChoice.length">

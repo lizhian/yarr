@@ -56,8 +56,18 @@ var FONT_OPTIONS = [
   {name: 'maple-mono-nf-cn', title: 'Maple Mono NF-CN'},
 ]
 
+var CONTENT_MODE_OPTIONS = [
+  {name: 'normal', title: '普通'},
+  {name: 'readability', title: '正文'},
+  {name: 'embed', title: '嵌入'},
+]
+
 function normalizeThemeFont(font) {
   return FONT_OPTIONS.some(function(option) { return option.name == font }) ? font : 'lxgw-wenkai'
+}
+
+function normalizeContentMode(mode) {
+  return CONTENT_MODE_OPTIONS.some(function(option) { return option.name == mode }) ? mode : 'normal'
 }
 
 Vue.component('drag', {
@@ -250,6 +260,7 @@ var vm = new Vue({
       'feedIconErrors': {},
       'feedNewChoice': [],
       'feedNewChoiceSelected': '',
+      'feedNewContentMode': 'normal',
       'items': [],
       'itemsHasMore': true,
       'itemsAutoReadSeen': {},
@@ -258,6 +269,8 @@ var vm = new Vue({
       'itemSelected': null,
       'itemSelectedDetails': null,
       'itemSelectedReadability': '',
+      'itemSelectedReadabilityError': '',
+      'itemSelectedContentMode': 'normal',
       'itemSearch': '',
       'itemSortNewestFirst': s.sort_newest_first,
       'itemListWidth': s.item_list_width || 300,
@@ -303,6 +316,7 @@ var vm = new Vue({
       'refreshRate': s.refresh_rate,
       'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
       'fontOptions': FONT_OPTIONS,
+      'contentModeOptions': CONTENT_MODE_OPTIONS,
       'authenticated': app.authenticated,
       'feed_errors': {},
       'navigationHistory': {
@@ -361,7 +375,7 @@ var vm = new Vue({
     itemSelectedContent: function() {
       if (!this.itemSelected) return ''
 
-      if (this.itemSelectedReadability)
+      if (this.itemSelectedContentMode == 'readability')
         return this.itemSelectedReadability
 
       return this.itemSelectedDetails.content || ''
@@ -419,6 +433,9 @@ var vm = new Vue({
     },
     'itemSelected': function(newVal, oldVal) {
       this.itemSelectedReadability = ''
+      this.itemSelectedReadabilityError = ''
+      this.itemSelectedContentMode = 'normal'
+      this.loading.readability = false
       if (newVal === null) {
         this.itemSelectedDetails = null
         this.syncNavigationHistory()
@@ -430,6 +447,8 @@ var vm = new Vue({
       api.items.get(newVal).then(function(item) {
         if (this.itemSelected !== newVal) return
         this.itemSelectedDetails = item
+        this.itemSelectedContentMode = normalizeContentMode((this.feedsById[item.feed_id] || {}).content_mode)
+        this.loadSelectedContentMode()
         this.markItemRead(this.itemSelectedDetails)
       }.bind(this)).catch(function() {
         if (this.itemSelected === newVal) this.itemSelected = null
@@ -884,6 +903,17 @@ var vm = new Vue({
         })
       })
     },
+    updateFeedContentMode: function(feed, mode) {
+      mode = normalizeContentMode(mode)
+      api.feeds.update(feed.id, {content_mode: mode}).then(function(res) {
+        if (res.ok) {
+          feed.content_mode = mode
+        } else {
+          vm.alertDialog('内容方式不支持。')
+        }
+      })
+    },
+    normalizeContentMode: normalizeContentMode,
     updateFeedIconURL: function(feed) {
       this.promptDialog('请输入图标链接', feed.icon_url || '').then(function(iconURL) {
         if (iconURL === null) return
@@ -914,6 +944,7 @@ var vm = new Vue({
         url: form.querySelector('input[name=url]').value,
         folder_id: parseInt(form.querySelector('select[name=folder_id]').value) || null,
         content_selector: form.querySelector('input[name=content_selector]').value,
+        content_mode: this.feedNewContentMode,
       }
       if (this.feedNewChoiceSelected) {
         data.url = this.feedNewChoiceSelected
@@ -1028,19 +1059,42 @@ var vm = new Vue({
       })
     },
     toggleReadability: function() {
-      if (this.itemSelectedReadability) {
-        this.itemSelectedReadability = null
-        return
+      this.setItemSelectedContentMode(this.itemSelectedContentMode == 'readability' ? 'normal' : 'readability')
+    },
+    setItemSelectedContentMode: function(mode) {
+      this.itemSelectedContentMode = normalizeContentMode(mode)
+      this.loadSelectedContentMode()
+    },
+    loadSelectedContentMode: function() {
+      if (this.itemSelectedContentMode == 'readability') {
+        this.loadItemSelectedReadability()
       }
+    },
+    loadItemSelectedReadability: function() {
       var item = this.itemSelectedDetails
       if (!item) return
-      if (item.link) {
-        this.loading.readability = true
-        api.crawl(item.link, item.feed_id).then(function(data) {
-          vm.itemSelectedReadability = data && data.content
-          vm.loading.readability = false
-        })
+      if (!item.link) {
+        this.itemSelectedReadability = ''
+        this.itemSelectedReadabilityError = '当前文章没有原文链接，无法获取正文。'
+        return
       }
+      this.loading.readability = true
+      this.itemSelectedReadabilityError = ''
+      var itemId = item.id
+      api.crawl(item.link, item.feed_id).then(function(data) {
+        if (vm.itemSelected !== itemId) return
+        vm.itemSelectedReadability = data && data.content || ''
+        if (!vm.itemSelectedReadability) {
+          vm.itemSelectedReadabilityError = '未能获取正文。'
+        }
+      }).catch(function() {
+        if (vm.itemSelected !== itemId) return
+        vm.itemSelectedReadability = ''
+        vm.itemSelectedReadabilityError = '未能获取正文。'
+      }).then(function() {
+        if (vm.itemSelected !== itemId) return
+        vm.loading.readability = false
+      })
     },
     showSettings: function(settings) {
       this.settings = settings
@@ -1048,6 +1102,7 @@ var vm = new Vue({
       if (settings === 'create') {
         vm.feedNewChoice = []
         vm.feedNewChoiceSelected = ''
+        vm.feedNewContentMode = 'normal'
       }
     },
     showFeedSettings: function(feed) {

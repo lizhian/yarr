@@ -97,7 +97,7 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	db, _ := storage.New(":memory:")
 	log.SetOutput(os.Stderr)
 
-	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly"}`)
+	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"readability"}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("POST", "/api/feeds", body)
 
@@ -124,6 +124,26 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	}
 	if feed.FeedLink != "rsshub://bilibili/weekly" {
 		t.Fatalf("got %q", feed.FeedLink)
+	}
+	if feed.ContentMode != storage.FeedContentModeReadability {
+		t.Fatalf("got %q", feed.ContentMode)
+	}
+}
+
+func TestCreateFeedRejectsUnsupportedContentMode(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"invalid"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", "/api/feeds", body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
 	}
 }
 
@@ -168,6 +188,50 @@ func TestUpdateFeedContentSelectorRejectsUnsupportedSelector(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.ContentSelector != "" {
 		t.Fatalf("got %q", feed.ContentSelector)
+	}
+}
+
+func TestUpdateFeedContentMode(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"content_mode":"embed"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.ContentMode != storage.FeedContentModeEmbed {
+		t.Fatalf("got %q", feed.ContentMode)
+	}
+}
+
+func TestUpdateFeedContentModeRejectsUnsupportedMode(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"content_mode":"invalid"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.ContentMode != storage.FeedContentModeNormal {
+		t.Fatalf("got %q", feed.ContentMode)
 	}
 }
 

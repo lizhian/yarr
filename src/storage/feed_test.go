@@ -70,6 +70,7 @@ func TestUpdateFeed(t *testing.T) {
 	db.RenameFeed(feed1.Id, "newtitle")
 	db.UpdateFeedFolder(feed1.Id, &folder.Id)
 	db.UpdateFeedContentSelector(feed1.Id, ".content")
+	db.UpdateFeedContentMode(feed1.Id, FeedContentModeEmbed)
 	db.UpdateFeedIconURL(feed1.Id, "https://example.com/icon.png")
 
 	feed2 := db.GetFeed(feed1.Id)
@@ -82,13 +83,38 @@ func TestUpdateFeed(t *testing.T) {
 	if feed2.ContentSelector != ".content" {
 		t.Error("invalid content selector")
 	}
+	if feed2.ContentMode != FeedContentModeEmbed {
+		t.Error("invalid content mode")
+	}
 	if feed2.IconURL != "https://example.com/icon.png" {
 		t.Error("invalid icon url")
+	}
+	if db.UpdateFeedContentMode(feed1.Id, "invalid") {
+		t.Error("invalid content mode accepted")
 	}
 	db.UpdateFeedIconURL(feed1.Id, "")
 	feed2 = db.GetFeed(feed1.Id)
 	if feed2.IconURL != "" {
 		t.Error("invalid cleared icon url")
+	}
+}
+
+func TestCreateFeedContentMode(t *testing.T) {
+	db := testDB()
+
+	feed := db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
+	if feed.ContentMode != FeedContentModeNormal {
+		t.Fatalf("got %q", feed.ContentMode)
+	}
+
+	feed = db.CreateFeedWithContentMode("feed", "", "http://example.com", "http://example.com/feed.xml", "", FeedContentModeReadability, nil)
+	if feed.ContentMode != FeedContentModeReadability {
+		t.Fatalf("got %q", feed.ContentMode)
+	}
+
+	feed = db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
+	if feed.ContentMode != FeedContentModeReadability {
+		t.Fatalf("expected existing content mode to be preserved, got %q", feed.ContentMode)
 	}
 }
 
