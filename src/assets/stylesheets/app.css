@@ -534,6 +534,55 @@ select.form-control:not([multiple]):not([size]) {
   margin-bottom: .25rem;
 }
 
+.settings-dialog-fields {
+  display: grid;
+  gap: .2rem;
+}
+
+.settings-dialog-field {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: grid;
+  font-size: .9rem;
+  gap: .75rem;
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  min-height: 1.85rem;
+  padding: .25rem .2rem;
+  text-align: left;
+  width: 100%;
+}
+
+.settings-dialog-field:focus {
+  outline: none;
+}
+
+.settings-dialog-field,
+.settings-dialog-field:hover,
+.settings-dialog-field:focus,
+.settings-dialog-field:active {
+  text-decoration: none;
+}
+
+.settings-dialog-field-label {
+  cursor: inherit;
+  font-weight: 700;
+}
+
+.settings-dialog-field-value {
+  cursor: inherit;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-dialog-field-disabled {
+  cursor: default;
+}
+
 .settings-dialog-actions {
   display: grid;
   gap: .2rem;
@@ -555,6 +604,13 @@ select.form-control:not([multiple]):not([size]) {
   padding: .25rem .2rem;
   text-align: left;
   width: 100%;
+}
+
+.settings-dialog-action-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-dialog-action:focus {
@@ -766,6 +822,7 @@ button.theme-light {
 .theme-light .toolbar-search:hover,
 .theme-light .dropdown-item:hover,
 .theme-light .selectgroup-action:hover,
+.theme-light .settings-dialog-field-action:hover,
 .theme-light .settings-dialog-action:hover,
 .theme-light .settings-segmented .btn:hover,
 .theme-light .refresh-rate-picker .btn:hover,
@@ -825,6 +882,7 @@ a,
 .theme-sepia .toolbar-search:hover,
 .theme-sepia .dropdown-item:hover,
 .theme-sepia .selectgroup-action:hover,
+.theme-sepia .settings-dialog-field-action:hover,
 .theme-sepia .settings-dialog-action:hover,
 .theme-sepia .settings-segmented .btn:hover,
 .theme-sepia .refresh-rate-picker .btn:hover,
@@ -872,6 +930,7 @@ a,
 .theme-night .toolbar-item:hover,
 .theme-night .toolbar-search:hover,
 .theme-night .selectgroup-action:hover,
+.theme-night .settings-dialog-field-action:hover,
 .theme-night .settings-dialog-action:hover,
 .theme-night .settings-segmented .btn:hover,
 .theme-night .refresh-rate-picker .btn:hover,
