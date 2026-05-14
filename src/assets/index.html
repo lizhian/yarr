@@ -328,7 +328,7 @@
             <div v-if="settings=='menu'" class="settings-dialog">
                 <p class="cursor-default"><b>设置</b></p>
 
-                <div class="settings-dialog-actions settings-dialog-actions-inline mt-3">
+                <div class="settings-dialog-actions settings-dialog-actions-inline settings-dialog-actions-main mt-3">
                     <button class="settings-dialog-action" @click="showSettings('create')">
                         <span class="icon mr-2">{% inline "plus.svg" %}</span>
                         新订阅源
@@ -336,6 +336,10 @@
                     <button class="settings-dialog-action" @click="fetchAllFeeds(); settings = ''">
                         <span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>
                         刷新订阅源
+                    </button>
+                    <button class="settings-dialog-action text-danger" @click="showSettings('deletefeeds')">
+                        <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                        删除
                     </button>
                 </div>
 
@@ -575,6 +579,34 @@
                     </div>
                     <button class="btn btn-block btn-default mt-3" :class="{loading: loading.newfeed}" type="submit">添加</button>
                 </form>
+            </div>
+            <div v-else-if="settings=='deletefeeds'" class="settings-dialog">
+                <p class="cursor-default"><b>删除订阅源</b></p>
+
+                <div class="feed-delete-list mt-3" v-if="feedDeleteGroups.length">
+                    <section class="feed-delete-group" v-for="group in feedDeleteGroups">
+                        <header>{{ group.title }}</header>
+                        <label class="feed-delete-row" v-for="feed in group.feeds">
+                            <input type="checkbox" :value="feed.id" v-model="feedDeleteSelectedIds">
+                            <span class="feed-delete-check" aria-hidden="true">
+                                <span class="icon">{% inline "check.svg" %}</span>
+                            </span>
+                            <span class="feed-delete-title">{{ feed.title }}</span>
+                        </label>
+                    </section>
+                </div>
+                <p class="mt-3 light cursor-default" v-else>暂无订阅源</p>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-link mr-2" type="button" @click="settings = ''">取消</button>
+                    <button class="btn btn-default text-danger"
+                            :class="{loading: loading.deletefeeds}"
+                            :disabled="!feedDeleteSelectedIds.length || loading.deletefeeds"
+                            type="button"
+                            @click="deleteSelectedFeeds()">
+                        删除
+                    </button>
+                </div>
             </div>
             <div v-else-if="settings=='rsshub'">
                 <p class="cursor-default"><b>RSSHub</b></p>

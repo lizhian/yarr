@@ -265,6 +265,7 @@ var vm = new Vue({
       'feedNewChoice': [],
       'feedNewChoiceSelected': '',
       'feedNewContentMode': 'normal',
+      'feedDeleteSelectedIds': [],
       'items': [],
       'itemsHasMore': true,
       'itemsAutoReadSeen': {},
@@ -303,6 +304,7 @@ var vm = new Vue({
       'loading': {
         'feeds': 0,
         'newfeed': false,
+        'deletefeeds': false,
         'items': false,
         'readability': false,
       },
@@ -355,6 +357,19 @@ var vm = new Vue({
       })
       folders.push({id: null, feeds: feedsByFolders[null]})
       return folders
+    },
+    feedDeleteGroups: function() {
+      return this.foldersWithFeeds
+        .filter(function(folder) {
+          return folder.feeds && folder.feeds.length
+        })
+        .map(function(folder) {
+          return {
+            id: folder.id,
+            title: folder.id ? folder.title : '无文件夹',
+            feeds: folder.feeds,
+          }
+        })
     },
     feedsById: function() {
       return this.feeds.reduce(function(acc, f) { acc[f.id] = f; return acc }, {})
@@ -945,6 +960,39 @@ var vm = new Vue({
         })
       })
     },
+    deleteSelectedFeeds: function() {
+      var ids = this.feedDeleteSelectedIds.slice()
+      if (!ids.length || this.loading.deletefeeds) return
+
+      this.confirmDialog('确定删除 ' + ids.length + ' 个订阅源吗？', '删除订阅源').then(function(confirmed) {
+        if (!confirmed) return
+
+        vm.loading.deletefeeds = true
+        Promise.all(ids.map(function(id) {
+          return api.feeds.delete(id).then(function(res) {
+            return res.ok
+          }).catch(function() {
+            return false
+          })
+        })).then(function(results) {
+          var failed = results.some(function(ok) { return !ok })
+          vm.settings = ''
+          vm.settingsFeed = null
+          vm.feedDeleteSelectedIds = []
+          vm.feedSelected = null
+          vm.itemSelected = null
+          return vm.refreshFeeds().then(function() {
+            vm.refreshStats()
+            if (failed) vm.alertDialog('部分订阅源删除失败。')
+          })
+        }).then(function() {
+          vm.loading.deletefeeds = false
+        }).catch(function() {
+          vm.loading.deletefeeds = false
+          vm.alertDialog('部分订阅源删除失败。')
+        })
+      })
+    },
     createFeed: function(event) {
       var form = event.target
       var data = {
@@ -1110,6 +1158,8 @@ var vm = new Vue({
         vm.feedNewChoice = []
         vm.feedNewChoiceSelected = ''
         vm.feedNewContentMode = 'normal'
+      } else if (settings === 'deletefeeds') {
+        vm.feedDeleteSelectedIds = []
       }
     },
     showFeedSettings: function(feed) {
