@@ -71,6 +71,63 @@ func TestFindFeedIconPrefersFeedImage(t *testing.T) {
 	}
 }
 
+func TestFindFeedIconSkipsNonOKSitePage(t *testing.T) {
+	const challengeIcon = "challenge-icon"
+	requested := make([]string, 0)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		switch r.URL.Path {
+		case "/":
+			w.WriteHeader(http.StatusForbidden)
+			io.WriteString(w, `<html><head><link rel="icon" href="/challenge-icon.png"></head></html>`)
+		case "/challenge-icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte(challengeIcon))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	icon, err := findFeedIcon("", server.URL, server.URL+"/feed.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if icon != nil {
+		t.Fatalf("got %#v", icon)
+	}
+	for _, path := range requested {
+		if path == "/challenge-icon.png" {
+			t.Fatalf("requested challenge icon: %#v", requested)
+		}
+	}
+}
+
+func TestFindFeedIconDoesNotStoreEmptyIcon(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			io.WriteString(w, `<html><head><link rel="icon" href="/empty-icon.png"></head></html>`)
+		case "/empty-icon.png", "/favicon.ico":
+			w.Header().Set("Content-Type", "image/png")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	worker := NewWorker(db)
+
+	worker.findFeedIcon(*feed, "", server.URL+"/feed.xml")
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Icon != nil {
+		t.Fatalf("icon got %#v", feed.Icon)
+	}
+}
+
 func TestListItemsResolvesRSSHubLink(t *testing.T) {
 	requestPath := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
