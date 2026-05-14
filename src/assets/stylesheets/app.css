@@ -924,14 +924,25 @@ a,
 .theme-sepia .modal-content,
 .theme-sepia .toolbar-search {
   --article-card-shadow: 0 2px 8px rgba(83, 67, 35, .12);
-  --item-list-separator-color: #e0d6ba;
-  background-color: #f4f0e5 !important;
+  --item-list-separator-color: #d9c999;
+  background-color: #f2e6bd !important;
 }
+
+body.theme-sepia {
+  background-image:
+    radial-gradient(circle at 18% 24%, rgba(121, 86, 31, .08) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 78% 62%, rgba(255, 255, 255, .24) 0 1px, transparent 1.8px),
+    linear-gradient(90deg, rgba(105, 73, 25, .035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, .10), rgba(145, 101, 32, .06));
+  background-attachment: fixed;
+  background-size: 23px 29px, 31px 37px, 7px 7px, 100% 100%;
+}
+
 .theme-sepia .content hr,
 .theme-sepia .content pre,
 .theme-sepia .border-right,
 .theme-sepia .border-top {
-  border-color: #e0d6ba !important;
+  border-color: #d9c999 !important;
 }
 .theme-sepia .selectgroup-label:hover,
 .theme-sepia .toolbar-item:hover,
@@ -943,16 +954,16 @@ a,
 .theme-sepia .settings-segmented .btn:hover,
 .theme-sepia .refresh-rate-picker .btn:hover,
 .theme-sepia .toolbar-search:focus {
-  background-color: #e0d6ba;
+  background-color: #e6d7a8;
 }
 
 .theme-sepia .article-list-layout-card #item-list-scroll .selectgroup-label {
-  border-color: #e0d6ba;
-  background-color: #faf6ea;
+  border-color: #d9c999;
+  background-color: #f7edca;
 }
 
 .theme-sepia .article-list-layout-card #item-list-scroll .selectgroup-label:hover {
-  background-color: #ede4cb;
+  background-color: #eadbad;
 }
 
 .theme-sepia #item-list-scroll .item-status-read {

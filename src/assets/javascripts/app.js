@@ -310,7 +310,7 @@ var vm = new Vue({
       },
       'themeColors': {
         'night': '#1f1f1f',
-        'sepia': '#f4f0e5',
+        'sepia': '#f2e6bd',
         'light': '#f7f7f5',
       },
       'refreshRate': s.refresh_rate,
