@@ -14,6 +14,7 @@ import (
 	"github.com/nkanaev/yarr/src/server/auth"
 	"github.com/nkanaev/yarr/src/server/router"
 	"github.com/nkanaev/yarr/src/storage"
+	"github.com/nkanaev/yarr/src/worker"
 )
 
 type FeverGroup struct {
@@ -51,6 +52,13 @@ type FeverItem struct {
 type FeverFavicon struct {
 	ID   int64  `json:"id"`
 	Data string `json:"data"`
+}
+
+const feverBlankFavicon = "data:image/gif;base64,R0lGODlhAQABAAAAACw="
+const feverMaxFaviconSize = 512 * 1024
+
+func feverIconCacheKey(feed storage.Feed) string {
+	return fmt.Sprintf("fever-icon:%d:%s", feed.Id, feed.IconURL)
 }
 
 func writeFeverJSON(c *router.Context, data map[string]interface{}, lastRefreshed int64) {
@@ -204,21 +212,37 @@ func (s *Server) feverFaviconsHandler(c *router.Context) {
 	feeds := s.db.ListFeeds()
 	favicons := make([]*FeverFavicon, len(feeds))
 	for i, feed := range feeds {
-		data := "data:image/gif;base64,R0lGODlhAQABAAAAACw="
-		if feed.HasIcon {
-			icon := s.db.GetFeed(feed.Id).Icon
-			data = fmt.Sprintf(
-				"data:%s;base64,%s",
-				http.DetectContentType(*icon),
-				base64.StdEncoding.EncodeToString(*icon),
-			)
-		}
-		favicons[i] = &FeverFavicon{ID: feed.Id, Data: data}
+		favicons[i] = &FeverFavicon{ID: feed.Id, Data: s.feverFaviconData(feed)}
 	}
 
 	writeFeverJSON(c, map[string]interface{}{
 		"favicons": favicons,
 	}, getLastRefreshedOnTime(s.db.ListHTTPStates()))
+}
+
+func (s *Server) feverFaviconData(feed storage.Feed) string {
+	if feed.IconURL == "" {
+		return feverBlankFavicon
+	}
+
+	cachekey := feverIconCacheKey(feed)
+	s.cache_mutex.Lock()
+	cachedat := s.cache[cachekey]
+	s.cache_mutex.Unlock()
+	if data, ok := cachedat.(string); ok {
+		return data
+	}
+
+	icon, ctype, err := worker.FetchImage(feed.IconURL)
+	if err != nil || icon == nil || len(*icon) > feverMaxFaviconSize {
+		return feverBlankFavicon
+	}
+	data := fmt.Sprintf("data:%s;base64,%s", ctype, base64.StdEncoding.EncodeToString(*icon))
+
+	s.cache_mutex.Lock()
+	s.cache[cachekey] = data
+	s.cache_mutex.Unlock()
+	return data
 }
 
 // for memory pressure reasons, we only return a limited number of items

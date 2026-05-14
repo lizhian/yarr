@@ -66,12 +66,11 @@ func TestUpdateFeed(t *testing.T) {
 	db := testDB()
 	feed1 := db.CreateFeedWithContentSelector("feed 1", "", "http://example1.com", "http://example1.com/feed.xml", ".article", nil)
 	folder := db.CreateFolder("test")
-	icon := []byte("icon")
 
 	db.RenameFeed(feed1.Id, "newtitle")
 	db.UpdateFeedFolder(feed1.Id, &folder.Id)
 	db.UpdateFeedContentSelector(feed1.Id, ".content")
-	db.UpdateFeedIcon(feed1.Id, &icon)
+	db.UpdateFeedIconURL(feed1.Id, "https://example.com/icon.png")
 
 	feed2 := db.GetFeed(feed1.Id)
 	if feed2.Title != "newtitle" {
@@ -83,8 +82,25 @@ func TestUpdateFeed(t *testing.T) {
 	if feed2.ContentSelector != ".content" {
 		t.Error("invalid content selector")
 	}
-	if !feed2.HasIcon || string(*feed2.Icon) != "icon" {
-		t.Error("invalid icon")
+	if feed2.IconURL != "https://example.com/icon.png" {
+		t.Error("invalid icon url")
+	}
+	db.UpdateFeedIconURL(feed1.Id, "")
+	feed2 = db.GetFeed(feed1.Id)
+	if feed2.IconURL != "" {
+		t.Error("invalid cleared icon url")
+	}
+}
+
+func TestListFeedsMissingIconURLs(t *testing.T) {
+	db := testDB()
+	feed1 := db.CreateFeed("feed 1", "", "http://example1.com", "http://example1.com/feed.xml", nil)
+	feed2 := db.CreateFeed("feed 2", "", "http://example2.com", "http://example2.com/feed.xml", nil)
+	db.UpdateFeedIconURL(feed2.Id, "https://example.com/icon.png")
+
+	feeds := db.ListFeedsMissingIconURLs()
+	if !reflect.DeepEqual(feeds, []Feed{*feed1}) {
+		t.Fatalf("invalid feed list: %#v", feeds)
 	}
 }
 
