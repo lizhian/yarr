@@ -92,6 +92,14 @@ _Avoid_: 内容选择器, 文章选择器, CSS selector
 A user preference that controls whether top-level toolbar actions are shown as icons, text, or both.
 _Avoid_: 顶栏图标模式, 按钮样式
 
+**主题**:
+A user preference that controls yarr's overall color surface.
+_Avoid_: Theme, 皮肤
+
+**主题强调色**:
+The color a **主题** uses to highlight selected states, active actions, links, and focused controls.
+_Avoid_: 蓝色强调, Accent color
+
 **字体显示**:
 A user preference that controls the font family used across yarr's user interface and article reading surface.
 _Avoid_: 字体切换, 正文字体
@@ -275,6 +283,7 @@ _Avoid_: Browser back, 返回上一页
 - **层级返回** does not expose the current layer in the address bar.
 - **工具栏显示** applies to most top-level toolbar actions.
 - **工具栏显示** can be **仅文字** or **仅图标**.
+- Each **主题** has one **主题强调色**.
 - **字体显示** applies globally to yarr's interface and article reading surface.
 - **字体显示** can be **霞鹜文楷** or **Maple Mono NF-CN**.
 - **霞鹜文楷** is the default **字体显示** option.
