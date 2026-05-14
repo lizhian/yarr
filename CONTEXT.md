@@ -152,6 +152,7 @@ _Avoid_: Browser back, 返回上一页
 - When a **订阅源** has no visible **订阅源图标**, a refreshed channel image URL can provide one.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
+- **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
 - **文章详情** centers article images.
 - An **RSSHub 订阅链接** is stored as the **订阅源** subscription link before it is first fetched successfully.

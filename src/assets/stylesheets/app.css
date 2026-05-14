@@ -686,8 +686,20 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .content-open-original {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: .75rem;
+  align-items: center;
   margin-top: 2rem;
   text-align: center;
+}
+
+.content-open-original-prev {
+  justify-self: end;
+}
+
+.content-open-original-next {
+  justify-self: start;
 }
 
 .content-open-original a,

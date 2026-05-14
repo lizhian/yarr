@@ -273,9 +273,23 @@
                     <hr>
                     <div v-html="itemSelectedContent"></div>
                     <div class="content-open-original">
+                        <button class="btn btn-outline content-open-original-prev"
+                                type="button"
+                                @click="navigateToItem(-1)"
+                                :disabled="itemSelected == items[0].id"
+                                title="上一篇文章">
+                            上一篇
+                        </button>
                         <a class="btn btn-outline" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
                             打开原文
                         </a>
+                        <button class="btn btn-outline content-open-original-next"
+                                type="button"
+                                @click="navigateToItem(+1)"
+                                :disabled="itemSelected == items[items.length - 1].id"
+                                title="下一篇文章">
+                            下一篇
+                        </button>
                     </div>
                 </div>
             </div>

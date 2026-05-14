@@ -95,7 +95,6 @@ func DiscoverFeedWithLink(candidateUrl, feedLink string) (*DiscoverResult, error
 	return result, nil
 }
 
-var emptyIcon = make([]byte, 0)
 var imageTypes = map[string]bool{
 	"image/x-icon":  true,
 	"image/png":     true,
@@ -119,6 +118,9 @@ func fetchImage(link string) (*[]byte, error) {
 	content, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+	if len(content) == 0 {
+		return nil, nil
 	}
 
 	ctype := http.DetectContentType(content)
@@ -150,11 +152,15 @@ func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
 	if siteUrl != "" {
 		if res, err := client.get(siteUrl); err == nil {
 			defer res.Body.Close()
-			if body, err := ioutil.ReadAll(res.Body); err == nil {
-				urls = append(urls, scraper.FindIcons(string(body), siteUrl)...)
-				if c := favicon(siteUrl); c != "" {
-					urls = append(urls, c)
+			if res.StatusCode == 200 {
+				body, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					return nil, err
 				}
+				urls = append(urls, scraper.FindIcons(string(body), siteUrl)...)
+			}
+			if c := favicon(siteUrl); c != "" {
+				urls = append(urls, c)
 			}
 		}
 	}
@@ -170,7 +176,7 @@ func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
 		}
 		return content, nil
 	}
-	return &emptyIcon, nil
+	return nil, nil
 }
 
 func (w *Worker) resolveLink(link string) (string, error) {
