@@ -249,6 +249,10 @@ func refreshFeedFromLinks(f storage.Feed, requestLinks []string, db *storage.Sto
 		lmod = state.LastModified
 		etag = state.Etag
 	}
+	if f.HasRefreshMetadataPlaceholder() {
+		lmod = ""
+		etag = ""
+	}
 
 	var lastErr error
 	for _, requestLink := range requestLinks {

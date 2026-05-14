@@ -122,6 +122,10 @@ func isRefreshMetadataPlaceholder(value string) bool {
 	return value == "" || strings.HasPrefix(value, "rsshub://")
 }
 
+func (f Feed) HasRefreshMetadataPlaceholder() bool {
+	return isRefreshMetadataPlaceholder(f.Title) || isRefreshMetadataPlaceholder(f.Link)
+}
+
 func (s *Storage) UpdateFeedContentSelector(feedId int64, selector string) bool {
 	_, err := s.db.Exec(`update feeds set content_selector = ? where id = ?`, selector, feedId)
 	return err == nil

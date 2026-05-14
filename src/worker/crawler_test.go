@@ -191,6 +191,48 @@ func TestRefreshPreservesSavedFeedMetadata(t *testing.T) {
 	}
 }
 
+func TestRefreshFillsWhitespaceTitleDespiteHTTPState(t *testing.T) {
+	var ifNoneMatch string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ifNoneMatch = r.Header.Get("If-None-Match")
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.Header().Set("Etag", `"new"`)
+		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fresh Title</title>
+    <link>https://example.com/fresh</link>
+    <item>
+      <title>Article</title>
+      <link>https://example.com/article</link>
+      <guid>article-1</guid>
+    </item>
+  </channel>
+</rss>`)
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Stale Title", "", "https://example.com/stale", server.URL+"/feed.xml", nil)
+	db.RenameFeed(feed.Id, " ")
+	db.SetHTTPState(feed.Id, "", `"old"`)
+	feed = db.GetFeed(feed.Id)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if ifNoneMatch != "" {
+		t.Fatalf("If-None-Match got %q", ifNoneMatch)
+	}
+	if feed.Title != "Fresh Title" {
+		t.Fatalf("title got %q", feed.Title)
+	}
+	if feed.Link != "https://example.com/stale" {
+		t.Fatalf("link got %q", feed.Link)
+	}
+}
+
 func TestRefreshAddsFeedIconFromImageURLWhenMissing(t *testing.T) {
 	const icon = "image-icon"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
