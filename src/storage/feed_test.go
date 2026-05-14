@@ -88,6 +88,95 @@ func TestUpdateFeed(t *testing.T) {
 	}
 }
 
+func TestUpdateFeedMetadataPreservesSavedTitleAndLink(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("Saved Title", "", "https://example.com/saved", "https://example.com/feed.xml", nil)
+
+	if !db.UpdateFeedMetadata(feed.Id, "Fresh Title", "https://example.com/fresh", "https://example.com/new-feed.xml") {
+		t.Fatal("failed to update metadata")
+	}
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Title != "Saved Title" {
+		t.Fatalf("title got %q", feed.Title)
+	}
+	if feed.Link != "https://example.com/saved" {
+		t.Fatalf("link got %q", feed.Link)
+	}
+	if feed.FeedLink != "https://example.com/new-feed.xml" {
+		t.Fatalf("feed_link got %q", feed.FeedLink)
+	}
+}
+
+func TestUpdateFeedMetadataFillsPlaceholderTitleAndLink(t *testing.T) {
+	tests := []struct {
+		name      string
+		oldTitle  string
+		oldLink   string
+		wantTitle string
+		wantLink  string
+	}{
+		{
+			name:      "empty",
+			oldTitle:  "",
+			oldLink:   "",
+			wantTitle: "Fresh Title",
+			wantLink:  "https://example.com/fresh",
+		},
+		{
+			name:      "whitespace",
+			oldTitle:  "  ",
+			oldLink:   "  ",
+			wantTitle: "Fresh Title",
+			wantLink:  "https://example.com/fresh",
+		},
+		{
+			name:      "rsshub placeholders",
+			oldTitle:  "rsshub://telegram/channel/test",
+			oldLink:   "rsshub://telegram/channel/test",
+			wantTitle: "Fresh Title",
+			wantLink:  "https://example.com/fresh",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := testDB()
+			feed := db.CreateFeed("Initial Title", "", tt.oldLink, "https://example.com/feed.xml", nil)
+			db.RenameFeed(feed.Id, tt.oldTitle)
+
+			if !db.UpdateFeedMetadata(feed.Id, "Fresh Title - Telegram Channel", "https://example.com/fresh", "") {
+				t.Fatal("failed to update metadata")
+			}
+
+			feed = db.GetFeed(feed.Id)
+			if feed.Title != tt.wantTitle {
+				t.Fatalf("title got %q", feed.Title)
+			}
+			if feed.Link != tt.wantLink {
+				t.Fatalf("link got %q", feed.Link)
+			}
+		})
+	}
+}
+
+func TestUpdateFeedMetadataKeepsPlaceholderWhenFreshMetadataEmpty(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("rsshub://telegram/channel/test", "", "rsshub://telegram/channel/test", "https://example.com/feed.xml", nil)
+
+	if !db.UpdateFeedMetadata(feed.Id, "", "", "") {
+		t.Fatal("failed to update metadata")
+	}
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Title != "rsshub://telegram/channel/test" {
+		t.Fatalf("title got %q", feed.Title)
+	}
+	if feed.Link != "rsshub://telegram/channel/test" {
+		t.Fatalf("link got %q", feed.Link)
+	}
+}
+
 func TestDeleteFeed(t *testing.T) {
 	db := testDB()
 	feed1 := db.CreateFeed("title", "", "http://example.com", "http://example.com/feed.xml", nil)

@@ -183,7 +183,9 @@ _Avoid_: Browser back, 返回上一页
 - Failed **文章** fetching does not change **RSSHub 可用性**; only the availability check updates it.
 - Adding an **RSSHub 订阅链接** stores it immediately and does not try any **RSSHub 基础链接**.
 - Adding an **RSSHub 订阅链接** stores the portable **RSSHub 订阅链接** until the first successful fetch.
-- Successfully fetching an **RSSHub 订阅链接** updates the **订阅源** website link from the fetched feed metadata and the **订阅源** subscription link to the HTTP(S) feed link that succeeded.
+- Successfully fetching an **RSSHub 订阅链接** updates the **订阅源** subscription link to the HTTP(S) feed link that succeeded.
+- Refreshing a **订阅源** preserves its saved title and website link unless that specific saved value is empty or still an **RSSHub 订阅链接** placeholder.
+- A saved **订阅源** title or website link containing only whitespace is treated as empty during refresh.
 - If all attempted **RSSHub 基础链接** fail while fetching **文章**, users see the last request error while logs keep the candidate-level failures.
 - OPML import and export preserve unfetched **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.

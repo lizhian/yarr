@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"log"
+	"strings"
 
 	"github.com/nkanaev/yarr/src/feedmeta"
 )
@@ -93,6 +94,15 @@ func (s *Storage) UpdateFeedLink(feedId int64, newLink string) bool {
 
 func (s *Storage) UpdateFeedMetadata(feedId int64, title, link, feedLink string) bool {
 	title = feedmeta.CleanTitle(title)
+	link = strings.TrimSpace(link)
+	if feed := s.GetFeed(feedId); feed != nil {
+		if !isRefreshMetadataPlaceholder(feed.Title) {
+			title = ""
+		}
+		if !isRefreshMetadataPlaceholder(feed.Link) {
+			link = ""
+		}
+	}
 	_, err := s.db.Exec(`
 		update feeds set
 			title = case when ? != '' then ? else title end,
@@ -105,6 +115,11 @@ func (s *Storage) UpdateFeedMetadata(feedId int64, title, link, feedLink string)
 		feedId,
 	)
 	return err == nil
+}
+
+func isRefreshMetadataPlaceholder(value string) bool {
+	value = strings.TrimSpace(value)
+	return value == "" || strings.HasPrefix(value, "rsshub://")
 }
 
 func (s *Storage) UpdateFeedContentSelector(feedId int64, selector string) bool {

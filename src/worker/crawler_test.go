@@ -155,7 +155,7 @@ func TestListItemsResolvesRSSHubLink(t *testing.T) {
 	}
 }
 
-func TestRefreshUpdatesFeedMetadata(t *testing.T) {
+func TestRefreshPreservesSavedFeedMetadata(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
@@ -180,10 +180,10 @@ func TestRefreshUpdatesFeedMetadata(t *testing.T) {
 	worker.refresher([]storage.Feed{*feed})
 
 	feed = db.GetFeed(feed.Id)
-	if feed.Title != "Fresh Title" {
+	if feed.Title != "Stale Title" {
 		t.Fatalf("title got %q", feed.Title)
 	}
-	if feed.Link != "https://example.com/fresh" {
+	if feed.Link != "https://example.com/stale" {
 		t.Fatalf("link got %q", feed.Link)
 	}
 	if feed.FeedLink != server.URL+"/feed.xml" {
@@ -331,7 +331,7 @@ func TestRefreshKeepsImageURLOnFailedIconUpdate(t *testing.T) {
 	}
 }
 
-func TestRefreshRSSHubUpdatesMetadataAndFeedLink(t *testing.T) {
+func TestRefreshRSSHubPreservesSavedMetadataAndUpdatesFeedLink(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
@@ -354,6 +354,45 @@ func TestRefreshRSSHubUpdatesMetadataAndFeedLink(t *testing.T) {
 		t.Fatal("failed to set RSSHub base URL")
 	}
 	feed := db.CreateFeed("Stale Title", "", "https://example.com/stale", "rsshub://telegram/channel/test", nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Title != "Stale Title" {
+		t.Fatalf("title got %q", feed.Title)
+	}
+	if feed.Link != "https://example.com/stale" {
+		t.Fatalf("link got %q", feed.Link)
+	}
+	if feed.FeedLink != server.URL+"/telegram/channel/test" {
+		t.Fatalf("feed_link got %q", feed.FeedLink)
+	}
+}
+
+func TestRefreshRSSHubFillsPlaceholderMetadata(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fresh RSSHub Title - Telegram Channel</title>
+    <link>https://example.com/rsshub-site</link>
+    <item>
+      <title>Article</title>
+      <link>https://example.com/article</link>
+      <guid>article-1</guid>
+    </item>
+  </channel>
+</rss>`)
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": server.URL}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	feed := db.CreateFeed("rsshub://telegram/channel/test", "", "rsshub://telegram/channel/test", "rsshub://telegram/channel/test", nil)
 	worker := NewWorker(db)
 
 	worker.refresher([]storage.Feed{*feed})
