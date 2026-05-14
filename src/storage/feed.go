@@ -91,6 +91,22 @@ func (s *Storage) UpdateFeedLink(feedId int64, newLink string) bool {
 	return err == nil
 }
 
+func (s *Storage) UpdateFeedMetadata(feedId int64, title, link, feedLink string) bool {
+	title = feedmeta.CleanTitle(title)
+	_, err := s.db.Exec(`
+		update feeds set
+			title = case when ? != '' then ? else title end,
+			link = case when ? != '' then ? else link end,
+			feed_link = case when ? != '' then ? else feed_link end
+		where id = ?`,
+		title, title,
+		link, link,
+		feedLink, feedLink,
+		feedId,
+	)
+	return err == nil
+}
+
 func (s *Storage) UpdateFeedContentSelector(feedId int64, selector string) bool {
 	_, err := s.db.Exec(`update feeds set content_selector = ? where id = ?`, selector, feedId)
 	return err == nil

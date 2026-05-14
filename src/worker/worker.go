@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/storage"
 )
 
@@ -145,7 +146,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	w.db.ResetFeedErrors()
 
 	srcqueue := make(chan storage.Feed, len(feeds))
-	dstqueue := make(chan []storage.Item)
+	dstqueue := make(chan *FeedRefreshResult)
 
 	for i := 0; i < NUM_WORKERS; i++ {
 		go w.worker(srcqueue, dstqueue)
@@ -155,10 +156,17 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		srcqueue <- feed
 	}
 	for i := 0; i < len(feeds); i++ {
-		items := <-dstqueue
-		if len(items) > 0 {
-			w.db.CreateItems(items)
-			w.db.SetFeedSize(items[0].FeedId, len(items))
+		result := <-dstqueue
+		if result != nil && result.Feed != nil {
+			feedLink := result.FeedLink
+			if rsshub.IsLink(result.StoredFeedLink) {
+				feedLink = ""
+			}
+			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, feedLink)
+		}
+		if result != nil && len(result.Items) > 0 {
+			w.db.CreateItems(result.Items)
+			w.db.SetFeedSize(result.Items[0].FeedId, len(result.Items))
 		}
 		atomic.AddInt32(w.pending, -1)
 		w.db.SyncSearch()
@@ -169,7 +177,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	log.Printf("Finished refreshing %d feeds", len(feeds))
 }
 
-func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- []storage.Item) {
+func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- *FeedRefreshResult) {
 	for feed := range srcqueue {
 		requestLinks, err := w.resolveLinks(feed.FeedLink)
 		if err != nil {
@@ -177,10 +185,10 @@ func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- []storage.
 			dstqueue <- nil
 			continue
 		}
-		items, err := listItemsFromLinks(feed, requestLinks, w.db)
+		result, err := refreshFeedFromLinks(feed, requestLinks, w.db)
 		if err != nil {
 			w.db.SetFeedError(feed.Id, err)
 		}
-		dstqueue <- items
+		dstqueue <- result
 	}
 }

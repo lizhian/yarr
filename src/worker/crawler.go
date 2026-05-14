@@ -30,6 +30,14 @@ type DiscoverResult struct {
 	Sources  []FeedSource
 }
 
+type FeedRefreshResult struct {
+	FeedID         int64
+	StoredFeedLink string
+	Feed           *parser.Feed
+	FeedLink       string
+	Items          []storage.Item
+}
+
 func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {
 	return DiscoverFeedWithLink(candidateUrl, candidateUrl)
 }
@@ -221,6 +229,14 @@ func listItems(f storage.Feed, db *storage.Storage) ([]storage.Item, error) {
 }
 
 func listItemsFromLinks(f storage.Feed, requestLinks []string, db *storage.Storage) ([]storage.Item, error) {
+	result, err := refreshFeedFromLinks(f, requestLinks, db)
+	if err != nil || result == nil {
+		return nil, err
+	}
+	return result.Items, nil
+}
+
+func refreshFeedFromLinks(f storage.Feed, requestLinks []string, db *storage.Storage) (*FeedRefreshResult, error) {
 	lmod := ""
 	etag := ""
 	if state := db.GetHTTPState(f.Id); state != nil {
@@ -230,9 +246,9 @@ func listItemsFromLinks(f storage.Feed, requestLinks []string, db *storage.Stora
 
 	var lastErr error
 	for _, requestLink := range requestLinks {
-		items, err := listItemsFromLink(f, requestLink, lmod, etag, db)
+		result, err := refreshFeedFromLink(f, requestLink, lmod, etag, db)
 		if err == nil {
-			return items, nil
+			return result, nil
 		}
 		logCandidateFailure(f.FeedLink, requestLink, err)
 		lastErr = err
@@ -241,6 +257,14 @@ func listItemsFromLinks(f storage.Feed, requestLinks []string, db *storage.Stora
 }
 
 func listItemsFromLink(f storage.Feed, requestLink, lmod, etag string, db *storage.Storage) ([]storage.Item, error) {
+	result, err := refreshFeedFromLink(f, requestLink, lmod, etag, db)
+	if err != nil || result == nil {
+		return nil, err
+	}
+	return result.Items, nil
+}
+
+func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *storage.Storage) (*FeedRefreshResult, error) {
 	res, err := client.getConditional(requestLink, lmod, etag)
 	if err != nil {
 		return nil, err
@@ -267,7 +291,17 @@ func listItemsFromLink(f storage.Feed, requestLink, lmod, etag string, db *stora
 	if lmod != "" || etag != "" {
 		db.SetHTTPState(f.Id, lmod, etag)
 	}
-	return ConvertItems(feed.Items, f), nil
+	feedLink := requestLink
+	if res.Request != nil && res.Request.URL != nil {
+		feedLink = res.Request.URL.String()
+	}
+	return &FeedRefreshResult{
+		FeedID:         f.Id,
+		StoredFeedLink: f.FeedLink,
+		Feed:           feed,
+		FeedLink:       feedLink,
+		Items:          ConvertItems(feed.Items, f),
+	}, nil
 }
 
 func logCandidateFailure(link, requestLink string, err error) {
