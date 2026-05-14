@@ -150,6 +150,13 @@ func hasImageMediaLink(links []MediaLink) bool {
 	return false
 }
 
+func firstRSSContentImageSrc(item rssItem) string {
+	if src := firstImageSrc(item.ContentEncoded); src != "" {
+		return src
+	}
+	return item.Description.FirstImageSrc()
+}
+
 func ParseRSS(r io.Reader) (*Feed, error) {
 	srcfeed := rssFeed{}
 
@@ -179,7 +186,7 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 			}
 		}
 		if !hasImageMediaLink(mediaLinks) {
-			if imageURL := srcitem.Description.FirstImageSrc(); imageURL != "" {
+			if imageURL := firstRSSContentImageSrc(srcitem); imageURL != "" {
 				mediaLinks = append(mediaLinks, MediaLink{URL: imageURL, Type: "image"})
 			}
 		}

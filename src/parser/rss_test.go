@@ -337,6 +337,30 @@ func TestRSSDescriptionImageFallbackSkippedWhenImageExists(t *testing.T) {
 	}
 }
 
+func TestRSSContentEncodedImageFallback(t *testing.T) {
+	feed, _ := Parse(strings.NewReader(`
+		<?xml version="1.0" encoding="UTF-8"?>
+		<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+			<channel>
+				<item>
+					<description>AI 早报摘要，没有 HTML 图片。</description>
+					<content:encoded><![CDATA[
+						<p><img src="https://example.com/cover.png" alt=""></p>
+						<h1>AI 早报</h1>
+					]]></content:encoded>
+				</item>
+			</channel>
+		</rss>
+	`))
+	have := feed.Items[0].MediaLinks
+	want := []MediaLink{{URL: "https://example.com/cover.png", Type: "image"}}
+	if !reflect.DeepEqual(want, have) {
+		t.Logf("want: %#v", want)
+		t.Logf("have: %#v", have)
+		t.FailNow()
+	}
+}
+
 func TestRSSOpusPodcast(t *testing.T) {
 	feed, _ := Parse(strings.NewReader(`
 		<?xml version="1.0" encoding="UTF-8"?>
