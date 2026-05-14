@@ -115,6 +115,12 @@ select.form-control:not([multiple]):not([size]) {
   -webkit-overflow-scrolling: touch;
 }
 
+#feed-list-scroll,
+#item-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* custom elements */
 
 .icon {
@@ -370,6 +376,7 @@ select.form-control:not([multiple]):not([size]) {
 .toolbar {
   min-height: 2rem !important;
   max-height: 2rem !important;
+  flex-shrink: 0;
 }
 
 .toolbar-item {
@@ -479,8 +486,14 @@ select.form-control:not([multiple]):not([size]) {
 
 .custom-modal {
   background-color: rgba(0, 0, 0, 0.9);
+  padding: .5rem;
   overflow-y: auto;
-  display: block !important;
+  display: flex !important;
+}
+
+.custom-modal .modal-dialog {
+  margin: auto;
+  width: 100%;
 }
 
 .settings-modal .modal-dialog {
@@ -599,6 +612,8 @@ select.form-control:not([multiple]):not([size]) {
 /* content */
 
 .content {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-wrap: break-word;
   line-height: 1.5;
 }
