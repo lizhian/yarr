@@ -930,12 +930,15 @@ a,
 
 body.theme-sepia {
   background-image:
-    radial-gradient(circle at 18% 24%, rgba(121, 86, 31, .08) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 78% 62%, rgba(255, 255, 255, .24) 0 1px, transparent 1.8px),
-    linear-gradient(90deg, rgba(105, 73, 25, .035) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255, 255, 255, .10), rgba(145, 101, 32, .06));
+    radial-gradient(ellipse at 18% 22%, rgba(139, 95, 28, .14), transparent 34%),
+    radial-gradient(ellipse at 82% 14%, rgba(255, 255, 255, .20), transparent 30%),
+    radial-gradient(ellipse at 52% 88%, rgba(118, 79, 21, .10), transparent 38%),
+    repeating-linear-gradient(92deg, rgba(101, 70, 22, .026) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(2deg, rgba(255, 255, 255, .045) 0 1px, transparent 1px 11px),
+    linear-gradient(0deg, rgba(255, 255, 255, .08), rgba(145, 101, 32, .07));
   background-attachment: fixed;
-  background-size: 23px 29px, 31px 37px, 7px 7px, 100% 100%;
+  background-blend-mode: multiply, screen, multiply, multiply, screen, normal;
+  background-size: 140% 120%, 130% 110%, 150% 120%, 17px 100%, 100% 19px, 100% 100%;
 }
 
 .theme-sepia .content hr,
