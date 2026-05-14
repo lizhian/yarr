@@ -783,7 +783,8 @@ select.form-control:not([multiple]):not([size]) {
 .content-embed {
   border: 1px solid #ced4da;
   border-radius: 3px;
-  height: 70vh;
+  height: calc(100vh - 9rem);
+  min-height: 32rem;
   width: 100%;
 }
 
@@ -808,11 +809,16 @@ select.form-control:not([multiple]):not([size]) {
   justify-self: start;
 }
 
-.content-open-original a,
-.content-open-original a:hover,
-.content-open-original a:focus,
-.content-open-original a:active {
+.content-open-original .btn-outline,
+.content-open-original .btn-outline:hover,
+.content-open-original .btn-outline:focus,
+.content-open-original .btn-outline:active {
+  color: inherit;
   text-decoration: none;
+}
+
+.content-open-original .btn-outline:disabled {
+  opacity: 1;
 }
 
 .content blockquote {
