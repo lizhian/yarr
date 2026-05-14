@@ -115,6 +115,39 @@ func TestFeedIcons(t *testing.T) {
 	}
 }
 
+func TestFeedIconCacheInvalidatedByWorkerCallback(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	oldIcon := []byte("old")
+	newIcon := []byte("new")
+	feed := db.CreateFeed("", "", "", "", nil)
+	db.UpdateFeedIcon(feed.Id, &oldIcon)
+	log.SetOutput(os.Stderr)
+
+	server := NewServer(db, "127.0.0.1:8000")
+	handler := server.handler()
+	url := fmt.Sprintf("/api/feeds/%d/icon", feed.Id)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", url, nil)
+	handler.ServeHTTP(recorder, request)
+	body, _ := io.ReadAll(recorder.Result().Body)
+	if string(body) != "old" {
+		t.Fatalf("got %q", body)
+	}
+
+	db.UpdateFeedIcon(feed.Id, &newIcon)
+	server.worker.OnFeedIconUpdated(feed.Id)
+
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("GET", url, nil)
+	handler.ServeHTTP(recorder, request)
+	body, _ = io.ReadAll(recorder.Result().Body)
+	if string(body) != "new" {
+		t.Fatalf("got %q", body)
+	}
+}
+
 func TestMissingItemReturnsNotFound(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")

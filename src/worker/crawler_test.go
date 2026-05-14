@@ -134,6 +134,112 @@ func TestRefreshUpdatesFeedMetadata(t *testing.T) {
 	}
 }
 
+func TestRefreshAddsFeedIconFromImageURLWhenMissing(t *testing.T) {
+	const icon = "image-icon"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/icon.png"))
+		case "/icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte(icon))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Icon == nil || string(*feed.Icon) != icon {
+		t.Fatalf("icon got %#v", feed.Icon)
+	}
+	if url, ok := worker.feedImageUrl(feed.Id); !ok || url != server.URL+"/icon.png" {
+		t.Fatalf("image url got %q, %v", url, ok)
+	}
+}
+
+func TestRefreshUpdatesFeedIconWhenImageURLChanges(t *testing.T) {
+	const oldIcon = "old-icon"
+	const newIcon = "new-icon"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte(newIcon))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	icon := []byte(oldIcon)
+	db.UpdateFeedIcon(feed.Id, &icon)
+	worker := NewWorker(db)
+	worker.setFeedImageUrl(feed.Id, server.URL+"/old-icon.png")
+	updated := int64(0)
+	worker.OnFeedIconUpdated = func(feedID int64) {
+		updated = feedID
+	}
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Icon == nil || string(*feed.Icon) != newIcon {
+		t.Fatalf("icon got %#v", feed.Icon)
+	}
+	if updated != feed.Id {
+		t.Fatalf("updated callback got %d", updated)
+	}
+	if url, ok := worker.feedImageUrl(feed.Id); !ok || url != server.URL+"/new-icon.png" {
+		t.Fatalf("image url got %q, %v", url, ok)
+	}
+}
+
+func TestRefreshKeepsImageURLOnFailedIconUpdate(t *testing.T) {
+	const oldIcon = "old-icon"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	icon := []byte(oldIcon)
+	db.UpdateFeedIcon(feed.Id, &icon)
+	worker := NewWorker(db)
+	worker.setFeedImageUrl(feed.Id, server.URL+"/old-icon.png")
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Icon == nil || string(*feed.Icon) != oldIcon {
+		t.Fatalf("icon got %#v", feed.Icon)
+	}
+	if url, ok := worker.feedImageUrl(feed.Id); !ok || url != server.URL+"/old-icon.png" {
+		t.Fatalf("image url got %q, %v", url, ok)
+	}
+}
+
 func TestRefreshRSSHubUpdatesMetadataAndFeedLink(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
@@ -287,4 +393,26 @@ func rssBody(title string) string {
     </item>
   </channel>
 </rss>`
+}
+
+func rssBodyWithImage(title, imageURL string) string {
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>` + title + `</title>
+    <link>https://example.com</link>
+    <image>
+      <url>` + imageURL + `</url>
+    </image>
+    <item>
+      <title>Article</title>
+      <link>https://example.com/article</link>
+      <guid>article-1</guid>
+    </item>
+  </channel>
+</rss>`
+}
+
+func serverURL(r *http.Request) string {
+	return "http://" + r.Host
 }

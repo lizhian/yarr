@@ -174,6 +174,16 @@ type feedicon struct {
 	etag  string
 }
 
+func feedIconCacheKey(id int64) string {
+	return "icon:" + strconv.FormatInt(id, 10)
+}
+
+func (s *Server) clearFeedIconCache(id int64) {
+	s.cache_mutex.Lock()
+	defer s.cache_mutex.Unlock()
+	delete(s.cache, feedIconCacheKey(id))
+}
+
 func (s *Server) handleFeedIcon(c *router.Context) {
 	id, err := c.VarInt64("id")
 	if err != nil {
@@ -181,7 +191,7 @@ func (s *Server) handleFeedIcon(c *router.Context) {
 		return
 	}
 
-	cachekey := "icon:" + strconv.FormatInt(id, 10)
+	cachekey := feedIconCacheKey(id)
 	s.cache_mutex.Lock()
 	cachedat := s.cache[cachekey]
 	s.cache_mutex.Unlock()

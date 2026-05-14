@@ -30,13 +30,15 @@ type Server struct {
 }
 
 func NewServer(db *storage.Storage, addr string) *Server {
-	return &Server{
+	s := &Server{
 		db:          db,
 		Addr:        addr,
 		worker:      worker.NewWorker(db),
 		cache:       make(map[string]interface{}),
 		cache_mutex: &sync.Mutex{},
 	}
+	s.worker.OnFeedIconUpdated = s.clearFeedIconCache
+	return s
 }
 
 func (h *Server) GetAddr() string {

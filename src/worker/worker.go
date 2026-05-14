@@ -17,6 +17,9 @@ type Worker struct {
 	refresh            *time.Ticker
 	reflock            sync.Mutex
 	stopper            chan bool
+	feedImageUrls      map[int64]string
+	feedImageUrlsMu    sync.RWMutex
+	OnFeedIconUpdated  func(int64)
 	rsshubAvailability map[string]rsshubAvailability
 	rsshubMu           sync.RWMutex
 	rsshubRefresh      *time.Ticker
@@ -28,6 +31,7 @@ func NewWorker(db *storage.Storage) *Worker {
 	return &Worker{
 		db:                 db,
 		pending:            &pending,
+		feedImageUrls:      make(map[int64]string),
 		rsshubAvailability: make(map[string]rsshubAvailability),
 	}
 }
@@ -65,13 +69,7 @@ func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 	if result, err := DiscoverFeedWithLink(feedLink, feed.FeedLink); err == nil && result.Feed != nil {
 		feedImageUrl = result.Feed.ImageURL
 	}
-	icon, err := findFeedIcon(feedImageUrl, feed.Link, feedLink)
-	if err != nil {
-		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
-	}
-	if icon != nil {
-		w.db.UpdateFeedIcon(feed.Id, icon)
-	}
+	w.findFeedIcon(feed, feedImageUrl, feedLink)
 }
 
 func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
@@ -80,13 +78,85 @@ func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
 		log.Printf("Failed to resolve icon feed link for %s: %s", feed.FeedLink, err)
 		return
 	}
-	icon, err := findFeedIcon(feedImageUrl, feed.Link, feedLink)
+	w.findFeedIcon(feed, feedImageUrl, feedLink)
+}
+
+func (w *Worker) findFeedIcon(feed storage.Feed, feedImageUrl, feedLink string) {
+	if feedImageUrl != "" {
+		if w.updateFeedIconFromImageUrl(feed.Id, feedImageUrl) {
+			return
+		}
+		w.setFeedImageUrl(feed.Id, "")
+	}
+
+	icon, err := findFeedIcon("", feed.Link, feedLink)
 	if err != nil {
-		log.Printf("Failed to find icon for %s (%s): %s", feed.FeedLink, feed.Link, err)
+		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
 	}
 	if icon != nil {
-		w.db.UpdateFeedIcon(feed.Id, icon)
+		w.updateFeedIcon(feed.Id, icon)
 	}
+}
+
+func (w *Worker) updateFeedIconFromImageUrl(feedID int64, feedImageUrl string) bool {
+	icon, err := fetchImage(feedImageUrl)
+	if err != nil {
+		return false
+	}
+	if icon == nil {
+		return false
+	}
+	if !w.updateFeedIcon(feedID, icon) {
+		return false
+	}
+	w.setFeedImageUrl(feedID, feedImageUrl)
+	return true
+}
+
+func (w *Worker) updateFeedIcon(feedID int64, icon *[]byte) bool {
+	if !w.db.UpdateFeedIcon(feedID, icon) {
+		return false
+	}
+	if w.OnFeedIconUpdated != nil {
+		w.OnFeedIconUpdated(feedID)
+	}
+	return true
+}
+
+func (w *Worker) feedImageUrl(feedID int64) (string, bool) {
+	w.feedImageUrlsMu.RLock()
+	defer w.feedImageUrlsMu.RUnlock()
+	url, ok := w.feedImageUrls[feedID]
+	return url, ok
+}
+
+func (w *Worker) setFeedImageUrl(feedID int64, feedImageUrl string) {
+	w.feedImageUrlsMu.Lock()
+	defer w.feedImageUrlsMu.Unlock()
+	w.feedImageUrls[feedID] = feedImageUrl
+}
+
+func (w *Worker) updateRefreshedFeedIcon(result *FeedRefreshResult) {
+	if result == nil || result.Feed == nil || result.Feed.ImageURL == "" {
+		return
+	}
+
+	if knownUrl, ok := w.feedImageUrl(result.FeedID); ok {
+		if knownUrl != result.Feed.ImageURL {
+			w.updateFeedIconFromImageUrl(result.FeedID, result.Feed.ImageURL)
+		}
+		return
+	}
+
+	feed := w.db.GetFeed(result.FeedID)
+	if feed == nil {
+		return
+	}
+	if feed.HasIcon {
+		w.setFeedImageUrl(result.FeedID, result.Feed.ImageURL)
+		return
+	}
+	w.updateFeedIconFromImageUrl(result.FeedID, result.Feed.ImageURL)
 }
 
 func (w *Worker) SetRefreshRate(minute int64) {
@@ -158,6 +228,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		result := <-dstqueue
 		if result != nil && result.Feed != nil {
 			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, result.FeedLink)
+			w.updateRefreshedFeedIcon(result)
 		}
 		if result != nil && len(result.Items) > 0 {
 			w.db.CreateItems(result.Items)

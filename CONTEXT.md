@@ -148,6 +148,8 @@ _Avoid_: Browser back, 返回上一页
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
 - Known **订阅源标题后缀** values are removed from saved **订阅源** titles.
 - When a newly fetched RSS subscription declares a channel image URL, that image is preferred as the **订阅源图标**.
+- When a refreshed **订阅源** declares a different channel image URL, the **订阅源图标** should be updated from that image.
+- When a **订阅源** has no visible **订阅源图标**, a refreshed channel image URL can provide one.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
