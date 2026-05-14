@@ -232,8 +232,8 @@ _Avoid_: Browser back, 返回上一页
 - Fetching **文章** for one **RSSHub 订阅链接** tries at most five **RSSHub 基础链接**.
 - Failed **文章** fetching does not change **RSSHub 可用性**; only the availability check updates it.
 - Adding an **RSSHub 订阅链接** stores it immediately and does not try any **RSSHub 基础链接**.
-- Adding an **RSSHub 订阅链接** stores the portable **RSSHub 订阅链接** until the first successful fetch.
-- Successfully fetching an **RSSHub 订阅链接** updates the **订阅源** subscription link to the HTTP(S) feed link that succeeded.
+- Adding an **RSSHub 订阅链接** stores the portable **RSSHub 订阅链接**.
+- Successfully fetching an **RSSHub 订阅链接** keeps the **订阅源** subscription link in portable `rsshub://` form; the **RSSHub 基础链接** is used only for the fetch request.
 - Refreshing a **订阅源** preserves its saved title and website link unless that specific saved value is empty or still an **RSSHub 订阅链接** placeholder.
 - A saved **订阅源** title or website link containing only whitespace is treated as empty during refresh.
 - If all attempted **RSSHub 基础链接** fail while fetching **文章**, users see the last request error while logs keep the candidate-level failures.
@@ -332,7 +332,7 @@ _Avoid_: Browser back, 返回上一页
 
 - "Feed" is translated as **订阅源** in user-facing UI, not "源".
 - "Item" and "Article" are translated as **文章** in user-facing UI, not "条目".
-- `rsshub://...` is an **RSSHub 订阅链接** stored in portable form at creation time, then replaced by the HTTP(S) feed link after a successful fetch.
+- `rsshub://...` is an **RSSHub 订阅链接** stored and returned in portable form; the configured **RSSHub 基础链接** is used only when fetching.
 - "快速添加 RSSHub" means **RSSHub 快速添加**, not a separate subscription source type.
 - Adding an **RSSHub 订阅链接** is a save operation; fetching **文章** is the first step that requires a reachable **RSSHub 基础链接**.
 - `" 的 bilibili 动态"`, `" 的 bilibili 空间"`, and `" - Telegram Channel"` are **订阅源标题后缀**, not part of the reader-facing **订阅源** title.
