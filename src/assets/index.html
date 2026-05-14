@@ -28,10 +28,15 @@
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
             <div class="p-2 toolbar d-flex align-items-center">
-                <div class="icon mx-2">{% inline "anchor.svg" %}</div>
+                <button class="toolbar-item toolbar-item-icon-only px-2"
+                        title="设置"
+                        aria-label="设置"
+                        @click="showSettings('menu')">
+                    <span class="icon toolbar-icon">{% inline "anchor.svg" %}</span>
+                </button>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item ml-1"
-                        :class="{active: filterSelected == ''}"
+                        :class="{'toolbar-status-active': filterSelected == ''}"
                         :aria-pressed="filterSelected == ''"
                         title="全部"
                         @click="filterSelected = ''">
@@ -39,7 +44,7 @@
                     <span class="toolbar-label">全部</span>
                 </button>
                 <button class="toolbar-item mx-1"
-                        :class="{active: filterSelected == 'unread'}"
+                        :class="{'toolbar-status-active': filterSelected == 'unread'}"
                         :aria-pressed="filterSelected == 'unread'"
                         title="未读"
                         @click="filterSelected = 'unread'">
@@ -47,7 +52,7 @@
                     <span class="toolbar-label">未读</span>
                 </button>
                 <button class="toolbar-item mr-1"
-                        :class="{active: filterSelected == 'starred'}"
+                        :class="{'toolbar-status-active': filterSelected == 'starred'}"
                         :aria-pressed="filterSelected == 'starred'"
                         title="收藏"
                         @click="filterSelected = 'starred'">
@@ -55,11 +60,7 @@
                     <span class="toolbar-label">收藏</span>
                 </button>
                 <div class="flex-grow-1"></div>
-                <button class="btn btn-link toolbar-item toolbar-item-icon-only px-2"
-                        title="设置"
-                        @click="showSettings('menu')">
-                    <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
-                </button>
+                <span class="toolbar-item toolbar-item-icon-only px-2 toolbar-spacer" aria-hidden="true"></span>
             </div>
             <div id="feed-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1">
                 <label class="selectgroup">
@@ -133,7 +134,7 @@
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only mr-1 d-flex d-md-none"
-                        :class="{active: filterSelected == ''}"
+                        :class="{'toolbar-status-active': filterSelected == ''}"
                         :aria-pressed="filterSelected == ''"
                         aria-label="全部"
                         title="全部"
@@ -141,7 +142,7 @@
                     <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only mr-2 d-flex d-md-none"
-                        :class="{active: filterSelected == 'unread'}"
+                        :class="{'toolbar-status-active': filterSelected == 'unread'}"
                         :aria-pressed="filterSelected == 'unread'"
                         aria-label="未读"
                         title="未读"
@@ -236,7 +237,7 @@
                 </dropdown>
                 <div class="content-mode-switch" role="group" aria-label="内容方式">
                     <button class="toolbar-item"
-                            :class="{active: itemSelectedContentMode == 'normal'}"
+                            :class="{'toolbar-status-active': itemSelectedContentMode == 'normal'}"
                             :aria-pressed="itemSelectedContentMode == 'normal'"
                             @click="setItemSelectedContentMode('normal')"
                             title="普通">
@@ -244,7 +245,7 @@
                         <span class="toolbar-label">普通</span>
                     </button>
                     <button class="toolbar-item"
-                            :class="{active: itemSelectedContentMode == 'readability'}"
+                            :class="{'toolbar-status-active': itemSelectedContentMode == 'readability'}"
                             :aria-pressed="itemSelectedContentMode == 'readability'"
                             @click="setItemSelectedContentMode('readability')"
                             title="正文">
@@ -252,7 +253,7 @@
                         <span class="toolbar-label">正文</span>
                     </button>
                     <button class="toolbar-item"
-                            :class="{active: itemSelectedContentMode == 'embed'}"
+                            :class="{'toolbar-status-active': itemSelectedContentMode == 'embed'}"
                             :aria-pressed="itemSelectedContentMode == 'embed'"
                             @click="setItemSelectedContentMode('embed')"
                             title="嵌入">
@@ -260,10 +261,6 @@
                         <span class="toolbar-label">嵌入</span>
                     </button>
                 </div>
-                <a class="toolbar-item" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
-                    <span class="icon toolbar-icon">{% inline "external-link.svg" %}</span>
-                    <span class="toolbar-label">打开</span>
-                </a>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(-1)" title="上一篇文章" :disabled="itemSelected == items[0].id">
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>

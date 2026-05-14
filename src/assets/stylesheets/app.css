@@ -415,6 +415,11 @@ select.form-control:not([multiple]):not([size]) {
   display: inline-block;
 }
 
+.toolbar-spacer {
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .content-mode-switch {
   display: inline-grid;
   grid-template-columns: repeat(3, minmax(0, auto));
@@ -437,7 +442,8 @@ select.form-control:not([multiple]):not([size]) {
   border-top-right-radius: 3px;
 }
 
-.toolbar-display-text .toolbar-status-active .toolbar-label {
+.toolbar-status-active .toolbar-icon,
+.toolbar-status-active .toolbar-label {
   color: var(--accent-color);
   font-weight: 600;
 }
