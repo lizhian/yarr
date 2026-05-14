@@ -270,7 +270,7 @@ select.form-control:not([multiple]):not([size]) {
   align-items: stretch !important;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: var(--article-card-shadow);
   overflow: hidden;
 }
@@ -299,7 +299,7 @@ select.form-control:not([multiple]):not([size]) {
   height: auto;
   aspect-ratio: 16 / 9;
   margin-left: 0 !important;
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .toolbar-item:hover,
@@ -672,7 +672,7 @@ select.form-control:not([multiple]):not([size]) {
 
 .settings-segmented .btn,
 .refresh-rate-picker .btn {
-  border-radius: 0;
+  border-radius: 6px;
   color: inherit;
   font-size: .9rem;
   min-height: 1.85rem;
