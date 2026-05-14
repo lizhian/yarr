@@ -348,7 +348,7 @@ func TestRefreshKeepsIconURLEmptyOnFailedIconUpdate(t *testing.T) {
 	}
 }
 
-func TestRefreshRSSHubPreservesSavedMetadataAndUpdatesFeedLink(t *testing.T) {
+func TestRefreshRSSHubPreservesSavedMetadataAndFeedLink(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
@@ -382,7 +382,7 @@ func TestRefreshRSSHubPreservesSavedMetadataAndUpdatesFeedLink(t *testing.T) {
 	if feed.Link != "https://example.com/stale" {
 		t.Fatalf("link got %q", feed.Link)
 	}
-	if feed.FeedLink != server.URL+"/telegram/channel/test" {
+	if feed.FeedLink != "rsshub://telegram/channel/test" {
 		t.Fatalf("feed_link got %q", feed.FeedLink)
 	}
 }
@@ -421,7 +421,7 @@ func TestRefreshRSSHubFillsPlaceholderMetadata(t *testing.T) {
 	if feed.Link != "https://example.com/rsshub-site" {
 		t.Fatalf("link got %q", feed.Link)
 	}
-	if feed.FeedLink != server.URL+"/telegram/channel/test" {
+	if feed.FeedLink != "rsshub://telegram/channel/test" {
 		t.Fatalf("feed_link got %q", feed.FeedLink)
 	}
 }

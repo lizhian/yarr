@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/storage"
 )
 
@@ -171,7 +172,11 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	for i := 0; i < len(feeds); i++ {
 		result := <-dstqueue
 		if result != nil && result.Feed != nil {
-			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, result.FeedLink)
+			feedLink := result.FeedLink
+			if rsshub.IsLink(result.StoredFeedLink) {
+				feedLink = result.StoredFeedLink
+			}
+			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, feedLink)
 			w.updateRefreshedFeedIcon(result)
 		}
 		if result != nil && len(result.Items) > 0 {
