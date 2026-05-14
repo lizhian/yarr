@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,17 @@ import (
 
 	"github.com/nkanaev/yarr/src/storage"
 )
+
+func testServerDB(t *testing.T) *storage.Storage {
+	t.Helper()
+	log.SetOutput(io.Discard)
+	db, err := storage.New(":memory:")
+	log.SetOutput(os.Stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return db
+}
 
 func TestStatic(t *testing.T) {
 	handler := NewServer(nil, "127.0.0.1:8000").handler()
@@ -53,10 +65,135 @@ func TestStaticBanTemplates(t *testing.T) {
 	}
 }
 
+func TestAuthConfigEndpoint(t *testing.T) {
+	db := testServerDB(t)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	body := bytes.NewBufferString(`{"enabled":true,"username":"username","password":"password"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", "/api/auth", body)
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	if response.StatusCode != http.StatusOK {
+		t.Fatal("got", response.StatusCode)
+	}
+	if len(response.Cookies()) == 0 {
+		t.Fatal("expected auth cookie")
+	}
+
+	config := db.GetAuthConfig()
+	if !config.Enabled || config.Username != "username" || config.Password != "password" {
+		t.Fatalf("invalid auth config: %#v", config)
+	}
+
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("GET", "/api/status", nil)
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusUnauthorized {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("GET", "/api/status", nil)
+	request.AddCookie(response.Cookies()[0])
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+}
+
+func TestAuthConfigEndpointRejectsMissingCredentials(t *testing.T) {
+	db := testServerDB(t)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	body := bytes.NewBufferString(`{"enabled":true,"username":"username","password":""}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", "/api/auth", body)
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	if db.GetAuthConfig().Enabled {
+		t.Fatal("auth should remain disabled")
+	}
+}
+
+func TestAuthConfigEndpointDisablesAuth(t *testing.T) {
+	db := testServerDB(t)
+	if !db.SetAuthConfig(true, "username", "password") {
+		t.Fatal("did not enable auth")
+	}
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	login := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", "/", bytes.NewBufferString("username=username&password=password"))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	handler.ServeHTTP(login, request)
+	if len(login.Result().Cookies()) == 0 {
+		t.Fatal("expected login cookie")
+	}
+
+	body := bytes.NewBufferString(`{"enabled":false}`)
+	recorder := httptest.NewRecorder()
+	request = httptest.NewRequest("PUT", "/api/auth", body)
+	request.AddCookie(login.Result().Cookies()[0])
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	if response.StatusCode != http.StatusOK {
+		t.Fatal("got", response.StatusCode)
+	}
+	if db.GetAuthConfig().Enabled {
+		t.Fatal("auth should be disabled")
+	}
+	if len(response.Cookies()) == 0 || response.Cookies()[0].MaxAge != -1 {
+		t.Fatal("expected auth cookie to be cleared")
+	}
+
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("GET", "/api/status", nil)
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+}
+
+func TestFeverUsesStoredAuthConfig(t *testing.T) {
+	db := testServerDB(t)
+	if !db.SetAuthConfig(true, "username", "password") {
+		t.Fatal("did not enable auth")
+	}
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/fever/", nil)
+	handler.ServeHTTP(recorder, request)
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result["auth"] != float64(0) {
+		t.Fatalf("expected failed auth, got %#v", result["auth"])
+	}
+
+	apiKey := fmt.Sprintf("%x", md5.Sum([]byte("username:password")))
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("GET", "/fever/?api_key="+apiKey, nil)
+	handler.ServeHTTP(recorder, request)
+
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result["auth"] != float64(1) {
+		t.Fatalf("expected successful auth, got %#v", result["auth"])
+	}
+}
+
 func TestIndexGzipped(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	log.SetOutput(os.Stderr)
+	db := testServerDB(t)
 	handler := NewServer(db, "127.0.0.1:8000").handler()
 	url := "/"
 
@@ -77,9 +214,7 @@ func TestIndexGzipped(t *testing.T) {
 }
 
 func TestMissingItemReturnsNotFound(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	log.SetOutput(os.Stderr)
+	db := testServerDB(t)
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/api/items/1178", nil)
@@ -93,9 +228,7 @@ func TestMissingItemReturnsNotFound(t *testing.T) {
 }
 
 func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	log.SetOutput(os.Stderr)
+	db := testServerDB(t)
 
 	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"readability"}`)
 	recorder := httptest.NewRecorder()
@@ -131,9 +264,7 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 }
 
 func TestCreateFeedRejectsUnsupportedContentMode(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	log.SetOutput(os.Stderr)
+	db := testServerDB(t)
 
 	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"invalid"}`)
 	recorder := httptest.NewRecorder()

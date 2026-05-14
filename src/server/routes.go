@@ -28,21 +28,19 @@ func (s *Server) handler() http.Handler {
 
 	r.Use(gzip.Middleware)
 
-	if s.Username != "" && s.Password != "" {
-		a := &auth.Middleware{
+	if s.db != nil {
+		r.Use((&auth.Middleware{
 			BasePath: s.BasePath,
-			Username: s.Username,
-			Password: s.Password,
 			Public:   []string{"/static", "/fever", "/manifest.json"},
 			DB:       s.db,
-		}
-		r.Use(a.Handler)
+		}).Handler)
 	}
 
 	r.For("/", s.handleIndex)
 	r.For("/manifest.json", s.handleManifest)
 	r.For("/static/*path", s.handleStatic)
 	r.For("/api/status", s.handleStatus)
+	r.For("/api/auth", s.handleAuth)
 	r.For("/api/folders", s.handleFolderList)
 	r.For("/api/folders/:id", s.handleFolder)
 	r.For("/api/feeds", s.handleFeedList)
@@ -62,9 +60,10 @@ func (s *Server) handler() http.Handler {
 }
 
 func (s *Server) handleIndex(c *router.Context) {
+	authConfig := s.db.GetAuthConfig()
 	c.HTML(http.StatusOK, assets.Template("index.html"), map[string]interface{}{
 		"settings":      s.db.GetSettings(),
-		"authenticated": s.Username != "" && s.Password != "",
+		"authenticated": authConfig.Enabled,
 	})
 }
 
@@ -101,6 +100,43 @@ func (s *Server) handleStatus(c *router.Context) {
 		"running": s.worker.FeedsPending(),
 		"stats":   s.db.FeedStats(),
 	})
+}
+
+func (s *Server) handleAuth(c *router.Context) {
+	if c.Req.Method == "GET" {
+		authConfig := s.db.GetAuthConfig()
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"enabled":  authConfig.Enabled,
+			"username": authConfig.Username,
+		})
+		return
+	}
+
+	if c.Req.Method == "PUT" {
+		var request struct {
+			Enabled  bool   `json:"enabled"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+		if err := json.NewDecoder(c.Req.Body).Decode(&request); err != nil {
+			c.Out.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if !s.db.SetAuthConfig(request.Enabled, request.Username, request.Password) {
+			c.Out.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if request.Enabled {
+			authConfig := s.db.GetAuthConfig()
+			auth.Authenticate(c.Out, authConfig.Username, authConfig.Password, s.BasePath)
+		} else {
+			auth.Logout(c.Out, s.BasePath)
+		}
+		c.Out.WriteHeader(http.StatusOK)
+		return
+	}
+
+	c.Out.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func (s *Server) handleFolderList(c *router.Context) {

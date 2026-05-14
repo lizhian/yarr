@@ -21,9 +21,6 @@ type Server struct {
 
 	BasePath string
 
-	// auth
-	Username string
-	Password string
 	// https
 	CertFile string
 	KeyFile  string

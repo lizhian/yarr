@@ -83,10 +83,11 @@ func getLastRefreshedOnTime(httpStates map[int64]storage.HTTPState) int64 {
 }
 
 func (s *Server) feverAuth(c *router.Context) bool {
-	if s.Username != "" && s.Password != "" {
+	authConfig := s.db.GetAuthConfig()
+	if authConfig.Enabled {
 		apiKey := c.Req.FormValue("api_key")
 		apiKey = strings.ToLower(apiKey)
-		md5HashValue := md5.Sum([]byte(fmt.Sprintf("%s:%s", s.Username, s.Password)))
+		md5HashValue := md5.Sum([]byte(fmt.Sprintf("%s:%s", authConfig.Username, authConfig.Password)))
 		hexMD5HashValue := fmt.Sprintf("%x", md5HashValue[:])
 		if !auth.StringsEqual(apiKey, hexMD5HashValue) {
 			return false

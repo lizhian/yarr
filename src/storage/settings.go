@@ -88,6 +88,9 @@ func (s *Storage) GetSettings() map[string]interface{} {
 		var valDecoded interface{}
 
 		rows.Scan(&key, &val)
+		if _, ok := result[key]; !ok {
+			continue
+		}
 		if err = json.Unmarshal([]byte(val), &valDecoded); err != nil {
 			log.Print(err)
 			continue

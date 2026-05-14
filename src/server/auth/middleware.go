@@ -10,8 +10,6 @@ import (
 )
 
 type Middleware struct {
-	Username string
-	Password string
 	BasePath string
 	Public   []string
 	DB       *storage.Storage
@@ -22,13 +20,18 @@ func unsafeMethod(method string) bool {
 }
 
 func (m *Middleware) Handler(c *router.Context) {
+	authConfig := m.DB.GetAuthConfig()
+	if !authConfig.Enabled {
+		c.Next()
+		return
+	}
 	for _, path := range m.Public {
 		if strings.HasPrefix(c.Req.URL.Path, m.BasePath+path) {
 			c.Next()
 			return
 		}
 	}
-	if IsAuthenticated(c.Req, m.Username, m.Password) {
+	if IsAuthenticated(c.Req, authConfig.Username, authConfig.Password) {
 		c.Next()
 		return
 	}
@@ -43,8 +46,8 @@ func (m *Middleware) Handler(c *router.Context) {
 	if c.Req.Method == "POST" {
 		username := c.Req.FormValue("username")
 		password := c.Req.FormValue("password")
-		if StringsEqual(username, m.Username) && StringsEqual(password, m.Password) {
-			Authenticate(c.Out, m.Username, m.Password, m.BasePath)
+		if StringsEqual(username, authConfig.Username) && StringsEqual(password, authConfig.Password) {
+			Authenticate(c.Out, authConfig.Username, authConfig.Password, m.BasePath)
 			c.Redirect(rootUrl)
 			return
 		} else {
