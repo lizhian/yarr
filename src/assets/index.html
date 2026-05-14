@@ -417,27 +417,33 @@
             <div v-else-if="settings=='feed' && settingsFeed" class="settings-dialog">
                 <p class="cursor-default"><b>{{ settingsFeed.title }}</b></p>
 
+                <section class="settings-dialog-section mt-3">
+                    <header>基础设置</header>
+                    <div class="settings-dialog-fields">
+                        <button class="settings-dialog-field settings-dialog-field-action" @click="renameFeed(settingsFeed)">
+                            <span class="settings-dialog-field-label">标题</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.title || '未设置' }}</span>
+                        </button>
+                        <a class="settings-dialog-field settings-dialog-field-action" :href="settingsFeed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.link">
+                            <span class="settings-dialog-field-label">网站链接</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.link }}</span>
+                        </a>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-else>
+                            <span class="settings-dialog-field-label">网站链接</span>
+                            <span class="settings-dialog-field-value">未设置</span>
+                        </div>
+                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedLink(settingsFeed)">
+                            <span class="settings-dialog-field-label">订阅链接</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.feed_link || '未设置' }}</span>
+                        </button>
+                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedContentSelector(settingsFeed)">
+                            <span class="settings-dialog-field-label">正文选择器</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
+                        </button>
+                    </div>
+                </section>
+
                 <div class="settings-dialog-actions mt-3">
-                    <a class="settings-dialog-action" :href="settingsFeed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.link">
-                        <span class="icon mr-2">{% inline "globe.svg" %}</span>
-                        网站
-                    </a>
-                    <a class="settings-dialog-action" :href="settingsFeed.feed_link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.feed_link">
-                        <span class="icon mr-2">{% inline "rss.svg" %}</span>
-                        订阅源链接
-                    </a>
-                    <button class="settings-dialog-action" @click="renameFeed(settingsFeed)">
-                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
-                        重命名
-                    </button>
-                    <button class="settings-dialog-action" @click="updateFeedLink(settingsFeed)" v-if="settingsFeed.feed_link">
-                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
-                        修改链接
-                    </button>
-                    <button class="settings-dialog-action" @click="updateFeedContentSelector(settingsFeed)">
-                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
-                        修改正文选择器
-                    </button>
                     <button class="settings-dialog-action" @click="updateFeedIconURL(settingsFeed)">
                         <span class="icon mr-2">{% inline "edit.svg" %}</span>
                         修改图标链接
@@ -448,13 +454,13 @@
 
                 <section class="settings-dialog-section">
                     <header>移动到</header>
-                    <div class="settings-dialog-actions">
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
                         <button class="settings-dialog-action"
                                 v-if="folder.id != settingsFeed.folder_id"
                                 v-for="folder in folders"
                                 @click="moveFeed(settingsFeed, folder); settings = ''">
                             <span class="icon mr-2">{% inline "folder.svg" %}</span>
-                            {{ folder.title }}
+                            <span class="settings-dialog-action-label">{{ folder.title }}</span>
                         </button>
                         <button class="settings-dialog-action text-muted" @click="moveFeed(settingsFeed, null); settings = ''" v-if="settingsFeed.folder_id">
                             <span class="icon mr-2">{% inline "folder-minus.svg" %}</span>

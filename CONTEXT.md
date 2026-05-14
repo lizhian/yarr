@@ -109,12 +109,16 @@ A user preference that controls whether articles are shown as a list or as cards
 _Avoid_: 卡片模型, Item layout
 
 **订阅源设置**:
-A group of actions for one subscription source, including opening source links, renaming, moving, and deleting it.
+A group of information rows and actions for one subscription source, including source links, renaming, moving, and deleting it.
 _Avoid_: 订阅项设置, Feed settings
 
 **订阅源图标链接**:
 An HTTP(S) image link used to display one subscription source's icon in the subscription source list.
 _Avoid_: Favicon, Feed icon, 订阅源图标
+
+**基础设置**:
+The information-row section inside **订阅源设置** that shows editable subscription source properties and links.
+_Avoid_: 基本设置, Basic settings
 
 **订阅源标题后缀**:
 A known service-added phrase at the end of a subscription source title that does not identify the subscription source itself.
@@ -250,6 +254,8 @@ _Avoid_: Browser back, 返回上一页
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
 - **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
+- **基础设置** shows the selected **订阅源** title, website link, subscription link, and **正文选择器** as fixed rows.
+- Empty **基础设置** values are shown as `未设置`.
 - **文件夹设置** is opened from the corresponding **文件夹** row in the subscription source list.
 - **订阅源设置** and **文件夹设置** are not article list toolbar actions.
 
