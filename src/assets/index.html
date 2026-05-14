@@ -420,6 +420,16 @@
                             导出
                         </a>
                     </div>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline mt-1">
+                        <button class="settings-dialog-action" @click="createRSSHubFeed('bilibili')">
+                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                            Bilibili
+                        </button>
+                        <button class="settings-dialog-action" @click="createRSSHubFeed('telegram')">
+                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                            Telegram
+                        </button>
+                    </div>
                 </section>
 
                 <div class="settings-dialog-actions settings-dialog-actions-inline mt-1">
@@ -573,19 +583,6 @@
                     <textarea id="rsshub-base-url" name="rsshub_base_url" class="form-control" rows="5" autocomplete="off" :value="rsshubBaseUrl" placeholder="https://rsshub.rssforever.com&#10;#https://example.com" v-focus></textarea>
                     <button class="btn btn-block btn-default mt-3" type="submit">保存</button>
                 </form>
-                <section class="settings-dialog-section mt-3">
-                    <header>快速添加</header>
-                    <div class="settings-dialog-actions settings-dialog-actions-inline">
-                        <button class="settings-dialog-action" @click="createRSSHubFeed('bilibili')">
-                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
-                            bilibili
-                        </button>
-                        <button class="settings-dialog-action" @click="createRSSHubFeed('telegram')">
-                            <span class="icon mr-2">{% inline "rss.svg" %}</span>
-                            telegram
-                        </button>
-                    </div>
-                </section>
             </div>
             <div v-else-if="settings=='shortcuts'">
                 <p class="cursor-default"><b>键盘快捷键</b></p>
