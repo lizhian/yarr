@@ -55,6 +55,27 @@ func TestRSSFeed(t *testing.T) {
 	}
 }
 
+func TestRSSFeedImageURL(t *testing.T) {
+	feed, err := ParseAndFix(strings.NewReader(`
+		<?xml version="1.0"?>
+		<rss version="2.0">
+		<channel>
+			<title>Feed</title>
+			<link>https://example.com/feed.xml</link>
+			<image>
+				<url>/icon.png</url>
+			</image>
+		</channel>
+		</rss>
+	`), "https://example.com/feed.xml", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if feed.ImageURL != "https://example.com/icon.png" {
+		t.Fatalf("got %q", feed.ImageURL)
+	}
+}
+
 func TestRSSMediaContentThumbnail(t *testing.T) {
 	// see: https://vimeo.com/channels/staffpicks/videos/rss
 	feed, _ := Parse(strings.NewReader(`

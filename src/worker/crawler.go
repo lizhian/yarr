@@ -89,15 +89,48 @@ func DiscoverFeedWithLink(candidateUrl, feedLink string) (*DiscoverResult, error
 
 var emptyIcon = make([]byte, 0)
 var imageTypes = map[string]bool{
-	"image/x-icon": true,
-	"image/png":    true,
-	"image/jpeg":   true,
-	"image/gif":    true,
+	"image/x-icon":  true,
+	"image/png":     true,
+	"image/jpeg":    true,
+	"image/gif":     true,
+	"image/webp":    true,
+	"image/svg+xml": true,
+	"image/avif":    true,
 }
 
-func findFavicon(siteUrl, feedUrl string) (*[]byte, error) {
-	urls := make([]string, 0)
+func fetchImage(link string) (*[]byte, error) {
+	res, err := client.get(link)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("status code %d", res.StatusCode)
+	}
 
+	content, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	ctype := http.DetectContentType(content)
+	if imageTypes[ctype] {
+		return &content, nil
+	}
+	if mediaType, _, err := mime.ParseMediaType(res.Header.Get("Content-Type")); err == nil && imageTypes[mediaType] {
+		return &content, nil
+	}
+	return nil, nil
+}
+
+func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
+	if feedImageUrl != "" {
+		if content, err := fetchImage(feedImageUrl); err == nil && content != nil {
+			return content, nil
+		}
+	}
+
+	urls := make([]string, 0)
 	favicon := func(link string) string {
 		u, err := url.Parse(link)
 		if err != nil {
@@ -123,24 +156,11 @@ func findFavicon(siteUrl, feedUrl string) (*[]byte, error) {
 	}
 
 	for _, u := range urls {
-		res, err := client.get(u)
-		if err != nil {
+		content, err := fetchImage(u)
+		if err != nil || content == nil {
 			continue
 		}
-		defer res.Body.Close()
-		if res.StatusCode != 200 {
-			continue
-		}
-
-		content, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			continue
-		}
-
-		ctype := http.DetectContentType(content)
-		if imageTypes[ctype] {
-			return &content, nil
-		}
+		return content, nil
 	}
 	return &emptyIcon, nil
 }

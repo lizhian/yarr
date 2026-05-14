@@ -38,6 +38,39 @@ func TestDiscoverFeedWithLinkPreservesStoredLink(t *testing.T) {
 	}
 }
 
+func TestFindFeedIconPrefersFeedImage(t *testing.T) {
+	const feedImage = "feed-image"
+	const favicon = "\x00\x00\x01\x00favicon"
+	var requested []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		switch r.URL.Path {
+		case "/feed-image.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte(feedImage))
+		case "/":
+			io.WriteString(w, `<html><head><link rel="icon" href="/favicon.ico"></head></html>`)
+		case "/favicon.ico":
+			w.Header().Set("Content-Type", "image/x-icon")
+			w.Write([]byte(favicon))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	icon, err := findFeedIcon(server.URL+"/feed-image.png", server.URL, server.URL+"/feed.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if icon == nil || string(*icon) != feedImage {
+		t.Fatalf("got %#v", icon)
+	}
+	if len(requested) != 1 || requested[0] != "/feed-image.png" {
+		t.Fatalf("got requests %#v", requested)
+	}
+}
+
 func TestListItemsResolvesRSSHubLink(t *testing.T) {
 	requestPath := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

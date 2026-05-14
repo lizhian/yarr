@@ -80,6 +80,34 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParseCleanFeedTitleSuffix(t *testing.T) {
+	testcases := []struct {
+		title string
+		want  string
+	}{
+		{"Alice 的 bilibili 动态", "Alice"},
+		{"Alice 的 bilibili 空间", "Alice"},
+		{"Alice - Telegram Channel", "Alice"},
+		{"Alice", "Alice"},
+	}
+	for _, testcase := range testcases {
+		feed, err := Parse(strings.NewReader(`
+			<?xml version="1.0"?>
+			<rss version="2.0">
+				<channel>
+					<title>` + testcase.title + `</title>
+				</channel>
+			</rss>
+		`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if feed.Title != testcase.want {
+			t.Fatalf("got %q, want %q", feed.Title, testcase.want)
+		}
+	}
+}
+
 func TestParseShortFeed(t *testing.T) {
 	have, err := Parse(strings.NewReader(
 		`<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>`,

@@ -20,7 +20,12 @@ type rssFeed struct {
 	Version string    `xml:"version,attr"`
 	Title   string    `xml:"channel>title"`
 	Link    string    `xml:"channel>link"`
+	Image   rssImage  `xml:"channel>image"`
 	Items   []rssItem `xml:"channel>item"`
+}
+
+type rssImage struct {
+	URL string `xml:"url"`
 }
 
 type rssItem struct {
@@ -144,8 +149,9 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 	}
 
 	dstfeed := &Feed{
-		Title:   srcfeed.Title,
-		SiteURL: srcfeed.Link,
+		Title:    srcfeed.Title,
+		SiteURL:  srcfeed.Link,
+		ImageURL: srcfeed.Image.URL,
 	}
 	for _, srcitem := range srcfeed.Items {
 		mediaLinks := srcitem.mediaLinks()

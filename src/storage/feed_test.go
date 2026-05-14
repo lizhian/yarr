@@ -17,6 +17,20 @@ func TestCreateFeed(t *testing.T) {
 	}
 }
 
+func TestCreateFeedCleansTitleSuffix(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("Alice - Telegram Channel", "", "http://example.com", "http://example.com/feed.xml", nil)
+	if feed.Title != "Alice" {
+		t.Fatalf("got %q", feed.Title)
+	}
+
+	db.RenameFeed(feed.Id, "Alice 的 bilibili 动态")
+	feed = db.GetFeed(feed.Id)
+	if feed.Title != "Alice" {
+		t.Fatalf("got %q", feed.Title)
+	}
+}
+
 func TestCreateFeedSameLink(t *testing.T) {
 	db := testDB()
 	feed1 := db.CreateFeed("title", "", "", "http://example1.com/feed.xml", nil)

@@ -3,6 +3,8 @@ package storage
 import (
 	"database/sql"
 	"log"
+
+	"github.com/nkanaev/yarr/src/feedmeta"
 )
 
 type Feed struct {
@@ -22,6 +24,7 @@ func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId
 }
 
 func (s *Storage) CreateFeedWithContentSelector(title, description, link, feedLink, contentSelector string, folderId *int64) *Feed {
+	title = feedmeta.CleanTitle(title)
 	if title == "" {
 		title = feedLink
 	}
@@ -73,6 +76,7 @@ func (s *Storage) DeleteFeed(feedId int64) bool {
 }
 
 func (s *Storage) RenameFeed(feedId int64, newTitle string) bool {
+	newTitle = feedmeta.CleanTitle(newTitle)
 	_, err := s.db.Exec(`update feeds set title = ? where id = ?`, newTitle, feedId)
 	return err == nil
 }

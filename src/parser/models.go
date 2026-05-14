@@ -3,9 +3,10 @@ package parser
 import "time"
 
 type Feed struct {
-	Title   string
-	SiteURL string
-	Items   []Item
+	Title    string
+	SiteURL  string
+	ImageURL string
+	Items    []Item
 }
 
 type Item struct {
