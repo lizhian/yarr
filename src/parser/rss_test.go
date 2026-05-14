@@ -76,6 +76,25 @@ func TestRSSFeedImageURL(t *testing.T) {
 	}
 }
 
+func TestRSSFeedSiteURLIgnoresAtomSelfLink(t *testing.T) {
+	feed, err := Parse(strings.NewReader(`
+		<?xml version="1.0"?>
+		<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+		<channel>
+			<title>Feed</title>
+			<link>https://example.com/site</link>
+			<atom:link href="https://example.com/feed.xml" rel="self" type="application/rss+xml" />
+		</channel>
+		</rss>
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if feed.SiteURL != "https://example.com/site" {
+		t.Fatalf("got %q", feed.SiteURL)
+	}
+}
+
 func TestRSSMediaContentThumbnail(t *testing.T) {
 	// see: https://vimeo.com/channels/staffpicks/videos/rss
 	feed, _ := Parse(strings.NewReader(`

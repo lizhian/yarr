@@ -19,7 +19,7 @@ type rssFeed struct {
 	XMLName xml.Name  `xml:"rss"`
 	Version string    `xml:"version,attr"`
 	Title   string    `xml:"channel>title"`
-	Link    string    `xml:"channel>link"`
+	Links   rssLinks  `xml:"channel>link"`
 	Image   rssImage  `xml:"channel>image"`
 	Items   []rssItem `xml:"channel>item"`
 }
@@ -71,6 +71,17 @@ type rssLink struct {
 	Data    string `xml:",chardata"`
 	Href    string `xml:"href,attr"`
 	Rel     string `xml:"rel,attr"`
+}
+
+type rssLinks []rssLink
+
+func (links rssLinks) ChannelLink() string {
+	for _, link := range links {
+		if link.XMLName.Space == "rss" {
+			return link.Data
+		}
+	}
+	return ""
 }
 
 type rssTitle struct {
@@ -150,7 +161,7 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 
 	dstfeed := &Feed{
 		Title:    srcfeed.Title,
-		SiteURL:  srcfeed.Link,
+		SiteURL:  srcfeed.Links.ChannelLink(),
 		ImageURL: srcfeed.Image.URL,
 	}
 	for _, srcitem := range srcfeed.Items {
