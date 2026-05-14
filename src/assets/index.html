@@ -404,7 +404,7 @@
                         <span class="icon mr-2">{% inline "globe.svg" %}</span>
                         网站
                     </a>
-                    <a class="settings-dialog-action" :href="feedLinkHref(settingsFeed.feed_link)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="feedLinkHref(settingsFeed.feed_link)">
+                    <a class="settings-dialog-action" :href="settingsFeed.feed_link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.feed_link">
                         <span class="icon mr-2">{% inline "rss.svg" %}</span>
                         订阅源链接
                     </a>

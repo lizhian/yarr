@@ -1022,12 +1022,6 @@ var vm = new Vue({
         cancelText: '取消',
       })
     },
-    feedLinkHref: function(link) {
-      if (!link) return ''
-      if (link.indexOf('rsshub://') !== 0) return link
-      if (!this.rsshubBaseUrl) return ''
-      return this.rsshubBaseUrl.replace(/\/+$/, '') + '/' + link.replace('rsshub://', '').replace(/^\/+/, '')
-    },
     resizeFeedList: function(width) {
       this.feedListWidth = Math.min(Math.max(200, width), 700)
     },
