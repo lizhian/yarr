@@ -207,6 +207,40 @@ func TestRefreshUpdatesFeedIconWhenImageURLChanges(t *testing.T) {
 	}
 }
 
+func TestRefreshUpdatesExistingFeedIconWhenImageURLFirstObserved(t *testing.T) {
+	const oldIcon = "old-icon"
+	const newIcon = "new-icon"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte(newIcon))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	icon := []byte(oldIcon)
+	db.UpdateFeedIcon(feed.Id, &icon)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.Icon == nil || string(*feed.Icon) != newIcon {
+		t.Fatalf("icon got %#v", feed.Icon)
+	}
+	if url, ok := worker.feedImageUrl(feed.Id); !ok || url != server.URL+"/new-icon.png" {
+		t.Fatalf("image url got %q, %v", url, ok)
+	}
+}
+
 func TestRefreshKeepsImageURLOnFailedIconUpdate(t *testing.T) {
 	const oldIcon = "old-icon"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

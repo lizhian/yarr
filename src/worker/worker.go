@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bytes"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -99,12 +100,20 @@ func (w *Worker) findFeedIcon(feed storage.Feed, feedImageUrl, feedLink string) 
 }
 
 func (w *Worker) updateFeedIconFromImageUrl(feedID int64, feedImageUrl string) bool {
+	return w.updateFeedIconFromImageUrlIfChanged(feedID, feedImageUrl, nil)
+}
+
+func (w *Worker) updateFeedIconFromImageUrlIfChanged(feedID int64, feedImageUrl string, currentIcon *[]byte) bool {
 	icon, err := fetchImage(feedImageUrl)
 	if err != nil {
 		return false
 	}
 	if icon == nil {
 		return false
+	}
+	if currentIcon != nil && bytes.Equal(*currentIcon, *icon) {
+		w.setFeedImageUrl(feedID, feedImageUrl)
+		return true
 	}
 	if !w.updateFeedIcon(feedID, icon) {
 		return false
@@ -152,11 +161,7 @@ func (w *Worker) updateRefreshedFeedIcon(result *FeedRefreshResult) {
 	if feed == nil {
 		return
 	}
-	if feed.HasIcon {
-		w.setFeedImageUrl(result.FeedID, result.Feed.ImageURL)
-		return
-	}
-	w.updateFeedIconFromImageUrl(result.FeedID, result.Feed.ImageURL)
+	w.updateFeedIconFromImageUrlIfChanged(result.FeedID, result.Feed.ImageURL, feed.Icon)
 }
 
 func (w *Worker) SetRefreshRate(minute int64) {
