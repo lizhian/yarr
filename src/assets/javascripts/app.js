@@ -1424,6 +1424,12 @@ var vm = new Vue({
     resizeItemList: function(width) {
       this.itemListWidth = Math.min(Math.max(200, width), 700)
     },
+    resetColumnWidths: function() {
+      var appWidth = this.$el.getBoundingClientRect().width
+      var columnWidth = Math.round(appWidth / 5)
+      this.feedListWidth = columnWidth
+      this.itemListWidth = columnWidth
+    },
     resetFeedChoice: function() {
       this.feedNewChoice = []
       this.feedNewChoiceSelected = ''
@@ -1432,6 +1438,7 @@ var vm = new Vue({
       this.theme.size = +(this.theme.size + (0.1 * x)).toFixed(1)
     },
     fetchAllFeeds: function() {
+      this.resetColumnWidths()
       if (this.loading.feeds) return
       api.feeds.refresh().then(function() {
         vm.refreshStats()
