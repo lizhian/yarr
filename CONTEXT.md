@@ -254,7 +254,7 @@ _Avoid_: Browser back, 返回上一页
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
 - **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
-- **基础设置** shows the selected **订阅源** title, website link, subscription link, and **正文选择器** as fixed rows.
+- **基础设置** shows the selected **订阅源** title, website link, subscription link, **正文选择器**, and **订阅源图标链接** as fixed rows.
 - Empty **基础设置** values are shown as `未设置`.
 - **文件夹设置** is opened from the corresponding **文件夹** row in the subscription source list.
 - **订阅源设置** and **文件夹设置** are not article list toolbar actions.

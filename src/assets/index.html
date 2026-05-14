@@ -440,15 +440,12 @@
                             <span class="settings-dialog-field-label">正文选择器</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
                         </button>
+                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedIconURL(settingsFeed)">
+                            <span class="settings-dialog-field-label">图标链接</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.icon_url || '未设置' }}</span>
+                        </button>
                     </div>
                 </section>
-
-                <div class="settings-dialog-actions mt-3">
-                    <button class="settings-dialog-action" @click="updateFeedIconURL(settingsFeed)">
-                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
-                        修改图标链接
-                    </button>
-                </div>
 
                 <hr>
 
@@ -570,7 +567,7 @@
                 </table>
             </div>
         </modal>
-        <modal :open="dialog.open" @hide="cancelDialog()">
+        <modal class="settings-modal" :open="dialog.open" @hide="cancelDialog()">
             <form @submit.prevent="submitDialog()">
                 <p class="cursor-default"><b>{{ dialog.title }}</b></p>
                 <p class="mt-4 mb-0 text-break">{{ dialog.message }}</p>
