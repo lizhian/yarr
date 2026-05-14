@@ -436,13 +436,13 @@
                             <span class="settings-dialog-field-label">订阅链接</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.feed_link || '未设置' }}</span>
                         </button>
-                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedContentSelector(settingsFeed)">
-                            <span class="settings-dialog-field-label">正文选择器</span>
-                            <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
-                        </button>
                         <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedIconURL(settingsFeed)">
                             <span class="settings-dialog-field-label">图标链接</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.icon_url || '未设置' }}</span>
+                        </button>
+                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedContentSelector(settingsFeed)">
+                            <span class="settings-dialog-field-label">正文选择器</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
                         </button>
                     </div>
                 </section>
