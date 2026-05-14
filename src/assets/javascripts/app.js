@@ -140,6 +140,41 @@ function parseURL(raw) {
   }
 }
 
+var ARTICLE_LIST_LAYOUTS_KEY = 'yarr.articleListLayouts.v1'
+
+function normalizeArticleListLayout(layout) {
+  return layout == 'card' ? 'card' : 'list'
+}
+
+function articleListLayoutStorageKey(feedSelected) {
+  return feedSelected || 'all'
+}
+
+function readArticleListLayouts() {
+  try {
+    var layouts = JSON.parse(localStorage.getItem(ARTICLE_LIST_LAYOUTS_KEY) || '{}')
+    return layouts && typeof layouts == 'object' && !Array.isArray(layouts) ? layouts : {}
+  } catch (e) {
+    return {}
+  }
+}
+
+function writeArticleListLayouts(layouts) {
+  try {
+    localStorage.setItem(ARTICLE_LIST_LAYOUTS_KEY, JSON.stringify(layouts))
+  } catch (e) {}
+}
+
+function getArticleListLayout(feedSelected) {
+  return normalizeArticleListLayout(readArticleListLayouts()[articleListLayoutStorageKey(feedSelected)])
+}
+
+function setArticleListLayout(feedSelected, layout) {
+  var layouts = readArticleListLayouts()
+  layouts[articleListLayoutStorageKey(feedSelected)] = normalizeArticleListLayout(layout)
+  writeArticleListLayouts(layouts)
+}
+
 Vue.component('drag', {
   props: ['width'],
   template: '<div class="drag"></div>',
@@ -345,7 +380,8 @@ var vm = new Vue({
       'itemSearch': '',
       'itemSortNewestFirst': s.sort_newest_first,
       'itemListWidth': s.item_list_width || 300,
-      'articleListLayout': s.article_list_layout == 'card' ? 'card' : 'list',
+      'articleListLayout': getArticleListLayout(s.feed),
+      'articleListLayoutApplying': false,
       'rsshubBaseUrl': s.rsshub_base_url || '',
 
       'filteredFeedStats': {},
@@ -517,6 +553,11 @@ var vm = new Vue({
     },
     'feedSelected': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
+      var layout = getArticleListLayout(newVal)
+      if (this.articleListLayout != layout) {
+        this.articleListLayoutApplying = true
+        this.articleListLayout = layout
+      }
       api.settings.update({feed: newVal}).then(this.refreshItems.bind(this, false))
       this.itemSelected = null
       if (this.$refs.itemlist) this.$refs.itemlist.scrollTop = 0
@@ -570,7 +611,11 @@ var vm = new Vue({
     },
     'articleListLayout': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({article_list_layout: newVal})
+      if (this.articleListLayoutApplying) {
+        this.articleListLayoutApplying = false
+        return
+      }
+      setArticleListLayout(this.feedSelected, newVal)
     },
   },
   methods: {

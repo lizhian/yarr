@@ -10,18 +10,17 @@ import (
 
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
-		"filter":              "",
-		"feed":                "",
-		"feed_list_width":     300,
-		"item_list_width":     300,
-		"sort_newest_first":   true,
-		"theme_name":          "light",
-		"theme_font":          "lxgw-wenkai",
-		"theme_size":          1,
-		"refresh_rate":        0,
-		"rsshub_base_url":     "",
-		"toolbar_display":     "text",
-		"article_list_layout": "list",
+		"filter":            "",
+		"feed":              "",
+		"feed_list_width":   300,
+		"item_list_width":   300,
+		"sort_newest_first": true,
+		"theme_name":        "light",
+		"theme_font":        "lxgw-wenkai",
+		"theme_size":        1,
+		"refresh_rate":      0,
+		"rsshub_base_url":   "",
+		"toolbar_display":   "text",
 	}
 }
 
@@ -36,6 +35,9 @@ func normalizeSetting(key string, val interface{}) interface{} {
 }
 
 func (s *Storage) GetSettingsValue(key string) interface{} {
+	if _, ok := settingsDefaults()[key]; !ok {
+		return nil
+	}
 	row := s.db.QueryRow(`select val from settings where key=?`, key)
 	var val []byte
 	if err := row.Scan(&val); err != nil {
@@ -88,6 +90,9 @@ func (s *Storage) GetSettings() map[string]interface{} {
 		var valDecoded interface{}
 
 		rows.Scan(&key, &val)
+		if _, ok := result[key]; !ok {
+			continue
+		}
 		if err = json.Unmarshal([]byte(val), &valDecoded); err != nil {
 			log.Print(err)
 			continue

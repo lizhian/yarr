@@ -125,7 +125,7 @@ A small image preview shown alongside an article in the article list.
 _Avoid_: Thumbnail, 预览图
 
 **文章列表布局**:
-A user preference that controls whether articles are shown as a list or as cards in the article list.
+A browser-local user preference that controls whether articles are shown as a list or as cards in the article list.
 _Avoid_: 卡片模型, Item layout
 
 **订阅源设置**:
@@ -243,7 +243,18 @@ _Avoid_: Browser back, 返回上一页
 - **全部** includes **已读**, **未读**, and **收藏** articles.
 - An **文章** can have a **缩略图** when it includes an image media link.
 - **文章列表布局** can present **文章** in **列表模式** or **卡片模式**.
+- **文章列表布局** is remembered in the browser, not on the server.
+- **文章列表布局** is not a server-side reader setting.
+- **文章列表布局** can be remembered separately for different **订阅源** and **文件夹** selections.
+- **全部** has its own **文章列表布局** memory separate from any **订阅源** or **文件夹**.
+- **文章列表布局** memory is shared across **全部**, **未读**, and **收藏** filters for the same selection.
 - **列表模式** is the default **文章列表布局**.
+- A selection with no remembered **文章列表布局** uses **列表模式**.
+- Existing server-side **文章列表布局** values are not migrated into browser-local memory.
+- Switching between **全部**, **订阅源**, and **文件夹** selections immediately applies that selection's remembered **文章列表布局**.
+- Changing **文章列表布局** updates only the current selection's browser-local memory.
+- A **订阅源** without remembered **文章列表布局** does not inherit the remembered **文章列表布局** of its **文件夹**.
+- Browser-local **文章列表布局** memory is not actively cleared when a **订阅源** or **文件夹** is deleted.
 - **卡片模式** presents **文章** as a single-column card flow.
 - **卡片模式** places the **缩略图** above the article title when the **文章** has a **缩略图**.
 - **卡片模式** does not add an image placeholder when the **文章** has no **缩略图**.

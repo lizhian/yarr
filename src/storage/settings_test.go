@@ -123,26 +123,23 @@ func TestStoredInvalidThemeFontFallsBackToDefault(t *testing.T) {
 	}
 }
 
-func TestArticleListLayoutDefault(t *testing.T) {
+func TestUnknownSettingsAreIgnored(t *testing.T) {
 	db := testDB()
+	setRawSetting(t, db, "article_list_layout", `"card"`)
 
-	if got := db.GetSettingsValue("article_list_layout"); got != "list" {
-		t.Fatalf("invalid article list layout default: %#v", got)
+	if got := db.GetSettingsValue("article_list_layout"); got != nil {
+		t.Fatalf("unknown setting should not have a value: %#v", got)
 	}
 
 	settings := db.GetSettings()
-	if got := settings["article_list_layout"]; got != "list" {
-		t.Fatalf("invalid article list layout setting: %#v", got)
+	if _, ok := settings["article_list_layout"]; ok {
+		t.Fatal("unknown setting should not be returned")
 	}
-}
-
-func TestUpdateArticleListLayout(t *testing.T) {
-	db := testDB()
 
 	if !db.UpdateSettings(map[string]interface{}{"article_list_layout": "card"}) {
-		t.Fatal("did not update article list layout")
+		t.Fatal("unknown setting update should be ignored without failing")
 	}
-	if got := db.GetSettingsValue("article_list_layout"); got != "card" {
-		t.Fatalf("invalid article list layout: %#v", got)
+	if got := db.GetSettingsValue("article_list_layout"); got != nil {
+		t.Fatalf("unknown setting should remain ignored after update: %#v", got)
 	}
 }
