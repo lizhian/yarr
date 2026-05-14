@@ -240,7 +240,8 @@
                             :aria-pressed="itemSelectedContentMode == 'normal'"
                             @click="setItemSelectedContentMode('normal')"
                             title="普通">
-                        <span>普通</span>
+                        <span class="icon toolbar-icon">{% inline "rss.svg" %}</span>
+                        <span class="toolbar-label">普通</span>
                     </button>
                     <button class="toolbar-item"
                             :class="{active: itemSelectedContentMode == 'readability'}"
@@ -248,14 +249,15 @@
                             @click="setItemSelectedContentMode('readability')"
                             title="正文">
                         <span class="icon toolbar-icon" :class="{'icon-loading': loading.readability}">{% inline "book-open.svg" %}</span>
-                        <span>正文</span>
+                        <span class="toolbar-label">正文</span>
                     </button>
                     <button class="toolbar-item"
                             :class="{active: itemSelectedContentMode == 'embed'}"
                             :aria-pressed="itemSelectedContentMode == 'embed'"
                             @click="setItemSelectedContentMode('embed')"
                             title="嵌入">
-                        <span>嵌入</span>
+                        <span class="icon toolbar-icon">{% inline "globe.svg" %}</span>
+                        <span class="toolbar-label">嵌入</span>
                     </button>
                 </div>
                 <a class="toolbar-item" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
