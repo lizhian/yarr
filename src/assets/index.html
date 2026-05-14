@@ -484,14 +484,16 @@
                             <span class="settings-dialog-field-label">网站链接</span>
                             <span class="settings-dialog-field-value">未设置</span>
                         </div>
-                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedLink(settingsFeed)">
-                            <span class="settings-dialog-field-label">订阅链接</span>
-                            <span class="settings-dialog-field-value">{{ settingsFeed.feed_link || '未设置' }}</span>
-                        </button>
-                        <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedIconURL(settingsFeed)">
-                            <span class="settings-dialog-field-label">图标链接</span>
-                            <span class="settings-dialog-field-value">{{ settingsFeed.icon_url || '未设置' }}</span>
-                        </button>
+                        <div class="settings-dialog-field settings-dialog-field-split">
+                            <a class="settings-dialog-field-label settings-dialog-field-link" :href="trimValue(settingsFeed.feed_link)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="isHTTPURL(settingsFeed.feed_link)">订阅链接</a>
+                            <span class="settings-dialog-field-label" v-else>订阅链接</span>
+                            <button class="settings-dialog-field-value settings-dialog-field-value-action" @click="updateFeedLink(settingsFeed)" :title="settingsFeed.feed_link || '未设置'">{{ settingsFeed.feed_link || '未设置' }}</button>
+                        </div>
+                        <div class="settings-dialog-field settings-dialog-field-split">
+                            <a class="settings-dialog-field-label settings-dialog-field-link" :href="trimValue(settingsFeed.icon_url)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="isHTTPURL(settingsFeed.icon_url)">图标链接</a>
+                            <span class="settings-dialog-field-label" v-else>图标链接</span>
+                            <button class="settings-dialog-field-value settings-dialog-field-value-action" @click="updateFeedIconURL(settingsFeed)" :title="settingsFeed.icon_url || '未设置'">{{ settingsFeed.icon_url || '未设置' }}</button>
+                        </div>
                         <div class="settings-dialog-field settings-dialog-field-choice">
                             <span class="settings-dialog-field-label">内容方式</span>
                             <div class="settings-segmented settings-segmented-compact content-mode-picker">

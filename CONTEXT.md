@@ -32,6 +32,10 @@ _Avoid_: Disabled RSSHub host, 注释地址
 A portable subscription source link beginning with `rsshub://` whose path is resolved against the RSSHub base URL.
 _Avoid_: RSSHub URL, RSSHub shortcut
 
+**订阅链接**:
+The saved link yarr uses to fetch articles from one subscription source.
+_Avoid_: Feed URL, Feed link
+
 **RSSHub 快速添加**:
 A settings action that creates an RSSHub subscription link from a supported service template and a user-entered identifier.
 _Avoid_: RSSHub preset, RSSHub shortcut
@@ -176,6 +180,7 @@ _Avoid_: Browser back, 返回上一页
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- A **订阅源** has one **订阅链接**.
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
 - **桌面端视图** can show the **订阅源** list, **文章** list, and **文章详情** together.
@@ -317,6 +322,9 @@ _Avoid_: Browser back, 返回上一页
 - **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
 - **基础设置** shows the selected **订阅源** title, website link, subscription link, **正文选择器**, and **订阅源图标链接** as fixed rows.
 - Empty **基础设置** values are shown as `未设置`.
+- In **基础设置**, clicking the label of an openable link opens that link while clicking the value edits it.
+- In **基础设置**, only an HTTP(S) **订阅链接** can be opened directly; an **RSSHub 订阅链接** is not opened from the row label.
+- In **基础设置**, an empty link value cannot be opened from the row label.
 - **文件夹设置** is opened from the corresponding **文件夹** row in the subscription source list.
 - **订阅源设置** and **文件夹设置** are not article list toolbar actions.
 

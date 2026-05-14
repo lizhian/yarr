@@ -1062,6 +1062,12 @@ var vm = new Vue({
       })
     },
     normalizeContentMode: normalizeContentMode,
+    trimValue: function(value) {
+      return (value || '').trim()
+    },
+    isHTTPURL: function(value) {
+      return /^https?:\/\//i.test(this.trimValue(value))
+    },
     updateFeedIconURL: function(feed) {
       this.promptDialog('请输入图标链接', feed.icon_url || '').then(function(iconURL) {
         if (iconURL === null) return
