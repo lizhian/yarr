@@ -61,9 +61,28 @@ func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 		log.Printf("Failed to resolve favicon feed link for %s: %s", feed.FeedLink, err)
 		return
 	}
-	icon, err := findFavicon(feed.Link, feedLink)
+	feedImageUrl := ""
+	if result, err := DiscoverFeedWithLink(feedLink, feed.FeedLink); err == nil && result.Feed != nil {
+		feedImageUrl = result.Feed.ImageURL
+	}
+	icon, err := findFeedIcon(feedImageUrl, feed.Link, feedLink)
 	if err != nil {
 		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
+	}
+	if icon != nil {
+		w.db.UpdateFeedIcon(feed.Id, icon)
+	}
+}
+
+func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
+	feedLink, err := w.resolveLink(feed.FeedLink)
+	if err != nil {
+		log.Printf("Failed to resolve icon feed link for %s: %s", feed.FeedLink, err)
+		return
+	}
+	icon, err := findFeedIcon(feedImageUrl, feed.Link, feedLink)
+	if err != nil {
+		log.Printf("Failed to find icon for %s (%s): %s", feed.FeedLink, feed.Link, err)
 	}
 	if icon != nil {
 		w.db.UpdateFeedIcon(feed.Id, icon)

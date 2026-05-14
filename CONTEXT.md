@@ -112,6 +112,14 @@ _Avoid_: 卡片模型, Item layout
 A group of actions for one subscription source, including opening source links, renaming, moving, and deleting it.
 _Avoid_: 订阅项设置, Feed settings
 
+**订阅源图标**:
+A small image that visually represents one subscription source in the subscription source list.
+_Avoid_: Favicon, Feed icon
+
+**订阅源标题后缀**:
+A known service-added phrase at the end of a subscription source title that does not identify the subscription source itself.
+_Avoid_: Title suffix, Feed title suffix
+
 **文件夹设置**:
 A group of actions for one folder, including renaming and deleting it.
 _Avoid_: Folder settings
@@ -136,13 +144,19 @@ _Avoid_: Browser back, 返回上一页
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- A **订阅源** can have one **订阅源图标**.
+- A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
+- Known **订阅源标题后缀** values are removed from saved **订阅源** titles.
+- When a newly fetched RSS subscription declares a channel image URL, that image is preferred as the **订阅源图标**.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
 - **文章详情** centers article images.
 - An **RSSHub 订阅链接** is stored as the **订阅源** link and resolves through the current **RSSHub 基础链接** when yarr fetches it.
 - Changing the **RSSHub 基础链接** changes where all saved **RSSHub 订阅链接** resolve without rewriting those links.
-- An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can be added or refreshed.
+- An **RSSHub 订阅链接** can be added without checking whether it can currently be reached.
+- An **RSSHub 订阅链接** can be added before any **RSSHub 基础链接** is configured.
+- An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can fetch **文章**.
 - **RSSHub 快速添加** creates an **RSSHub 订阅链接** and then follows the normal **订阅源** creation flow.
 - **RSSHub 快速添加** supports Bilibili user videos by UID and Telegram channels by 频道 ID.
 - An **RSSHub 基础链接列表** contains one or more **RSSHub 基础链接**.
@@ -152,7 +166,7 @@ _Avoid_: Browser back, 返回上一页
 - Duplicate **RSSHub 基础链接** entries are resolved by keeping the first normalized occurrence.
 - A line beginning with `#` in the **RSSHub 基础链接列表** is a **停用的 RSSHub 基础链接**.
 - A **停用的 RSSHub 基础链接** must still be a valid **RSSHub 基础链接** after removing the `#` prefix.
-- A **停用的 RSSHub 基础链接** is not used for **RSSHub 可用性** checks, adding **RSSHub 订阅链接**, or fetching **文章**.
+- A **停用的 RSSHub 基础链接** is not used for **RSSHub 可用性** checks or fetching **文章**.
 - A **RSSHub 基础链接列表** with no enabled **RSSHub 基础链接** is treated as unconfigured.
 - An **RSSHub 订阅链接** resolves through the global **RSSHub 基础链接列表**, not a per-**订阅源** RSSHub setting.
 - **RSSHub 可用性** is checked against each **RSSHub 基础链接** root URL; HTTP 2xx and 3xx responses mean available.
@@ -164,9 +178,9 @@ _Avoid_: Browser back, 返回上一页
 - If no **RSSHub 基础链接** is known to be available, fetching **文章** falls back to enabled **RSSHub 基础链接** in **RSSHub 基础链接列表** order, including links with **未知 RSSHub 可用性**.
 - Fetching **文章** for one **RSSHub 订阅链接** tries at most five **RSSHub 基础链接**.
 - Failed **文章** fetching does not change **RSSHub 可用性**; only the availability check updates it.
-- Adding an **RSSHub 订阅链接** uses the same **RSSHub 基础链接列表** ordering and five-link attempt limit as fetching **文章**.
+- Adding an **RSSHub 订阅链接** stores it immediately and does not try any **RSSHub 基础链接**.
 - Adding an **RSSHub 订阅链接** stores the portable **RSSHub 订阅链接**, not the resolved HTTP(S) URL that succeeded.
-- If all attempted **RSSHub 基础链接** fail, users see the last request error while logs keep the candidate-level failures.
+- If all attempted **RSSHub 基础链接** fail while fetching **文章**, users see the last request error while logs keep the candidate-level failures.
 - OPML import and export preserve **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
 - **自动刷新** can be disabled or set to 1m, 5m, 10m, 30m, or 1h from settings.
@@ -237,7 +251,9 @@ _Avoid_: Browser back, 返回上一页
 - "Feed" is translated as **订阅源** in user-facing UI, not "源".
 - "Item" and "Article" are translated as **文章** in user-facing UI, not "条目".
 - `rsshub://...` is an **RSSHub 订阅链接** stored in portable form, not a one-time import shortcut expanded to HTTP(S) at creation time.
-- "快速添加 RSSHub" means **RSSHub 快速添加**, not a separate subscription source type or a bypass of the normal creation flow.
+- "快速添加 RSSHub" means **RSSHub 快速添加**, not a separate subscription source type.
+- Adding an **RSSHub 订阅链接** is a save operation; fetching **文章** is the first step that requires a reachable **RSSHub 基础链接**.
+- `" 的 bilibili 动态"`, `" 的 bilibili 空间"`, and `" - Telegram Channel"` are **订阅源标题后缀**, not part of the reader-facing **订阅源** title.
 - **RSSHub 基础链接** means an HTTP(S) base URL normalized without a trailing slash.
 - "RSSHub 地址支持多个地址" means a global **RSSHub 基础链接列表**, not a per-**订阅源** address list.
 - A `#` prefix in **RSSHub 基础链接列表** means a **停用的 RSSHub 基础链接**, not a free-form comment.

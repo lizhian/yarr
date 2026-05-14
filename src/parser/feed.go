@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nkanaev/yarr/src/content/htmlutil"
+	"github.com/nkanaev/yarr/src/feedmeta"
 	"golang.org/x/net/html/charset"
 )
 
@@ -125,8 +126,9 @@ func ParseAndFix(r io.Reader, baseURL, fallbackEncoding string) (*Feed, error) {
 }
 
 func (feed *Feed) cleanup(keepContentMediaImages bool) {
-	feed.Title = strings.TrimSpace(feed.Title)
+	feed.Title = feedmeta.CleanTitle(feed.Title)
 	feed.SiteURL = strings.TrimSpace(feed.SiteURL)
+	feed.ImageURL = strings.TrimSpace(feed.ImageURL)
 
 	for i, item := range feed.Items {
 		feed.Items[i].GUID = strings.TrimSpace(item.GUID)
@@ -171,6 +173,13 @@ func (feed *Feed) TranslateURLs(base string) error {
 		return fmt.Errorf("failed to parse feed url: %#v", feed.SiteURL)
 	}
 	feed.SiteURL = baseUrl.ResolveReference(siteUrl).String()
+	if feed.ImageURL != "" {
+		imageUrl, err := url.Parse(feed.ImageURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse image url: %#v", feed.ImageURL)
+		}
+		feed.ImageURL = baseUrl.ResolveReference(imageUrl).String()
+	}
 	for _, item := range feed.Items {
 		itemUrl, err := url.Parse(item.URL)
 		if err != nil {

@@ -239,16 +239,16 @@ func (s *Server) handleFeedList(c *router.Context) {
 		}
 
 		if rsshub.IsLink(form.Url) {
-			bases, err := rsshub.EnabledBases(s.db.GetSettingsValueString("rsshub_base_url"))
-			if err != nil {
-				log.Printf("Failed to parse RSSHub base list: %s", err)
+			if err := rsshub.ValidateLink(form.Url); err != nil {
 				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
 				return
 			}
-			if len(bases) == 0 {
-				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": "请先配置启用的 RSSHub 基础链接。"})
-				return
-			}
+			feed := s.db.CreateFeedWithContentSelector("", "", "", form.Url, form.ContentSelector, form.FolderID)
+			c.JSON(http.StatusOK, map[string]interface{}{
+				"status": "success",
+				"feed":   feed,
+			})
+			return
 		}
 
 		result, err := s.worker.DiscoverFeed(form.Url)
@@ -277,7 +277,7 @@ func (s *Server) handleFeedList(c *router.Context) {
 				s.db.SetFeedSize(feed.Id, len(items))
 				s.db.SyncSearch()
 			}
-			s.worker.FindFeedFavicon(*feed)
+			s.worker.FindFeedIcon(*feed, result.Feed.ImageURL)
 
 			c.JSON(http.StatusOK, map[string]interface{}{
 				"status": "success",
@@ -322,7 +322,14 @@ func (s *Server) handleFeed(c *router.Context) {
 		}
 		if link, ok := body["feed_link"]; ok {
 			if reflect.TypeOf(link).Kind() == reflect.String {
-				s.db.UpdateFeedLink(id, link.(string))
+				link := link.(string)
+				if rsshub.IsLink(link) {
+					if err := rsshub.ValidateLink(link); err != nil {
+						c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+						return
+					}
+				}
+				s.db.UpdateFeedLink(id, link)
 			}
 		}
 		if selector, ok := body["content_selector"]; ok {

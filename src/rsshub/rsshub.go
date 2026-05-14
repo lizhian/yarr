@@ -14,6 +14,24 @@ func IsLink(link string) bool {
 	return err == nil && u.Scheme == Scheme
 }
 
+func ValidateLink(link string) error {
+	u, err := url.Parse(link)
+	if err != nil {
+		return err
+	}
+	if u.Scheme != Scheme {
+		return nil
+	}
+	if u.Host == "" {
+		return errors.New("RSSHub link must use rsshub:// route format")
+	}
+	path := strings.TrimLeft(u.Host+u.EscapedPath(), "/")
+	if path == "" {
+		return fmt.Errorf("RSSHub link has no route")
+	}
+	return nil
+}
+
 func NormalizeBase(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

@@ -131,7 +131,7 @@ func TestMissingItemReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestCreateRSSHubFeedRequiresBaseURL(t *testing.T) {
+func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")
 	log.SetOutput(os.Stderr)
@@ -143,12 +143,26 @@ func TestCreateRSSHubFeedRequiresBaseURL(t *testing.T) {
 	handler := NewServer(db, "127.0.0.1:8000").handler()
 	handler.ServeHTTP(recorder, request)
 
-	var result map[string]string
+	var result struct {
+		Status string       `json:"status"`
+		Feed   storage.Feed `json:"feed"`
+	}
 	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
-	if result["status"] != "error" {
-		t.Fatalf("got %q", result["status"])
+	if result.Status != "success" {
+		t.Fatalf("got %q", result.Status)
+	}
+	if result.Feed.FeedLink != "rsshub://bilibili/weekly" {
+		t.Fatalf("got %q", result.Feed.FeedLink)
+	}
+
+	feed := db.GetFeed(result.Feed.Id)
+	if feed == nil {
+		t.Fatal("expected feed")
+	}
+	if feed.FeedLink != "rsshub://bilibili/weekly" {
+		t.Fatalf("got %q", feed.FeedLink)
 	}
 }
 
