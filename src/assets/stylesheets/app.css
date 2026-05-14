@@ -651,6 +651,32 @@ select.form-control:not([multiple]):not([size]) {
   cursor: default;
 }
 
+.settings-dialog-field-split {
+  cursor: default;
+}
+
+.settings-dialog-field-link,
+.settings-dialog-field-link:hover,
+.settings-dialog-field-link:focus,
+.settings-dialog-field-link:active {
+  color: inherit;
+  cursor: pointer;
+}
+
+.settings-dialog-field-value-action {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  padding: 0;
+  width: 100%;
+}
+
+.settings-dialog-field-value-action:focus {
+  outline: none;
+}
+
 .settings-dialog-actions {
   display: grid;
   gap: .2rem;
