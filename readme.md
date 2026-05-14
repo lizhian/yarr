@@ -27,7 +27,7 @@ Usage instructions:
 
 [macos-open]: https://support.apple.com/en-gb/guide/mac-help/mh40616/mac
 
-For self-hosting, see `yarr -h` for auth, tls & server configuration flags.
+For self-hosting, see `yarr -h` for TLS and server configuration flags. Access authentication is configured from the in-app settings.
 
 See more:
 

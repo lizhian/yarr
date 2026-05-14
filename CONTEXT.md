@@ -40,6 +40,10 @@ _Avoid_: RSSHub preset, RSSHub shortcut
 A setting that periodically checks subscription sources for new articles without user action.
 _Avoid_: Auto-refresh, 自动更新
 
+**访问认证**:
+A user-managed setting that requires credentials before accessing yarr reader data and protected actions.
+_Avoid_: 登录功能, Auth
+
 **文件夹**:
 A user-created grouping for subscription sources.
 _Avoid_: Folder, 分类
@@ -184,6 +188,10 @@ _Avoid_: Browser back, 返回上一页
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
 - **文章详情** centers article images.
+- **访问认证** is disabled by default.
+- Enabling **访问认证** requires a username and password.
+- Disabling **访问认证** removes the login requirement.
+- Disabling **访问认证** clears the saved username and password.
 - A **订阅源** has one **内容方式**.
 - The default **内容方式** for a **订阅源** is **普通模式**.
 - Opening an **文章** in **文章详情** uses its **订阅源** **内容方式**.

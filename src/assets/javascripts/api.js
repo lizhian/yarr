@@ -92,6 +92,14 @@
         return api('put', './api/settings', data)
       },
     },
+    auth: {
+      get: function() {
+        return api('get', './api/auth').then(json)
+      },
+      update: function(data) {
+        return api('put', './api/auth', data)
+      },
+    },
     status: function() {
       return api('get', './api/status').then(json)
     },

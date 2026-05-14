@@ -383,6 +383,15 @@ var vm = new Vue({
       'articleListLayout': getArticleListLayout(s.feed),
       'articleListLayoutApplying': false,
       'rsshubBaseUrl': s.rsshub_base_url || '',
+      'authConfig': {
+        enabled: app.authenticated,
+        username: '',
+      },
+      'authForm': {
+        enabled: app.authenticated,
+        username: '',
+        password: '',
+      },
 
       'filteredFeedStats': {},
       'filteredFolderStats': {},
@@ -1234,6 +1243,39 @@ var vm = new Vue({
         document.location.reload()
       })
     },
+    loadAuthConfig: function() {
+      return api.auth.get().then(function(config) {
+        vm.authConfig = config
+        vm.authForm.enabled = config.enabled
+        vm.authForm.username = config.username || ''
+        vm.authForm.password = ''
+        vm.authenticated = config.enabled
+      })
+    },
+    updateAuthConfig: function() {
+      var payload = {
+        enabled: this.authForm.enabled,
+        username: this.authForm.username,
+        password: this.authForm.password,
+      }
+      if (!payload.enabled) {
+        this.confirmDialog('关闭访问认证后将清空已保存的用户名和密码。', '关闭访问认证').then(function(confirmed) {
+          if (!confirmed) return
+          api.auth.update({enabled: false}).then(function(res) {
+            if (res.ok) document.location.reload()
+            else vm.alertDialog('未能关闭访问认证。')
+          })
+        })
+        return
+      }
+      api.auth.update(payload).then(function(res) {
+        if (res.ok) {
+          document.location.reload()
+        } else {
+          vm.alertDialog('用户名和密码不能为空。')
+        }
+      })
+    },
     toggleReadability: function() {
       this.setItemSelectedContentMode(this.itemSelectedContentMode == 'readability' ? 'normal' : 'readability')
     },
@@ -1281,6 +1323,8 @@ var vm = new Vue({
         vm.feedNewContentMode = 'normal'
       } else if (settings === 'deletefeeds') {
         vm.feedDeleteSelectedIds = []
+      } else if (settings === 'auth') {
+        vm.loadAuthConfig()
       }
     },
     showFeedSettings: function(feed) {
