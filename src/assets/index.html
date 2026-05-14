@@ -23,7 +23,7 @@
     </script>
 </head>
 <body class="theme-{% .settings.theme_name %} font-{% .settings.theme_font %}">
-    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
+    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow, 'toolbar-feed-actions-narrow': toolbarFeedActionsNarrow, 'toolbar-feed-actions-minimal': toolbarFeedActionsMinimal}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
@@ -60,7 +60,18 @@
                     <span class="toolbar-label">收藏</span>
                 </button>
                 <div class="flex-grow-1"></div>
-                <span class="toolbar-item toolbar-item-icon-only px-2 toolbar-spacer" aria-hidden="true"></span>
+                <button class="toolbar-item toolbar-item-icon-only px-2 feed-list-toolbar-refresh"
+                        title="刷新订阅源"
+                        aria-label="刷新订阅源"
+                        @click="fetchAllFeeds()">
+                    <span class="icon toolbar-icon">{% inline "rotate-cw.svg" %}</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only px-2 ml-1 feed-list-toolbar-create"
+                        title="新订阅源"
+                        aria-label="新订阅源"
+                        @click="showSettings('create')">
+                    <span class="icon toolbar-icon">{% inline "plus.svg" %}</span>
+                </button>
             </div>
             <div id="feed-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1">
                 <label class="selectgroup">
@@ -544,7 +555,7 @@
                 <p class="cursor-default"><b>新订阅源</b></p>
                 <form action="" @submit.prevent="createFeed(event)" class="mt-4">
                     <label for="feed-url">URL</label>
-                    <input id="feed-url" name="url" type="text" class="form-control" required autocomplete="off" :readonly="feedNewChoice.length > 0" placeholder="https://example.com/feed 或 rsshub://bilibili/weekly" v-focus>
+                    <input id="feed-url" name="url" type="text" class="form-control" required autocomplete="off" :readonly="feedNewChoice.length > 0" placeholder="https://example.com/feed、Bilibili 空间或 t.me 频道" v-focus>
                     <label for="feed-folder" class="mt-3 d-block">
                         文件夹
                         <a href="#" class="float-right text-decoration-none" @click.prevent="createNewFeedFolder()">新文件夹</a>

@@ -201,6 +201,9 @@ _Avoid_: Browser back, 返回上一页
 - An **RSSHub 基础链接** must be configured before an **RSSHub 订阅链接** can fetch **文章**.
 - **RSSHub 快速添加** creates an **RSSHub 订阅链接** and then follows the normal **订阅源** creation flow.
 - **RSSHub 快速添加** supports Bilibili user videos by UID and Telegram channels by 频道 ID.
+- **RSSHub 快速添加** treats supported Bilibili profile URLs as UID input and creates a Bilibili user videos **RSSHub 订阅链接**.
+- **RSSHub 快速添加** treats supported Telegram channel URLs as 频道 ID input and creates a Telegram channel **RSSHub 订阅链接**.
+- **RSSHub 快速添加** does not infer a Telegram channel from Telegram message links or invite links.
 - An **RSSHub 基础链接列表** contains one or more **RSSHub 基础链接**.
 - Users edit the **RSSHub 基础链接列表** as one **RSSHub 基础链接** per line.
 - A previous single **RSSHub 基础链接** configuration is treated as a one-line **RSSHub 基础链接列表**.
@@ -283,6 +286,8 @@ _Avoid_: Browser back, 返回上一页
 - **层级返回** does not expose the current layer in the address bar.
 - **工具栏显示** applies to most top-level toolbar actions.
 - **工具栏显示** can be **仅文字** or **仅图标**.
+- The **订阅源** list toolbar can expose icon-only actions for creating a **订阅源** and refreshing **订阅源**.
+- When the **订阅源** list toolbar becomes narrow, the create **订阅源** action hides before the refresh **订阅源** action.
 - Each **主题** has one **主题强调色**.
 - **字体显示** applies globally to yarr's interface and article reading surface.
 - **字体显示** can be **霞鹜文楷** or **Maple Mono NF-CN**.

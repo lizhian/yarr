@@ -4,10 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
 const Scheme = "rsshub"
+
+var (
+	bilibiliUIDRe = regexp.MustCompile(`^[0-9]+$`)
+	telegramIDRe  = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+)
 
 func IsLink(link string) bool {
 	u, err := url.Parse(link)
@@ -30,6 +36,92 @@ func ValidateLink(link string) error {
 		return fmt.Errorf("RSSHub link has no route")
 	}
 	return nil
+}
+
+func NormalizeSubscriptionInput(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return raw, false
+	}
+
+	if link, ok := normalizeBilibiliSubscriptionInput(raw); ok {
+		return link, true
+	}
+	if link, ok := normalizeTelegramSubscriptionInput(raw); ok {
+		return link, true
+	}
+
+	return raw, false
+}
+
+func NormalizeBilibiliInput(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if bilibiliUIDRe.MatchString(raw) {
+		return bilibiliUserVideoLink(raw), true
+	}
+	return normalizeBilibiliSubscriptionInput(raw)
+}
+
+func NormalizeTelegramInput(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	id := strings.TrimPrefix(raw, "@")
+	if telegramIDRe.MatchString(id) {
+		return telegramChannelLink(id), true
+	}
+	return normalizeTelegramSubscriptionInput(raw)
+}
+
+func normalizeBilibiliSubscriptionInput(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return raw, false
+	}
+	if strings.ToLower(u.Hostname()) != "space.bilibili.com" {
+		return raw, false
+	}
+	parts := pathParts(u.EscapedPath())
+	if len(parts) == 0 || !bilibiliUIDRe.MatchString(parts[0]) {
+		return raw, false
+	}
+	if len(parts) == 1 || (len(parts) == 2 && parts[1] == "dynamic") || (len(parts) == 3 && parts[1] == "upload" && parts[2] == "video") {
+		return bilibiliUserVideoLink(parts[0]), true
+	}
+	return raw, false
+}
+
+func normalizeTelegramSubscriptionInput(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return raw, false
+	}
+	host := strings.ToLower(u.Hostname())
+	if host != "t.me" && host != "telegram.me" {
+		return raw, false
+	}
+	parts := pathParts(u.EscapedPath())
+	if len(parts) == 1 && parts[0] != "s" && telegramIDRe.MatchString(parts[0]) && !strings.HasPrefix(parts[0], "+") {
+		return telegramChannelLink(parts[0]), true
+	}
+	if len(parts) == 2 && parts[0] == "s" && telegramIDRe.MatchString(parts[1]) {
+		return telegramChannelLink(parts[1]), true
+	}
+	return raw, false
+}
+
+func bilibiliUserVideoLink(uid string) string {
+	return "rsshub://bilibili/user/video/" + uid
+}
+
+func telegramChannelLink(id string) string {
+	return "rsshub://telegram/channel/" + id
+}
+
+func pathParts(path string) []string {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return nil
+	}
+	return strings.Split(path, "/")
 }
 
 func NormalizeBase(raw string) (string, error) {

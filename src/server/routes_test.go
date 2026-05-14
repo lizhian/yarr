@@ -130,6 +130,48 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	}
 }
 
+func TestCreateFeedNormalizesSupportedRSSHubInputs(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{name: "Bilibili space", url: "https://space.bilibili.com/703186600", want: "rsshub://bilibili/user/video/703186600"},
+		{name: "Bilibili dynamic", url: "https://space.bilibili.com/703186600/dynamic", want: "rsshub://bilibili/user/video/703186600"},
+		{name: "Bilibili upload video", url: "https://space.bilibili.com/703186600/upload/video", want: "rsshub://bilibili/user/video/703186600"},
+		{name: "Telegram channel", url: "https://t.me/me888888888888", want: "rsshub://telegram/channel/me888888888888"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			log.SetOutput(io.Discard)
+			db, _ := storage.New(":memory:")
+			log.SetOutput(os.Stderr)
+
+			body := bytes.NewBufferString(fmt.Sprintf(`{"url":%q}`, test.url))
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest("POST", "/api/feeds", body)
+
+			handler := NewServer(db, "127.0.0.1:8000").handler()
+			handler.ServeHTTP(recorder, request)
+
+			var result struct {
+				Status string       `json:"status"`
+				Feed   storage.Feed `json:"feed"`
+			}
+			if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Status != "success" {
+				t.Fatalf("got %q", result.Status)
+			}
+			if result.Feed.FeedLink != test.want {
+				t.Fatalf("got %q, want %q", result.Feed.FeedLink, test.want)
+			}
+		})
+	}
+}
+
 func TestCreateFeedRejectsUnsupportedContentMode(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")

@@ -78,6 +78,94 @@ func TestResolveLeavesRegularURL(t *testing.T) {
 	}
 }
 
+func TestNormalizeSubscriptionInput(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+		ok   bool
+	}{
+		{name: "regular URL", raw: "https://example.com/feed.xml", want: "https://example.com/feed.xml", ok: false},
+		{name: "rsshub link", raw: "rsshub://bilibili/weekly", want: "rsshub://bilibili/weekly", ok: false},
+		{name: "Bilibili UID", raw: " 703186600 ", want: "703186600", ok: false},
+		{name: "Bilibili space", raw: "https://space.bilibili.com/703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Bilibili dynamic", raw: "https://space.bilibili.com/703186600/dynamic", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Bilibili upload video", raw: "https://space.bilibili.com/703186600/upload/video", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Bilibili ignores query", raw: "https://space.bilibili.com/703186600/dynamic?spm_id_from=333", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Telegram ID", raw: "me888888888888", want: "me888888888888", ok: false},
+		{name: "Telegram ID with at", raw: "@me888888888888", want: "@me888888888888", ok: false},
+		{name: "Telegram channel URL", raw: "https://t.me/me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "Telegram preview URL", raw: "https://t.me/s/me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "Telegram message URL", raw: "https://t.me/me888888888888/123", want: "https://t.me/me888888888888/123", ok: false},
+		{name: "Telegram invite URL", raw: "https://t.me/+invite", want: "https://t.me/+invite", ok: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := NormalizeSubscriptionInput(test.raw)
+			if ok != test.ok {
+				t.Fatalf("got ok %v, want %v", ok, test.ok)
+			}
+			if got != test.want {
+				t.Fatalf("got %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeBilibiliInput(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+		ok   bool
+	}{
+		{name: "UID", raw: " 703186600 ", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "space URL", raw: "https://space.bilibili.com/703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Telegram URL", raw: "https://t.me/me888888888888", want: "https://t.me/me888888888888", ok: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := NormalizeBilibiliInput(test.raw)
+			if ok != test.ok {
+				t.Fatalf("got ok %v, want %v", ok, test.ok)
+			}
+			if got != test.want {
+				t.Fatalf("got %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeTelegramInput(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+		ok   bool
+	}{
+		{name: "ID", raw: "me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "ID with at", raw: "@me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "channel URL", raw: "https://t.me/me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "preview URL", raw: "https://t.me/s/me888888888888", want: "rsshub://telegram/channel/me888888888888", ok: true},
+		{name: "Bilibili URL", raw: "https://space.bilibili.com/703186600", want: "https://space.bilibili.com/703186600", ok: false},
+		{name: "message URL", raw: "https://t.me/me888888888888/123", want: "https://t.me/me888888888888/123", ok: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := NormalizeTelegramInput(test.raw)
+			if ok != test.ok {
+				t.Fatalf("got ok %v, want %v", ok, test.ok)
+			}
+			if got != test.want {
+				t.Fatalf("got %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func TestNormalizeBaseList(t *testing.T) {
 	got, err := NormalizeBaseList(`
 		https://a.com/
