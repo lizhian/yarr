@@ -106,37 +106,51 @@ var imageTypes = map[string]bool{
 }
 
 func fetchImage(link string) (*[]byte, error) {
+	content, _, err := fetchImageWithContentType(link)
+	return content, err
+}
+
+func FetchImage(link string) (*[]byte, string, error) {
+	return fetchImageWithContentType(link)
+}
+
+func fetchImageWithContentType(link string) (*[]byte, string, error) {
 	res, err := client.get(link)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("status code %d", res.StatusCode)
+		return nil, "", fmt.Errorf("status code %d", res.StatusCode)
 	}
 
 	content, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if len(content) == 0 {
-		return nil, nil
+		return nil, "", nil
 	}
 
 	ctype := http.DetectContentType(content)
 	if imageTypes[ctype] {
-		return &content, nil
+		return &content, ctype, nil
 	}
 	if mediaType, _, err := mime.ParseMediaType(res.Header.Get("Content-Type")); err == nil && imageTypes[mediaType] {
-		return &content, nil
+		return &content, mediaType, nil
 	}
-	return nil, nil
+	return nil, "", nil
 }
 
-func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
+func validImageURL(link string) bool {
+	content, _, err := fetchImageWithContentType(link)
+	return err == nil && content != nil
+}
+
+func findFeedIconURL(feedImageUrl, siteUrl, feedUrl string) (string, error) {
 	if feedImageUrl != "" {
-		if content, err := fetchImage(feedImageUrl); err == nil && content != nil {
-			return content, nil
+		if validImageURL(feedImageUrl) {
+			return feedImageUrl, nil
 		}
 	}
 
@@ -155,7 +169,7 @@ func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
 			if res.StatusCode == 200 {
 				body, err := ioutil.ReadAll(res.Body)
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				urls = append(urls, scraper.FindIcons(string(body), siteUrl)...)
 			}
@@ -170,13 +184,11 @@ func findFeedIcon(feedImageUrl, siteUrl, feedUrl string) (*[]byte, error) {
 	}
 
 	for _, u := range urls {
-		content, err := fetchImage(u)
-		if err != nil || content == nil {
-			continue
+		if validImageURL(u) {
+			return u, nil
 		}
-		return content, nil
 	}
-	return nil, nil
+	return "", nil
 }
 
 func (w *Worker) resolveLink(link string) (string, error) {

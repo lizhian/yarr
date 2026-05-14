@@ -112,9 +112,9 @@ _Avoid_: 卡片模型, Item layout
 A group of actions for one subscription source, including opening source links, renaming, moving, and deleting it.
 _Avoid_: 订阅项设置, Feed settings
 
-**订阅源图标**:
-A small image that visually represents one subscription source in the subscription source list.
-_Avoid_: Favicon, Feed icon
+**订阅源图标链接**:
+An HTTP(S) image link used to display one subscription source's icon in the subscription source list.
+_Avoid_: Favicon, Feed icon, 订阅源图标
 
 **订阅源标题后缀**:
 A known service-added phrase at the end of a subscription source title that does not identify the subscription source itself.
@@ -144,12 +144,12 @@ _Avoid_: Browser back, 返回上一页
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
-- A **订阅源** can have one **订阅源图标**.
+- A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
 - Known **订阅源标题后缀** values are removed from saved **订阅源** titles.
-- When a newly fetched RSS subscription declares a channel image URL, that image is preferred as the **订阅源图标**.
-- When a refreshed **订阅源** declares a different channel image URL, the **订阅源图标** should be updated from that image.
-- When a **订阅源** has no visible **订阅源图标**, a refreshed channel image URL can provide one.
+- When a **订阅源** has no **订阅源图标链接**, yarr can automatically discover one from the subscription source or its website.
+- When a user sets a **订阅源图标链接**, automatic refresh does not overwrite it.
+- Clearing a **订阅源图标链接** lets yarr automatically discover one again.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.

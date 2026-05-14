@@ -98,8 +98,8 @@
                                v-for="feed in folder.feeds">
                             <input type="radio" name="feed" :value="'feed:'+feed.id" v-model="feedSelected">
                             <div class="selectgroup-label d-flex align-items-center w-100">
-                                <span class="icon mr-2" v-if="!feed.has_icon">{% inline "rss.svg" %}</span>
-                                <span class="icon mr-2" v-else><img :src="'./api/feeds/'+feed.id+'/icon'" alt="" loading="lazy"></span>
+                                <span class="icon mr-2" v-if="!feed.icon_url || feedIconErrored(feed)">{% inline "rss.svg" %}</span>
+                                <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}</span>
                                 <span class="counter text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                 <span class="icon flex-shrink-0 mx-2"
@@ -437,6 +437,10 @@
                     <button class="settings-dialog-action" @click="updateFeedContentSelector(settingsFeed)">
                         <span class="icon mr-2">{% inline "edit.svg" %}</span>
                         修改正文选择器
+                    </button>
+                    <button class="settings-dialog-action" @click="updateFeedIconURL(settingsFeed)">
+                        <span class="icon mr-2">{% inline "edit.svg" %}</span>
+                        修改图标链接
                     </button>
                 </div>
 

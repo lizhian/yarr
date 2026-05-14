@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/nkanaev/yarr/src/storage"
@@ -74,77 +73,6 @@ func TestIndexGzipped(t *testing.T) {
 	}
 	if response.Header.Get("content-type") != "text/html" {
 		t.Errorf("invalid content-type header: %#v", response.Header.Get("content-type"))
-	}
-}
-
-func TestFeedIcons(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	icon := []byte("test")
-	feed := db.CreateFeed("", "", "", "", nil)
-	db.UpdateFeedIcon(feed.Id, &icon)
-	log.SetOutput(os.Stderr)
-
-	recorder := httptest.NewRecorder()
-	url := fmt.Sprintf("/api/feeds/%d/icon", feed.Id)
-	request := httptest.NewRequest("GET", url, nil)
-
-	handler := NewServer(db, "127.0.0.1:8000").handler()
-	handler.ServeHTTP(recorder, request)
-	response := recorder.Result()
-
-	if response.StatusCode != http.StatusOK {
-		t.Fatal()
-	}
-	body, _ := io.ReadAll(response.Body)
-	if !reflect.DeepEqual(body, icon) {
-		t.Fatal()
-	}
-	if response.Header.Get("Etag") == "" {
-		t.Fatal()
-	}
-
-	recorder2 := httptest.NewRecorder()
-	request2 := httptest.NewRequest("GET", url, nil)
-	request2.Header.Set("If-None-Match", response.Header.Get("Etag"))
-	handler.ServeHTTP(recorder2, request2)
-	response2 := recorder2.Result()
-
-	if response2.StatusCode != http.StatusNotModified {
-		t.Fatal("got", response2.StatusCode)
-	}
-}
-
-func TestFeedIconCacheInvalidatedByWorkerCallback(t *testing.T) {
-	log.SetOutput(io.Discard)
-	db, _ := storage.New(":memory:")
-	oldIcon := []byte("old")
-	newIcon := []byte("new")
-	feed := db.CreateFeed("", "", "", "", nil)
-	db.UpdateFeedIcon(feed.Id, &oldIcon)
-	log.SetOutput(os.Stderr)
-
-	server := NewServer(db, "127.0.0.1:8000")
-	handler := server.handler()
-	url := fmt.Sprintf("/api/feeds/%d/icon", feed.Id)
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", url, nil)
-	handler.ServeHTTP(recorder, request)
-	body, _ := io.ReadAll(recorder.Result().Body)
-	if string(body) != "old" {
-		t.Fatalf("got %q", body)
-	}
-
-	db.UpdateFeedIcon(feed.Id, &newIcon)
-	server.worker.OnFeedIconUpdated(feed.Id)
-
-	recorder = httptest.NewRecorder()
-	request = httptest.NewRequest("GET", url, nil)
-	handler.ServeHTTP(recorder, request)
-	body, _ = io.ReadAll(recorder.Result().Body)
-	if string(body) != "new" {
-		t.Fatalf("got %q", body)
 	}
 }
 
@@ -240,5 +168,127 @@ func TestUpdateFeedContentSelectorRejectsUnsupportedSelector(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.ContentSelector != "" {
 		t.Fatalf("got %q", feed.ContentSelector)
+	}
+}
+
+func TestUpdateFeedIconURL(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"icon_url":" https://example.com/icon.png "}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != "https://example.com/icon.png" {
+		t.Fatalf("got %q", feed.IconURL)
+	}
+
+	body = bytes.NewBufferString(`{"icon_url":""}`)
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != "" {
+		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestUpdateFeedIconURLRejectsUnsupportedURL(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"icon_url":"javascript:alert(1)"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != "" {
+		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestFeverFaviconsUsesIconURLAndCaches(t *testing.T) {
+	requests := 0
+	iconServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "image/png")
+		w.Write([]byte("icon"))
+	}))
+	defer iconServer.Close()
+
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	db.UpdateFeedIconURL(feed.Id, iconServer.URL+"/icon.png")
+	log.SetOutput(os.Stderr)
+
+	server := NewServer(db, "127.0.0.1:8000")
+	handler := server.handler()
+	for i := 0; i < 2; i++ {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/fever/?favicons", nil)
+		handler.ServeHTTP(recorder, request)
+
+		var result struct {
+			Favicons []FeverFavicon `json:"favicons"`
+		}
+		if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Favicons) != 1 {
+			t.Fatalf("got %#v", result.Favicons)
+		}
+		if result.Favicons[0].Data != "data:image/png;base64,aWNvbg==" {
+			t.Fatalf("got %q", result.Favicons[0].Data)
+		}
+	}
+	if requests != 1 {
+		t.Fatalf("got %d requests", requests)
+	}
+}
+
+func TestFeverFaviconsFallsBackForEmptyIconURL(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/fever/?favicons", nil)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	var result struct {
+		Favicons []FeverFavicon `json:"favicons"`
+	}
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Favicons) != 1 {
+		t.Fatalf("got %#v", result.Favicons)
+	}
+	if result.Favicons[0].Data != feverBlankFavicon {
+		t.Fatalf("got %q", result.Favicons[0].Data)
 	}
 }

@@ -247,6 +247,7 @@ var vm = new Vue({
       'feeds': [],
       'feedSelected': s.feed,
       'feedListWidth': s.feed_list_width || 300,
+      'feedIconErrors': {},
       'feedNewChoice': [],
       'feedNewChoiceSelected': '',
       'items': [],
@@ -769,6 +770,12 @@ var vm = new Vue({
     toggleArticleListLayout: function() {
       this.articleListLayout = this.articleListLayout == 'card' ? 'list' : 'card'
     },
+    feedIconErrored: function(feed) {
+      return !!this.feedIconErrors[feed.id + ':' + (feed.icon_url || '')]
+    },
+    markFeedIconErrored: function(feed) {
+      this.$set(this.feedIconErrors, feed.id + ':' + (feed.icon_url || ''), true)
+    },
     markItemsRead: function() {
       var query = this.getItemsQuery()
       api.items.mark_read(query).then(function() {
@@ -873,6 +880,18 @@ var vm = new Vue({
             feed.content_selector = selector.trim()
           } else {
             vm.alertDialog('正文选择器格式不支持。')
+          }
+        })
+      })
+    },
+    updateFeedIconURL: function(feed) {
+      this.promptDialog('请输入图标链接', feed.icon_url || '').then(function(iconURL) {
+        if (iconURL === null) return
+        api.feeds.update(feed.id, {icon_url: iconURL}).then(function(res) {
+          if (res.ok) {
+            feed.icon_url = iconURL.trim()
+          } else {
+            vm.alertDialog('订阅源图标链接必须是 HTTP(S) URL。')
           }
         })
       })

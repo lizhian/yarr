@@ -1,14 +1,12 @@
 package server
 
 import (
-	"crypto/md5"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/nkanaev/yarr/src/assets"
@@ -50,7 +48,6 @@ func (s *Server) handler() http.Handler {
 	r.For("/api/feeds", s.handleFeedList)
 	r.For("/api/feeds/refresh", s.handleFeedRefresh)
 	r.For("/api/feeds/errors", s.handleFeedErrors)
-	r.For("/api/feeds/:id/icon", s.handleFeedIcon)
 	r.For("/api/feeds/:id", s.handleFeed)
 	r.For("/api/items", s.handleItemList)
 	r.For("/api/items/:id", s.handleItem)
@@ -168,67 +165,6 @@ func (s *Server) handleFeedErrors(c *router.Context) {
 	c.JSON(http.StatusOK, errors)
 }
 
-type feedicon struct {
-	ctype string
-	bytes []byte
-	etag  string
-}
-
-func feedIconCacheKey(id int64) string {
-	return "icon:" + strconv.FormatInt(id, 10)
-}
-
-func (s *Server) clearFeedIconCache(id int64) {
-	s.cache_mutex.Lock()
-	defer s.cache_mutex.Unlock()
-	delete(s.cache, feedIconCacheKey(id))
-}
-
-func (s *Server) handleFeedIcon(c *router.Context) {
-	id, err := c.VarInt64("id")
-	if err != nil {
-		c.Out.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	cachekey := feedIconCacheKey(id)
-	s.cache_mutex.Lock()
-	cachedat := s.cache[cachekey]
-	s.cache_mutex.Unlock()
-	if cachedat == nil {
-		feed := s.db.GetFeed(id)
-		if feed == nil || feed.Icon == nil {
-			c.Out.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		hash := md5.New()
-		hash.Write(*feed.Icon)
-
-		etag := fmt.Sprintf("%x", hash.Sum(nil))[:16]
-
-		cachedat = feedicon{
-			ctype: http.DetectContentType(*feed.Icon),
-			bytes: *(*feed).Icon,
-			etag:  etag,
-		}
-		s.cache_mutex.Lock()
-		s.cache[cachekey] = cachedat
-		s.cache_mutex.Unlock()
-	}
-
-	icon := cachedat.(feedicon)
-
-	if c.Req.Header.Get("If-None-Match") == icon.etag {
-		c.Out.WriteHeader(http.StatusNotModified)
-		return
-	}
-
-	c.Out.Header().Set("Content-Type", icon.ctype)
-	c.Out.Header().Set("Etag", icon.etag)
-	c.Out.Write(icon.bytes)
-}
-
 func (s *Server) handleFeedList(c *router.Context) {
 	if c.Req.Method == "GET" {
 		list := s.db.ListFeeds()
@@ -299,6 +235,17 @@ func (s *Server) handleFeedList(c *router.Context) {
 	}
 }
 
+func validFeedIconURL(iconURL string) bool {
+	if iconURL == "" {
+		return true
+	}
+	u, err := url.Parse(iconURL)
+	if err != nil {
+		return false
+	}
+	return (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+}
+
 func (s *Server) handleFeed(c *router.Context) {
 	id, err := c.VarInt64("id")
 	if err != nil {
@@ -354,6 +301,18 @@ func (s *Server) handleFeed(c *router.Context) {
 					}
 				}
 				s.db.UpdateFeedContentSelector(id, selector)
+			}
+		}
+		if iconURL, ok := body["icon_url"]; ok {
+			if iconURL == nil {
+				s.db.UpdateFeedIconURL(id, "")
+			} else if reflect.TypeOf(iconURL).Kind() == reflect.String {
+				iconURL := strings.TrimSpace(iconURL.(string))
+				if !validFeedIconURL(iconURL) {
+					c.JSON(http.StatusBadRequest, map[string]string{"error": "订阅源图标链接必须是 HTTP(S) URL。"})
+					return
+				}
+				s.db.UpdateFeedIconURL(id, iconURL)
 			}
 		}
 		c.Out.WriteHeader(http.StatusOK)

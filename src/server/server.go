@@ -37,7 +37,6 @@ func NewServer(db *storage.Storage, addr string) *Server {
 		cache:       make(map[string]interface{}),
 		cache_mutex: &sync.Mutex{},
 	}
-	s.worker.OnFeedIconUpdated = s.clearFeedIconCache
 	return s
 }
 
