@@ -152,6 +152,10 @@ _Avoid_: Row mode, 默认模式
 A narrow-screen reader layout where only one navigation layer is visible at a time.
 _Avoid_: WAP 页面, Mobile
 
+**桌面端视图**:
+A wide-screen reader layout where the subscription source list, article list, and article detail can be visible at the same time.
+_Avoid_: PC 端视图, 宽屏视图, Desktop
+
 **层级返回**:
 A mobile navigation behavior where Back moves from article details to the article list, then from the article list to the subscription source list.
 _Avoid_: Browser back, 返回上一页
@@ -162,6 +166,7 @@ _Avoid_: Browser back, 返回上一页
 - A **订阅源** produces zero or more **文章**.
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
+- **桌面端视图** can show the **订阅源** list, **文章** list, and **文章详情** together.
 - Known **订阅源标题后缀** values are removed from saved **订阅源** titles.
 - When a **订阅源** has no **订阅源图标链接**, yarr can automatically discover one from the subscription source or its website.
 - When a user sets a **订阅源图标链接**, automatic refresh does not overwrite it.

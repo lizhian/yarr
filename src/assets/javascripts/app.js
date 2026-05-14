@@ -51,6 +51,10 @@ function isMobileLayout() {
   return window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches
 }
 
+function isDesktopLayout() {
+  return window.matchMedia && window.matchMedia('(min-width: 992px)').matches
+}
+
 var FONT_OPTIONS = [
   {name: 'lxgw-wenkai', title: '霞鹜文楷'},
   {name: 'maple-mono-nf-cn', title: 'Maple Mono NF-CN'},
@@ -731,10 +735,14 @@ var vm = new Vue({
       this.itemsAutoReadPending = {}
       this.itemListLastScrollTop = this.$refs.itemlist ? this.$refs.itemlist.scrollTop : 0
     },
+    canAutoReadItemList: function(el) {
+      if (!el || el.scrollHeight === 0) return false
+      if (isMobileLayout()) return this.currentNavigationLayer() === 'items'
+      return isDesktopLayout()
+    },
     updateItemListAutoReadSeen: function(el) {
       el = el || this.$refs.itemlist
-      if (!el || !isMobileLayout()) return
-      if (this.currentNavigationLayer() !== 'items') return
+      if (!this.canAutoReadItemList(el)) return
       if (this.filterSelected != '' && this.filterSelected != 'unread') return
 
       var scrollRect = el.getBoundingClientRect()
@@ -759,8 +767,7 @@ var vm = new Vue({
       var scrollingDown = scrollTop > this.itemListLastScrollTop
       this.itemListLastScrollTop = scrollTop
 
-      if (!isMobileLayout()) return
-      if (this.currentNavigationLayer() !== 'items') return
+      if (!this.canAutoReadItemList(el)) return
       if (this.filterSelected != '' && this.filterSelected != 'unread') return
 
       var scrollRect = el.getBoundingClientRect()
