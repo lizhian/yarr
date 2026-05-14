@@ -176,6 +176,10 @@ func (s *Server) handleFeedList(c *router.Context) {
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		form.Url = strings.TrimSpace(form.Url)
+		if link, ok := rsshub.NormalizeSubscriptionInput(form.Url); ok {
+			form.Url = link
+		}
 		form.ContentSelector = strings.TrimSpace(form.ContentSelector)
 		form.ContentMode = strings.TrimSpace(form.ContentMode)
 		if form.ContentMode == "" {

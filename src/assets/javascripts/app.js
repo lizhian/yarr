@@ -74,6 +74,72 @@ function normalizeContentMode(mode) {
   return CONTENT_MODE_OPTIONS.some(function(option) { return option.name == mode }) ? mode : 'normal'
 }
 
+function normalizeRSSHubSubscriptionInput(raw) {
+  raw = (raw || '').trim()
+  if (!raw) return {value: raw, normalized: false}
+
+  var bilibili = normalizeBilibiliSubscriptionInput(raw)
+  if (bilibili.normalized) return bilibili
+
+  var telegram = normalizeTelegramSubscriptionInput(raw)
+  if (telegram.normalized) return telegram
+
+  return {value: raw, normalized: false}
+}
+
+function normalizeBilibiliSubscriptionInput(raw) {
+  var url = parseURL(raw)
+  if (!url || (url.protocol != 'http:' && url.protocol != 'https:') || url.hostname.toLowerCase() != 'space.bilibili.com') {
+    return {value: raw, normalized: false}
+  }
+  var parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
+  if (!parts.length || !/^\d+$/.test(parts[0])) return {value: raw, normalized: false}
+  if (parts.length == 1 || (parts.length == 2 && parts[1] == 'dynamic') || (parts.length == 3 && parts[1] == 'upload' && parts[2] == 'video')) {
+    return {value: 'rsshub://bilibili/user/video/' + parts[0], normalized: true}
+  }
+  return {value: raw, normalized: false}
+}
+
+function normalizeTelegramSubscriptionInput(raw) {
+  var url = parseURL(raw)
+  if (!url || (url.protocol != 'http:' && url.protocol != 'https:')) return {value: raw, normalized: false}
+  var host = url.hostname.toLowerCase()
+  if (host != 't.me' && host != 'telegram.me') return {value: raw, normalized: false}
+  var parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
+  if (parts.length == 1 && parts[0] != 's' && /^[A-Za-z0-9_]+$/.test(parts[0]) && parts[0][0] != '+') {
+    return {value: 'rsshub://telegram/channel/' + parts[0], normalized: true}
+  }
+  if (parts.length == 2 && parts[0] == 's' && /^[A-Za-z0-9_]+$/.test(parts[1])) {
+    return {value: 'rsshub://telegram/channel/' + parts[1], normalized: true}
+  }
+  return {value: raw, normalized: false}
+}
+
+function normalizeBilibiliQuickAddInput(raw) {
+  raw = (raw || '').trim()
+  if (/^\d+$/.test(raw)) {
+    return {value: 'rsshub://bilibili/user/video/' + raw, normalized: true}
+  }
+  return normalizeBilibiliSubscriptionInput(raw)
+}
+
+function normalizeTelegramQuickAddInput(raw) {
+  raw = (raw || '').trim()
+  var id = raw.replace(/^@/, '')
+  if (/^[A-Za-z0-9_]+$/.test(id)) {
+    return {value: 'rsshub://telegram/channel/' + id, normalized: true}
+  }
+  return normalizeTelegramSubscriptionInput(raw)
+}
+
+function parseURL(raw) {
+  try {
+    return new URL(raw)
+  } catch (e) {
+    return null
+  }
+}
+
 Vue.component('drag', {
   props: ['width'],
   template: '<div class="drag"></div>',
@@ -386,6 +452,12 @@ var vm = new Vue({
     },
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
+    },
+    toolbarFeedActionsNarrow: function() {
+      return this.feedListWidth < 260
+    },
+    toolbarFeedActionsMinimal: function() {
+      return this.feedListWidth < 230
     },
     showBottomMarkItemsRead: function() {
       return this.filterSelected == 'unread' &&
@@ -948,7 +1020,7 @@ var vm = new Vue({
     createFeed: function(event) {
       var form = event.target
       var data = {
-        url: form.querySelector('input[name=url]').value,
+        url: normalizeRSSHubSubscriptionInput(form.querySelector('input[name=url]').value).value,
         folder_id: parseInt(form.querySelector('select[name=folder_id]').value) || null,
         content_selector: form.querySelector('input[name=content_selector]').value,
         content_mode: this.feedNewContentMode,
@@ -982,23 +1054,27 @@ var vm = new Vue({
     createRSSHubFeed: function(kind) {
       var config = {
         bilibili: {
-          prompt: '请输入 Bilibili UID',
-          link: function(value) { return 'rsshub://bilibili/user/video/' + value },
+          prompt: '请输入 Bilibili UID 或空间链接',
+          normalize: normalizeBilibiliQuickAddInput,
         },
         telegram: {
-          prompt: '请输入 Telegram 频道 ID',
-          link: function(value) { return 'rsshub://telegram/channel/' + value },
+          prompt: '请输入 Telegram 频道 ID 或 t.me 链接',
+          normalize: normalizeTelegramQuickAddInput,
         },
       }[kind]
       if (!config) return
 
       this.promptDialog(config.prompt).then(function(value) {
-        value = (value || '').trim()
-        if (!value) return
+        var normalized = config.normalize((value || '').trim())
+        if (!normalized.value) return
+        if (!normalized.normalized) {
+          vm.alertDialog('无法识别 UID/频道 ID。')
+          return
+        }
 
         var folderId = vm.current.feed.folder_id || vm.current.folder.id || null
         vm.createFeedFromData({
-          url: config.link(value),
+          url: normalized.value,
           folder_id: folderId,
         }, false)
       })

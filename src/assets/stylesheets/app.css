@@ -421,6 +421,15 @@ select.form-control:not([multiple]):not([size]) {
   visibility: hidden;
 }
 
+.toolbar-feed-actions-narrow .feed-list-toolbar-create {
+  display: none;
+}
+
+.toolbar-feed-actions-minimal .feed-list-toolbar-refresh,
+.toolbar-feed-actions-minimal .feed-list-toolbar-create {
+  display: none;
+}
+
 .content-mode-switch {
   display: inline-grid;
   grid-template-columns: repeat(3, minmax(0, auto));
