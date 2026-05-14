@@ -219,6 +219,7 @@ _Avoid_: Browser back, 返回上一页
 - In **移动端视图**, the **文章** list toolbar exposes a quick switch between **全部** and **未读** without returning to the **订阅源** list.
 - The **移动端视图** quick switch includes **全部** and **未读**, not **收藏**.
 - In **移动端视图**, scrolling downward through the **文章** list can mark visible **未读** articles as **已读** after they leave the top of the visible list area.
+- A scrolled **文章** must have been meaningfully visible in the **文章** list before leaving the top of the visible list area to be treated as consumed.
 - Articles marked **已读** by scrolling through the **文章** list remain in the current list until the list is refreshed or its scope changes.
 - In the **未读** view, a bottom **全部设为已读** action applies only to the current **文章** list scope, such as the selected **订阅源**, **文件夹**, or current search.
 - After the bottom **全部设为已读** action succeeds in the **未读** view, the current **文章** list is cleared and unread counts are refreshed.
