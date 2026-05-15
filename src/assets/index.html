@@ -682,7 +682,23 @@
                         </div>
                     </div>
                 </section>
-                <p class="mt-3 light cursor-default" v-else>暂无 RSSHub 基础链接</p>
+                <section class="settings-dialog-section" v-if="hasRSSHubFeedDetails()">
+                    <header>订阅源</header>
+                    <div class="rsshub-detail-feed-list">
+                        <template v-for="detail in rsshubDetails">
+                            <a class="rsshub-detail-feed-row"
+                               :href="feed.link"
+                               rel="noopener noreferrer"
+                               target="_blank"
+                               referrerpolicy="no-referrer"
+                               v-for="feed in detail.details">
+                                <span class="rsshub-detail-feed-title">{{ feed.title }}</span>
+                                <span class="rsshub-detail-feed-link">{{ feed.link }}</span>
+                            </a>
+                        </template>
+                    </div>
+                </section>
+                <p class="mt-3 light cursor-default" v-if="!rsshubDetails.length">暂无 RSSHub 基础链接</p>
             </div>
             <div v-else-if="settings=='shortcuts'">
                 <p class="cursor-default"><b>键盘快捷键</b></p>

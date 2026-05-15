@@ -723,6 +723,37 @@ select.form-control:not([multiple]):not([size]) {
   outline: none;
 }
 
+.rsshub-detail-feed-list {
+  display: grid;
+  gap: .35rem;
+}
+
+.rsshub-detail-feed-row,
+.rsshub-detail-feed-row:hover,
+.rsshub-detail-feed-row:focus,
+.rsshub-detail-feed-row:active {
+  color: inherit;
+  display: grid;
+  line-height: 1.25;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.rsshub-detail-feed-title {
+  font-size: .9rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rsshub-detail-feed-link {
+  font-size: .8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .settings-dialog-actions {
   display: grid;
   gap: .2rem;

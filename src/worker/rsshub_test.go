@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/nkanaev/yarr/src/storage"
 )
 
 func TestCheckRSSHubBaseAcceptsRedirect(t *testing.T) {
@@ -39,9 +41,9 @@ func TestRSSHubRefreshDetailsCountLatestSuccessfulBasePerFeed(t *testing.T) {
 		t.Fatal("failed to set RSSHub base URL")
 	}
 
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedA.Id, StoredFeedLink: feedA.FeedLink, RSSHubBase: "https://a.example"})
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedB.Id, StoredFeedLink: feedB.FeedLink, RSSHubBase: "https://a.example"})
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedA.Id, StoredFeedLink: feedA.FeedLink, RSSHubBase: "https://b.example"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedA.Id, StoredFeedLink: feedA.FeedLink, RSSHubBase: "https://a.example", RSSHubLink: "https://a.example/bilibili/user/video/a"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedB.Id, StoredFeedLink: feedB.FeedLink, RSSHubBase: "https://a.example", RSSHubLink: "https://a.example/bilibili/user/video/b"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feedA.Id, StoredFeedLink: feedA.FeedLink, RSSHubBase: "https://b.example", RSSHubLink: "https://b.example/bilibili/user/video/a"})
 
 	details := worker.RSSHubRefreshDetails()
 	if len(details) != 2 {
@@ -52,6 +54,15 @@ func TestRSSHubRefreshDetailsCountLatestSuccessfulBasePerFeed(t *testing.T) {
 	}
 	if details[1].BaseURL != "https://b.example" || details[1].Feeds != 1 {
 		t.Fatalf("got second detail %#v", details[1])
+	}
+	if len(details[1].Details) != 1 {
+		t.Fatalf("got %d feed details", len(details[1].Details))
+	}
+	if details[1].Details[0].Title != "A" {
+		t.Fatalf("got title %q", details[1].Details[0].Title)
+	}
+	if details[1].Details[0].Link != "https://b.example/bilibili/user/video/a" {
+		t.Fatalf("got link %q", details[1].Details[0].Link)
 	}
 }
 
@@ -64,7 +75,7 @@ func TestRSSHubRefreshDetailsIgnoreNormalFeeds(t *testing.T) {
 		t.Fatal("failed to set RSSHub base URL")
 	}
 
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example", RSSHubLink: "https://a.example/feed.xml"})
 
 	details := worker.RSSHubRefreshDetails()
 	if len(details) != 1 {
@@ -84,7 +95,7 @@ func TestRSSHubRefreshDetailsIgnoreDeletedFeeds(t *testing.T) {
 		t.Fatal("failed to set RSSHub base URL")
 	}
 
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example", RSSHubLink: "https://a.example/bilibili/user/video/a"})
 	db.DeleteFeed(feed.Id)
 
 	details := worker.RSSHubRefreshDetails()
@@ -105,7 +116,7 @@ func TestRSSHubRefreshDetailsResetWhenBaseListChanges(t *testing.T) {
 		t.Fatal("failed to set RSSHub base URL")
 	}
 
-	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example"})
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{FeedID: feed.Id, StoredFeedLink: feed.FeedLink, RSSHubBase: "https://a.example", RSSHubLink: "https://a.example/bilibili/user/video/a"})
 	worker.CheckRSSHubAvailability()
 
 	details := worker.RSSHubRefreshDetails()
@@ -148,6 +159,9 @@ func TestRSSHubNotModifiedRefreshRecordsSuccessfulBase(t *testing.T) {
 	if result.RSSHubBase != server.URL {
 		t.Fatalf("got base %q", result.RSSHubBase)
 	}
+	if result.RSSHubLink != server.URL+"/bilibili/weekly" {
+		t.Fatalf("got link %q", result.RSSHubLink)
+	}
 }
 
 func TestRSSHubRefreshResultRecordsSuccessfulBaseAfterFallback(t *testing.T) {
@@ -180,5 +194,42 @@ func TestRSSHubRefreshResultRecordsSuccessfulBaseAfterFallback(t *testing.T) {
 	}
 	if result.RSSHubBase != server.URL+"/good" {
 		t.Fatalf("got base %q", result.RSSHubBase)
+	}
+	if result.RSSHubLink != server.URL+"/good/bilibili/weekly" {
+		t.Fatalf("got link %q", result.RSSHubLink)
+	}
+}
+
+func TestRefresherRecordsRSSHubFeedDetail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBody("哔哩热榜"))
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": server.URL}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	feed := db.CreateFeed("哔哩热榜", "", "", "rsshub://bilibili/weekly", nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	details := worker.RSSHubRefreshDetails()
+	if len(details) != 1 {
+		t.Fatalf("got %d details", len(details))
+	}
+	if details[0].Feeds != 1 {
+		t.Fatalf("got %d feeds", details[0].Feeds)
+	}
+	if len(details[0].Details) != 1 {
+		t.Fatalf("got %d feed details", len(details[0].Details))
+	}
+	if details[0].Details[0].Title != "哔哩热榜" {
+		t.Fatalf("got title %q", details[0].Details[0].Title)
+	}
+	if details[0].Details[0].Link != server.URL+"/bilibili/weekly" {
+		t.Fatalf("got link %q", details[0].Details[0].Link)
 	}
 }
