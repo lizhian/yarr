@@ -56,6 +56,10 @@ _Avoid_: B站 ID, Bilibili 用户 ID
 A setting that periodically checks subscription sources for new articles without user action.
 _Avoid_: Auto-refresh, 自动更新
 
+**刷新订阅源**:
+A user-triggered action that checks one or more subscription sources for new articles.
+_Avoid_: 手动更新, Refresh feeds
+
 **状态轮询**:
 A browser-side timer that keeps refresh state and unread counts current by checking yarr server status.
 _Avoid_: Status refresh, 状态刷新
@@ -280,6 +284,8 @@ _Avoid_: Browser back, 返回上一页
 - If all attempted **RSSHub 基础链接** fail while fetching **文章**, users see the last request error while logs keep the candidate-level failures.
 - OPML import and export preserve unfetched **RSSHub 订阅链接** in portable form.
 - **自动刷新** periodically checks **订阅源** for new **文章**.
+- **刷新订阅源** can check one **订阅源** or every **订阅源**.
+- **刷新订阅源** does not update **订阅源图标链接**; use **更新订阅源图标链接** for icon discovery.
 - **自动刷新** can be disabled or set to 1m, 5m, 10m, 30m, or 1h from settings.
 - RSSHub availability checks run on the same interval as **自动刷新**.
 - RSSHub availability checks cover all enabled **RSSHub 基础链接**.

@@ -148,6 +148,14 @@ func (w *Worker) SetRefreshRate(minute int64) {
 }
 
 func (w *Worker) RefreshFeeds() {
+	w.refreshFeeds(w.db.ListFeeds())
+}
+
+func (w *Worker) RefreshFeed(feed storage.Feed) {
+	w.refreshFeeds([]storage.Feed{feed})
+}
+
+func (w *Worker) refreshFeeds(feeds []storage.Feed) {
 	w.reflock.Lock()
 	defer w.reflock.Unlock()
 
@@ -156,7 +164,6 @@ func (w *Worker) RefreshFeeds() {
 		return
 	}
 
-	feeds := w.db.ListFeeds()
 	if len(feeds) == 0 {
 		log.Print("Nothing to refresh")
 		return

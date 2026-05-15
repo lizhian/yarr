@@ -49,6 +49,9 @@
       refresh: function() {
         return api('post', './api/feeds/refresh')
       },
+      refresh_one: function(id) {
+        return api('post', './api/feeds/' + id + '/refresh')
+      },
       refresh_icons: function() {
         return api('post', './api/feeds/icons/refresh')
       },

@@ -555,6 +555,10 @@
                         <span class="icon mr-2">{% inline "globe.svg" %}</span>
                         更新图标
                     </button>
+                    <button class="settings-dialog-action" :disabled="loading.feed === settingsFeed.id" @click.prevent="refreshFeed(settingsFeed)" title="刷新订阅源" aria-label="刷新订阅源">
+                        <span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>
+                        刷新
+                    </button>
                     <button class="settings-dialog-action text-danger" @click.prevent="deleteFeed(settingsFeed)">
                         <span class="icon mr-2">{% inline "trash.svg" %}</span>
                         删除

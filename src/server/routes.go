@@ -47,6 +47,7 @@ func (s *Server) handler() http.Handler {
 	r.For("/api/feeds/refresh", s.handleFeedRefresh)
 	r.For("/api/feeds/icons/refresh", s.handleFeedIconRefresh)
 	r.For("/api/feeds/errors", s.handleFeedErrors)
+	r.For("/api/feeds/:id/refresh", s.handleFeedRefresh)
 	r.For("/api/feeds/:id/icon/refresh", s.handleFeedIconRefresh)
 	r.For("/api/feeds/:id", s.handleFeed)
 	r.For("/api/items", s.handleItemList)
@@ -193,6 +194,16 @@ func (s *Server) handleFolder(c *router.Context) {
 
 func (s *Server) handleFeedRefresh(c *router.Context) {
 	if c.Req.Method == "POST" {
+		if id, err := c.VarInt64("id"); err == nil {
+			feed := s.db.GetFeed(id)
+			if feed == nil {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			s.worker.RefreshFeed(*feed)
+			c.Out.WriteHeader(http.StatusOK)
+			return
+		}
 		s.worker.RefreshFeeds()
 		c.Out.WriteHeader(http.StatusOK)
 	} else {

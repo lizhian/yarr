@@ -10,7 +10,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/nkanaev/yarr/src/server/opml"
 	"github.com/nkanaev/yarr/src/storage"
@@ -601,6 +604,80 @@ func TestRefreshFeedIconURL(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != iconServer.URL+"/icon.png" {
 		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeed(t *testing.T) {
+	var targetRequests, otherRequests int32
+	feedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/target.xml":
+			atomic.AddInt32(&targetRequests, 1)
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>target</title>
+    <link>https://example.com/target</link>
+    <item>
+      <guid>target-1</guid>
+      <title>target item</title>
+      <link>https://example.com/target/1</link>
+    </item>
+  </channel>
+</rss>`)
+		case "/other.xml":
+			atomic.AddInt32(&otherRequests, 1)
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>other</title>
+    <link>https://example.com/other</link>
+  </channel>
+</rss>`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer feedServer.Close()
+
+	dbPath := filepath.Join(t.TempDir(), "storage.db")
+	db, err := storage.New(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := db.CreateFeed("target", "", feedServer.URL+"/target", feedServer.URL+"/target.xml", nil)
+	other := db.CreateFeed("other", "", feedServer.URL+"/other", feedServer.URL+"/other.xml", nil)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", fmt.Sprintf("/api/feeds/%d/refresh", target.Id), nil)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if len(db.ListItems(storage.ItemFilter{FeedID: &target.Id}, 10, false, false)) == 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if atomic.LoadInt32(&targetRequests) != 1 {
+		t.Fatalf("got %d target requests", atomic.LoadInt32(&targetRequests))
+	}
+	if atomic.LoadInt32(&otherRequests) != 0 {
+		t.Fatalf("got %d other requests", atomic.LoadInt32(&otherRequests))
+	}
+	if count := len(db.ListItems(storage.ItemFilter{FeedID: &target.Id}, 10, false, false)); count != 1 {
+		t.Fatalf("got %d target items", count)
+	}
+	if count := len(db.ListItems(storage.ItemFilter{FeedID: &other.Id}, 10, false, false)); count != 0 {
+		t.Fatalf("got %d other items", count)
 	}
 }
 

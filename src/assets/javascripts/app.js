@@ -433,6 +433,7 @@ var vm = new Vue({
         'readability': false,
         'backup': false,
         'icons': false,
+        'feed': null,
         'feedIcon': null,
       },
       'feedStats': {},
@@ -1119,6 +1120,18 @@ var vm = new Vue({
         vm.loading.feedIcon = null
       }, function() {
         vm.loading.feedIcon = null
+      })
+    },
+    refreshFeed: function(feed) {
+      if (!feed || this.loading.feed === feed.id) return
+      this.loading.feed = feed.id
+      api.feeds.refresh_one(feed.id).then(function() {
+        vm.refreshStats(true)
+        return vm.refreshItems()
+      }).then(function() {
+        vm.loading.feed = null
+      }, function() {
+        vm.loading.feed = null
       })
     },
     deleteFeed: function(feed) {
