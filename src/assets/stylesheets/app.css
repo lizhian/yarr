@@ -732,6 +732,10 @@ select.form-control:not([multiple]):not([size]) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.settings-dialog-actions-left .settings-dialog-action {
+  justify-content: flex-start;
+}
+
 .settings-dialog-action {
   align-items: center;
   background: transparent;
