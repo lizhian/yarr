@@ -28,6 +28,24 @@ func opt(envVar, defaultValue string) string {
 	return defaultValue
 }
 
+func defaultDBPathFromExecutable(executable string) (string, error) {
+	executable, err := filepath.EvalSymlinks(executable)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(filepath.Dir(executable), "storage.db"), nil
+}
+
+func defaultDBPath() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	return defaultDBPathFromExecutable(executable)
+}
+
 func main() {
 	platform.FixConsoleIfNeeded()
 
@@ -76,16 +94,11 @@ func main() {
 	}
 
 	if db == "" {
-		configPath, err := os.UserConfigDir()
+		defaultDB, err := defaultDBPath()
 		if err != nil {
-			log.Fatal("Failed to get config dir: ", err)
+			log.Fatal("Failed to get default db path: ", err)
 		}
-
-		storagePath := filepath.Join(configPath, "yarr")
-		if err := os.MkdirAll(storagePath, 0755); err != nil {
-			log.Fatal("Failed to create app config dir: ", err)
-		}
-		db = filepath.Join(storagePath, "storage.db")
+		db = defaultDB
 	}
 
 	log.Printf("using db file %s", db)

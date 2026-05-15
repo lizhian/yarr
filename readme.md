@@ -4,6 +4,7 @@
 as a desktop application and a personal self-hosted server.
 
 The app is a single binary with an embedded database (SQLite).
+By default, the database is stored as `storage.db` next to the executable.
 
 ![screenshot](etc/promo.png)
 
@@ -27,7 +28,7 @@ Usage instructions:
 
 [macos-open]: https://support.apple.com/en-gb/guide/mac-help/mh40616/mac
 
-For self-hosting, see `yarr -h` for TLS and server configuration flags. Access authentication is configured from the in-app settings.
+For self-hosting, see `yarr -h` for the database path, TLS, and server configuration flags. Access authentication is configured from the in-app settings.
 
 See more:
 
