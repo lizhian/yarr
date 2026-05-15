@@ -12,6 +12,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/nkanaev/yarr/src/server/opml"
 	"github.com/nkanaev/yarr/src/storage"
 )
 
@@ -462,6 +463,80 @@ func TestUpdateFeedIconURLRejectsUnsupportedURL(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != "" {
 		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestCreateFeedFromOPMLPreservesFeedIconURLAndContentSelector(t *testing.T) {
+	db := testServerDB(t)
+	existing := db.CreateFeedWithContentSelector("existing", "", "https://example.com/old", "https://example.com/existing.xml", ".old", nil)
+	db.UpdateFeedIconURL(existing.Id, "https://example.com/old-icon.png")
+
+	server := NewServer(db, "127.0.0.1:8000")
+	server.createFeedFromOPML(opml.Feed{
+		Title:           "new",
+		FeedUrl:         "https://example.com/new.xml",
+		SiteUrl:         "https://example.com/new",
+		ContentSelector: ".article",
+		IconURL:         "https://example.com/new-icon.png",
+	}, nil)
+	server.createFeedFromOPML(opml.Feed{
+		Title:           "existing",
+		FeedUrl:         "https://example.com/existing.xml",
+		SiteUrl:         "https://example.com/existing",
+		ContentSelector: ".entry",
+		IconURL:         "https://example.com/icon.png",
+	}, nil)
+
+	feeds := db.ListFeeds()
+	if len(feeds) != 2 {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	for _, feed := range feeds {
+		switch feed.FeedLink {
+		case "https://example.com/new.xml":
+			if feed.ContentSelector != ".article" {
+				t.Fatalf("got new content selector %q", feed.ContentSelector)
+			}
+			if feed.IconURL != "https://example.com/new-icon.png" {
+				t.Fatalf("got new icon url %q", feed.IconURL)
+			}
+		case "https://example.com/existing.xml":
+			if feed.Id != existing.Id {
+				t.Fatalf("got existing feed id %d", feed.Id)
+			}
+			if feed.ContentSelector != ".entry" {
+				t.Fatalf("got existing content selector %q", feed.ContentSelector)
+			}
+			if feed.IconURL != "https://example.com/icon.png" {
+				t.Fatalf("got existing icon url %q", feed.IconURL)
+			}
+		default:
+			t.Fatalf("unexpected feed link %q", feed.FeedLink)
+		}
+	}
+}
+
+func TestCreateFeedFromOPMLIgnoresInvalidFeedIconURLAndContentSelector(t *testing.T) {
+	db := testServerDB(t)
+
+	server := NewServer(db, "127.0.0.1:8000")
+	server.createFeedFromOPML(opml.Feed{
+		Title:           "feed",
+		FeedUrl:         "https://example.com/feed.xml",
+		SiteUrl:         "https://example.com",
+		ContentSelector: "main:unsupported",
+		IconURL:         "javascript:alert(1)",
+	}, nil)
+
+	feeds := db.ListFeeds()
+	if len(feeds) != 1 {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	if feeds[0].ContentSelector != "" {
+		t.Fatalf("got content selector %q", feeds[0].ContentSelector)
+	}
+	if feeds[0].IconURL != "" {
+		t.Fatalf("got icon url %q", feeds[0].IconURL)
 	}
 }
 

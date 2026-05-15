@@ -20,9 +20,11 @@ func TestOPML(t *testing.T) {
 				Title: "sub",
 				Feeds: []Feed{
 					{
-						Title:   "subtitle1",
-						FeedUrl: "https://foo.com/feed.xml",
-						SiteUrl: "https://foo.com/",
+						Title:           "subtitle1",
+						FeedUrl:         "https://foo.com/feed.xml",
+						SiteUrl:         "https://foo.com/",
+						ContentSelector: `main .content > a[href="https://example.com/?a=1&b=2"]`,
+						IconURL:         "https://foo.com/icon.png?a=1&b=2",
 					},
 					{
 						Title:   "&>",
@@ -39,7 +41,7 @@ func TestOPML(t *testing.T) {
 <head><title>subscriptions</title></head>
 <body>
   <outline text="sub">
-    <outline type="rss" text="subtitle1" xmlUrl="https://foo.com/feed.xml" htmlUrl="https://foo.com/"/>
+    <outline type="rss" text="subtitle1" xmlUrl="https://foo.com/feed.xml" htmlUrl="https://foo.com/" icon_url="https://foo.com/icon.png?a=1&amp;b=2" content_selector="main .content &gt; a[href=&#34;https://example.com/?a=1&amp;b=2&#34;]"/>
     <outline type="rss" text="&amp;&gt;" xmlUrl="https://bar.com/feed.xml" htmlUrl="https://bar.com/"/>
   </outline>
   <outline type="rss" text="title1" xmlUrl="https://baz.com/feed.xml" htmlUrl="https://baz.com/"/>

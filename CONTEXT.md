@@ -297,7 +297,8 @@ _Avoid_: Browser back, 返回上一页
 - A **正文选择器** applies to all **文章** produced by its **订阅源**.
 - **正文模式** uses the selected **文章**'s **订阅源** **正文选择器** when one is configured.
 - A **正文选择器** can be configured regardless of the **订阅源** **内容方式**.
-- OPML import and export do not preserve **正文选择器**.
+- OPML import and export preserve **正文选择器**.
+- OPML import and export preserve **订阅源图标链接**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
 - In **移动端视图**, the **文章** list toolbar exposes a quick switch between **全部** and **未读** without returning to the **订阅源** list.
 - The **移动端视图** quick switch includes **全部** and **未读**, not **收藏**.

@@ -13,9 +13,11 @@ type Folder struct {
 }
 
 type Feed struct {
-	Title   string
-	FeedUrl string
-	SiteUrl string
+	Title           string
+	FeedUrl         string
+	SiteUrl         string
+	ContentSelector string
+	IconURL         string
 }
 
 func (f Folder) AllFeeds() []Feed {
@@ -51,9 +53,21 @@ func (f Folder) outline(level int) string {
 }
 
 func (f Feed) outline(level int) string {
+	attrs := []string{
+		fmt.Sprintf(`type="rss"`),
+		fmt.Sprintf(`text="%s"`, e(f.Title)),
+		fmt.Sprintf(`xmlUrl="%s"`, e(f.FeedUrl)),
+		fmt.Sprintf(`htmlUrl="%s"`, e(f.SiteUrl)),
+	}
+	if f.IconURL != "" {
+		attrs = append(attrs, fmt.Sprintf(`icon_url="%s"`, e(f.IconURL)))
+	}
+	if f.ContentSelector != "" {
+		attrs = append(attrs, fmt.Sprintf(`content_selector="%s"`, e(f.ContentSelector)))
+	}
 	return strings.Repeat(indent, level) + fmt.Sprintf(
-		`<outline type="rss" text="%s" xmlUrl="%s" htmlUrl="%s"/>`+nl,
-		e(f.Title), e(f.FeedUrl), e(f.SiteUrl),
+		`<outline %s/>`+nl,
+		strings.Join(attrs, " "),
 	)
 }
 

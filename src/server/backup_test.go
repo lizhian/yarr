@@ -118,7 +118,8 @@ func TestBackupEndpointTriggersBackup(t *testing.T) {
 func TestOPMLExportMatchesBackupOPML(t *testing.T) {
 	db := testServerDB(t)
 	folder := db.CreateFolder("folder")
-	db.CreateFeed("root feed", "", "https://example.com", "https://example.com/root.xml", nil)
+	root := db.CreateFeedWithContentSelector("root feed", "", "https://example.com", "https://example.com/root.xml", "main article", nil)
+	db.UpdateFeedIconURL(root.Id, "https://example.com/icon.png")
 	db.CreateFeed("folder feed", "", "https://example.com/folder", "https://example.com/folder.xml", &folder.Id)
 
 	recorder := httptest.NewRecorder()
@@ -132,6 +133,12 @@ func TestOPMLExportMatchesBackupOPML(t *testing.T) {
 	want := BuildOPML(db).OPML()
 	if strings.TrimSpace(got) != strings.TrimSpace(want) {
 		t.Fatalf("opml mismatch\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if !strings.Contains(got, `icon_url="https://example.com/icon.png"`) {
+		t.Fatal("opml should include feed icon url")
+	}
+	if !strings.Contains(got, `content_selector="main article"`) {
+		t.Fatal("opml should include feed content selector")
 	}
 }
 

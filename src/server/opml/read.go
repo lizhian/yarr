@@ -13,12 +13,14 @@ type opml struct {
 }
 
 type outline struct {
-	Type     string    `xml:"type,attr,omitempty"`
-	Title    string    `xml:"text,attr"`
-	Title2   string    `xml:"title,attr,omitempty"`
-	FeedUrl  string    `xml:"xmlUrl,attr,omitempty"`
-	SiteUrl  string    `xml:"htmlUrl,attr,omitempty"`
-	Outlines []outline `xml:"outline,omitempty"`
+	Type            string    `xml:"type,attr,omitempty"`
+	Title           string    `xml:"text,attr"`
+	Title2          string    `xml:"title,attr,omitempty"`
+	FeedUrl         string    `xml:"xmlUrl,attr,omitempty"`
+	SiteUrl         string    `xml:"htmlUrl,attr,omitempty"`
+	ContentSelector string    `xml:"content_selector,attr,omitempty"`
+	IconURL         string    `xml:"icon_url,attr,omitempty"`
+	Outlines        []outline `xml:"outline,omitempty"`
 }
 
 func buildFolder(title string, outlines []outline) Folder {
@@ -26,9 +28,11 @@ func buildFolder(title string, outlines []outline) Folder {
 	for _, outline := range outlines {
 		if outline.Type == "rss" || outline.FeedUrl != "" {
 			folder.Feeds = append(folder.Feeds, Feed{
-				Title:   outline.Title,
-				FeedUrl: outline.FeedUrl,
-				SiteUrl: outline.SiteUrl,
+				Title:           outline.Title,
+				FeedUrl:         outline.FeedUrl,
+				SiteUrl:         outline.SiteUrl,
+				ContentSelector: outline.ContentSelector,
+				IconURL:         outline.IconURL,
 			})
 		} else {
 			title := outline.Title

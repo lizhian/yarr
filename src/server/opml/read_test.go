@@ -15,7 +15,8 @@ func TestParse(t *testing.T) {
 		<body>
 			<outline text="sub">
 				<outline type="rss" text="subtitle1" description="sub1"
-						 xmlUrl="https://foo.com/feed.xml" htmlUrl="https://foo.com/"/>
+						 xmlUrl="https://foo.com/feed.xml" htmlUrl="https://foo.com/"
+						 icon_url="https://foo.com/icon.png" content_selector="main .content"/>
 				<outline type="rss" text="&amp;&gt;" description="&lt;&gt;"
 						 xmlUrl="https://bar.com/feed.xml" htmlUrl="https://bar.com/"/>
 			</outline>
@@ -38,9 +39,11 @@ func TestParse(t *testing.T) {
 				Title: "sub",
 				Feeds: []Feed{
 					{
-						Title:   "subtitle1",
-						FeedUrl: "https://foo.com/feed.xml",
-						SiteUrl: "https://foo.com/",
+						Title:           "subtitle1",
+						FeedUrl:         "https://foo.com/feed.xml",
+						SiteUrl:         "https://foo.com/",
+						ContentSelector: "main .content",
+						IconURL:         "https://foo.com/icon.png",
 					},
 					{
 						Title:   "&>",

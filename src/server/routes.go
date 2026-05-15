@@ -526,12 +526,12 @@ func (s *Server) handleOPMLImport(c *router.Context) {
 			return
 		}
 		for _, f := range doc.Feeds {
-			s.db.CreateFeed(f.Title, "", f.SiteUrl, f.FeedUrl, nil)
+			s.createFeedFromOPML(f, nil)
 		}
 		for _, f := range doc.Folders {
 			folder := s.db.CreateFolder(f.Title)
 			for _, ff := range f.AllFeeds() {
-				s.db.CreateFeed(ff.Title, "", ff.SiteUrl, ff.FeedUrl, &folder.Id)
+				s.createFeedFromOPML(ff, &folder.Id)
 			}
 		}
 
@@ -541,6 +541,25 @@ func (s *Server) handleOPMLImport(c *router.Context) {
 		c.Out.WriteHeader(http.StatusOK)
 	} else {
 		c.Out.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) createFeedFromOPML(f opml.Feed, folderID *int64) {
+	selector := strings.TrimSpace(f.ContentSelector)
+	if selector != "" {
+		if _, err := htmlutil.CompileSelector(selector); err != nil {
+			selector = ""
+		}
+	}
+
+	feed := s.db.CreateFeedWithContentSelector(f.Title, "", f.SiteUrl, f.FeedUrl, selector, folderID)
+	if feed == nil {
+		return
+	}
+
+	iconURL := strings.TrimSpace(f.IconURL)
+	if iconURL != "" && validFeedIconURL(iconURL) {
+		s.db.UpdateFeedIconURL(feed.Id, iconURL)
 	}
 }
 

@@ -159,9 +159,11 @@ func BuildOPML(db *storage.Storage) opml.Folder {
 		feed := feed
 		if feed.FolderId == nil {
 			doc.Feeds = append(doc.Feeds, opml.Feed{
-				Title:   feed.Title,
-				FeedUrl: feed.FeedLink,
-				SiteUrl: feed.Link,
+				Title:           feed.Title,
+				FeedUrl:         feed.FeedLink,
+				SiteUrl:         feed.Link,
+				ContentSelector: feed.ContentSelector,
+				IconURL:         feed.IconURL,
 			})
 		} else {
 			id := *feed.FolderId
@@ -177,9 +179,11 @@ func BuildOPML(db *storage.Storage) opml.Folder {
 		opmlfolder := opml.Folder{Title: folder.Title}
 		for _, feed := range folderFeeds {
 			opmlfolder.Feeds = append(opmlfolder.Feeds, opml.Feed{
-				Title:   feed.Title,
-				FeedUrl: feed.FeedLink,
-				SiteUrl: feed.Link,
+				Title:           feed.Title,
+				FeedUrl:         feed.FeedLink,
+				SiteUrl:         feed.Link,
+				ContentSelector: feed.ContentSelector,
+				IconURL:         feed.IconURL,
 			})
 		}
 		doc.Folders = append(doc.Folders, opmlfolder)
