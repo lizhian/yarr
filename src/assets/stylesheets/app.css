@@ -774,6 +774,21 @@ select.form-control:not([multiple]):not([size]) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.settings-dialog-actions-three {
+  gap: .15rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-dialog-actions-three .settings-dialog-action {
+  min-height: 1.75rem;
+  padding: .2rem .1rem;
+  white-space: nowrap;
+}
+
+.settings-dialog-actions-three .icon {
+  margin-right: .25rem !important;
+}
+
 .settings-dialog-actions-left .settings-dialog-action {
   justify-content: flex-start;
 }
