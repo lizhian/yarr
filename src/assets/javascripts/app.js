@@ -422,6 +422,8 @@ var vm = new Vue({
         'items': false,
         'readability': false,
         'backup': false,
+        'icons': false,
+        'feedIcon': null,
       },
       'feedStats': {},
       'theme': {
@@ -1089,6 +1091,20 @@ var vm = new Vue({
         })
       })
     },
+    refreshFeedIcon: function(feed) {
+      if (!feed || this.loading.feedIcon === feed.id) return
+      this.loading.feedIcon = feed.id
+      api.feeds.refresh_icon(feed.id).then(function(updatedFeed) {
+        if (updatedFeed && updatedFeed.id) {
+          feed.icon_url = updatedFeed.icon_url
+        }
+        vm.feedIconErrors = {}
+      }).then(function() {
+        vm.loading.feedIcon = null
+      }, function() {
+        vm.loading.feedIcon = null
+      })
+    },
     deleteFeed: function(feed) {
       this.confirmDialog('确定删除订阅源「' + feed.title + '」吗？', '删除订阅源').then(function(confirmed) {
         if (!confirmed) return
@@ -1475,6 +1491,18 @@ var vm = new Vue({
       if (this.loading.feeds) return
       api.feeds.refresh().then(function() {
         vm.refreshStats()
+      })
+    },
+    refreshFeedIcons: function() {
+      if (this.loading.icons) return
+      this.loading.icons = true
+      api.feeds.refresh_icons().then(function() {
+        vm.feedIconErrors = {}
+        return vm.refreshFeeds()
+      }).then(function() {
+        vm.loading.icons = false
+      }, function() {
+        vm.loading.icons = false
       })
     },
     computeStats: function() {

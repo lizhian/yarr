@@ -149,9 +149,7 @@ func validImageURL(link string) bool {
 
 func findFeedIconURL(feedImageUrl, siteUrl, feedUrl string) (string, error) {
 	if feedImageUrl != "" {
-		if validImageURL(feedImageUrl) {
-			return feedImageUrl, nil
-		}
+		return feedImageUrl, nil
 	}
 
 	urls := make([]string, 0)

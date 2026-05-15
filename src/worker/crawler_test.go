@@ -39,20 +39,17 @@ func TestDiscoverFeedWithLinkPreservesStoredLink(t *testing.T) {
 }
 
 func TestFindFeedIconPrefersFeedImage(t *testing.T) {
-	const feedImage = "feed-image"
-	const favicon = "\x00\x00\x01\x00favicon"
 	var requested []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requested = append(requested, r.URL.Path)
 		switch r.URL.Path {
 		case "/feed-image.png":
-			w.Header().Set("Content-Type", "image/png")
-			w.Write([]byte(feedImage))
+			w.WriteHeader(http.StatusInternalServerError)
 		case "/":
 			io.WriteString(w, `<html><head><link rel="icon" href="/favicon.ico"></head></html>`)
 		case "/favicon.ico":
 			w.Header().Set("Content-Type", "image/x-icon")
-			w.Write([]byte(favicon))
+			w.Write([]byte("\x00\x00\x01\x00favicon"))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -66,7 +63,7 @@ func TestFindFeedIconPrefersFeedImage(t *testing.T) {
 	if iconURL != server.URL+"/feed-image.png" {
 		t.Fatalf("got %q", iconURL)
 	}
-	if len(requested) != 1 || requested[0] != "/feed-image.png" {
+	if len(requested) != 0 {
 		t.Fatalf("got requests %#v", requested)
 	}
 }
@@ -322,12 +319,12 @@ func TestRefreshAddsFeedIconURLAfterUserClearsIt(t *testing.T) {
 	}
 }
 
-func TestRefreshKeepsIconURLEmptyOnFailedIconUpdate(t *testing.T) {
+func TestRefreshKeepsIconURLEmptyOnFailedFallbackIconUpdate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/feed.xml":
 			w.Header().Set("Content-Type", "application/rss+xml")
-			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+			io.WriteString(w, rssBody("Test Feed"))
 		case "/new-icon.png":
 			w.WriteHeader(http.StatusInternalServerError)
 		default:
@@ -345,6 +342,95 @@ func TestRefreshKeepsIconURLEmptyOnFailedIconUpdate(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != "" {
 		t.Fatalf("icon url got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLsOverwritesExistingIconURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte("new-icon"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	worker := NewWorker(db)
+
+	worker.RefreshFeedIconURLs()
+
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != server.URL+"/new-icon.png" {
+		t.Fatalf("icon url got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLsKeepsExistingIconURLOnFailedFallbackDiscovery(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBody("Test Feed"))
+		case "/new-icon.png":
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	worker := NewWorker(db)
+
+	worker.RefreshFeedIconURLs()
+
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != "https://example.com/old-icon.png" {
+		t.Fatalf("icon url got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLUpdatesOneFeed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte("new-icon"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	target := db.CreateFeed("Target Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	other := db.CreateFeed("Other Feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	db.UpdateFeedIconURL(target.Id, "https://example.com/old-icon.png")
+	db.UpdateFeedIconURL(other.Id, "https://example.com/other-icon.png")
+	worker := NewWorker(db)
+
+	worker.RefreshFeedIconURL(*target)
+
+	target = db.GetFeed(target.Id)
+	other = db.GetFeed(other.Id)
+	if target.IconURL != server.URL+"/new-icon.png" {
+		t.Fatalf("target icon url got %q", target.IconURL)
+	}
+	if other.IconURL != "https://example.com/other-icon.png" {
+		t.Fatalf("other icon url got %q", other.IconURL)
 	}
 }
 

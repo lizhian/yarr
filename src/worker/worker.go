@@ -56,6 +56,16 @@ func (w *Worker) FindFavicons() {
 	}()
 }
 
+func (w *Worker) RefreshFeedIconURLs() {
+	for _, feed := range w.db.ListFeeds() {
+		w.RefreshFeedIconURL(feed)
+	}
+}
+
+func (w *Worker) RefreshFeedIconURL(feed storage.Feed) {
+	w.FindFeedFavicon(feed)
+}
+
 func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 	feedLink, err := w.resolveLink(feed.FeedLink)
 	if err != nil {

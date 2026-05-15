@@ -152,6 +152,10 @@ _Avoid_: 订阅项设置, Feed settings
 An HTTP(S) image link used to display one subscription source's icon in the subscription source list.
 _Avoid_: Favicon, Feed icon, 订阅源图标
 
+**更新订阅源图标链接**:
+A user-triggered action that rediscovers icon links for one or more subscription sources.
+_Avoid_: 刷新图标, Update icons
+
 **基础设置**:
 The information-row section inside **订阅源设置** that shows editable subscription source properties and links.
 _Avoid_: 基本设置, Basic settings
@@ -196,6 +200,10 @@ _Avoid_: Browser back, 返回上一页
 - When a **订阅源** has no **订阅源图标链接**, yarr can automatically discover one from the subscription source or its website.
 - When a user sets a **订阅源图标链接**, automatic refresh does not overwrite it.
 - Clearing a **订阅源图标链接** lets yarr automatically discover one again.
+- **更新订阅源图标链接** can check one **订阅源** or every **订阅源**, including sources that already have a **订阅源图标链接**.
+- **更新订阅源图标链接** uses an icon link declared by the **订阅源** without checking whether the image is reachable.
+- **更新订阅源图标链接** replaces a saved **订阅源图标链接** only when a new link is discovered.
+- If **更新订阅源图标链接** cannot discover a valid link for a **订阅源**, yarr keeps the existing **订阅源图标链接**.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.

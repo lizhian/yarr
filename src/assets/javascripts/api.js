@@ -49,6 +49,12 @@
       refresh: function() {
         return api('post', './api/feeds/refresh')
       },
+      refresh_icons: function() {
+        return api('post', './api/feeds/icons/refresh')
+      },
+      refresh_icon: function(id) {
+        return api('post', './api/feeds/' + id + '/icon/refresh').then(json)
+      },
       list_errors: function() {
         return api('get', './api/feeds/errors').then(json)
       },

@@ -27,6 +27,10 @@ func testServerDB(t *testing.T) *storage.Storage {
 	return db
 }
 
+func serverURL(r *http.Request) string {
+	return "http://" + r.Host
+}
+
 func TestStatic(t *testing.T) {
 	handler := NewServer(nil, "127.0.0.1:8000").handler()
 	url := "/static/javascripts/app.js"
@@ -462,6 +466,103 @@ func TestUpdateFeedIconURLRejectsUnsupportedURL(t *testing.T) {
 	}
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != "" {
+		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLs(t *testing.T) {
+	iconServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>feed</title>
+    <link>https://example.com</link>
+    <image>
+      <url>`+serverURL(r)+`/icon.png</url>
+    </image>
+  </channel>
+</rss>`)
+		case "/icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte("icon"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer iconServer.Close()
+
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", iconServer.URL, iconServer.URL+"/feed.xml", nil)
+	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	log.SetOutput(os.Stderr)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", "/api/feeds/icons/refresh", nil)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != iconServer.URL+"/icon.png" {
+		t.Fatalf("got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURL(t *testing.T) {
+	iconServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>feed</title>
+    <link>https://example.com</link>
+    <image>
+      <url>`+serverURL(r)+`/icon.png</url>
+    </image>
+  </channel>
+</rss>`)
+		case "/icon.png":
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte("icon"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer iconServer.Close()
+
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", iconServer.URL, iconServer.URL+"/feed.xml", nil)
+	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	log.SetOutput(os.Stderr)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("POST", fmt.Sprintf("/api/feeds/%d/icon/refresh", feed.Id), nil)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	var result storage.Feed
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.IconURL != iconServer.URL+"/icon.png" {
+		t.Fatalf("response got %q", result.IconURL)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != iconServer.URL+"/icon.png" {
 		t.Fatalf("got %q", feed.IconURL)
 	}
 }

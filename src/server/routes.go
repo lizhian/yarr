@@ -45,7 +45,9 @@ func (s *Server) handler() http.Handler {
 	r.For("/api/folders/:id", s.handleFolder)
 	r.For("/api/feeds", s.handleFeedList)
 	r.For("/api/feeds/refresh", s.handleFeedRefresh)
+	r.For("/api/feeds/icons/refresh", s.handleFeedIconRefresh)
 	r.For("/api/feeds/errors", s.handleFeedErrors)
+	r.For("/api/feeds/:id/icon/refresh", s.handleFeedIconRefresh)
 	r.For("/api/feeds/:id", s.handleFeed)
 	r.For("/api/items", s.handleItemList)
 	r.For("/api/items/:id", s.handleItem)
@@ -191,6 +193,25 @@ func (s *Server) handleFolder(c *router.Context) {
 func (s *Server) handleFeedRefresh(c *router.Context) {
 	if c.Req.Method == "POST" {
 		s.worker.RefreshFeeds()
+		c.Out.WriteHeader(http.StatusOK)
+	} else {
+		c.Out.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleFeedIconRefresh(c *router.Context) {
+	if c.Req.Method == "POST" {
+		if id, err := c.VarInt64("id"); err == nil {
+			feed := s.db.GetFeed(id)
+			if feed == nil {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			s.worker.RefreshFeedIconURL(*feed)
+			c.JSON(http.StatusOK, s.db.GetFeed(id))
+			return
+		}
+		s.worker.RefreshFeedIconURLs()
 		c.Out.WriteHeader(http.StatusOK)
 	} else {
 		c.Out.WriteHeader(http.StatusMethodNotAllowed)

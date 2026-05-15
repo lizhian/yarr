@@ -460,6 +460,10 @@
                         <span class="icon mr-2">{% inline "download.svg" %}</span>
                         备份数据
                     </button>
+                    <button class="settings-dialog-action" :disabled="loading.icons" @click="refreshFeedIcons()">
+                        <span class="icon mr-2">{% inline "globe.svg" %}</span>
+                        更新图标
+                    </button>
                     <button class="settings-dialog-action" @click="showSettings('shortcuts')">
                         <span class="icon mr-2">{% inline "help-circle.svg" %}</span>
                         快捷键
@@ -542,10 +546,16 @@
 
                 <hr>
 
-                <button class="settings-dialog-action text-danger" @click.prevent="deleteFeed(settingsFeed)">
-                    <span class="icon mr-2">{% inline "trash.svg" %}</span>
-                    删除
-                </button>
+                <div class="settings-dialog-actions settings-dialog-actions-inline">
+                    <button class="settings-dialog-action" :disabled="loading.feedIcon === settingsFeed.id" @click.prevent="refreshFeedIcon(settingsFeed)">
+                        <span class="icon mr-2">{% inline "globe.svg" %}</span>
+                        更新图标
+                    </button>
+                    <button class="settings-dialog-action text-danger" @click.prevent="deleteFeed(settingsFeed)">
+                        <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                        删除
+                    </button>
+                </div>
             </div>
             <div v-else-if="settings=='folder' && settingsFolder" class="settings-dialog">
                 <p class="cursor-default"><b>{{ settingsFolder.title }}</b></p>
