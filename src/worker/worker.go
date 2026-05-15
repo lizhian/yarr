@@ -69,14 +69,13 @@ func (w *Worker) RefreshFeedIconURL(feed storage.Feed) {
 }
 
 func (w *Worker) FindFeedFavicon(feed storage.Feed) {
-	feedLink, err := w.resolveLink(feed.FeedLink)
-	if err != nil {
-		log.Printf("Failed to resolve favicon feed link for %s: %s", feed.FeedLink, err)
-		return
-	}
 	feedImageUrl := ""
-	if result, err := DiscoverFeedWithLink(feedLink, feed.FeedLink); err == nil && result.Feed != nil {
+	feedLink := feed.FeedLink
+	if result, err := w.DiscoverFeed(feed.FeedLink); err == nil && result.Feed != nil {
 		feedImageUrl = result.Feed.ImageURL
+		feedLink = result.FeedLink
+	} else if err != nil {
+		log.Printf("Failed to discover favicon feed image for %s: %s", feed.FeedLink, err)
 	}
 	w.findFeedIcon(feed, feedImageUrl, feedLink)
 }

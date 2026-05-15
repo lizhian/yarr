@@ -434,6 +434,97 @@ func TestRefreshFeedIconURLUpdatesOneFeed(t *testing.T) {
 	}
 }
 
+func TestRefreshFeedIconURLTriesMultipleRSSHubBases(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		switch r.URL.Path {
+		case "/bad/bilibili/user/video/1140672573":
+			w.WriteHeader(http.StatusInternalServerError)
+		case "/good/bilibili/user/video/1140672573":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("RSSHub Feed", serverURL(r)+"/icon.png"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": server.URL + "/bad\n" + server.URL + "/good"}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	feed := db.CreateFeed("RSSHub Feed", "", "", "rsshub://bilibili/user/video/1140672573", nil)
+	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	worker := NewWorker(db)
+
+	worker.RefreshFeedIconURL(*feed)
+
+	feed = db.GetFeed(feed.Id)
+	if requests != 2 {
+		t.Fatalf("got %d requests", requests)
+	}
+	if feed.IconURL != server.URL+"/icon.png" {
+		t.Fatalf("icon url got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLUsesAvailableRSSHubBasesFirst(t *testing.T) {
+	requestPath := ""
+	serverA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("unavailable base should not be requested")
+	}))
+	defer serverA.Close()
+	serverB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBodyWithImage("RSSHub Feed", serverURL(r)+"/icon.png"))
+	}))
+	defer serverB.Close()
+
+	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": serverA.URL + "\n" + serverB.URL}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	worker := NewWorker(db)
+	worker.rsshubAvailability[serverB.URL] = rsshubAvailable
+	feed := db.CreateFeed("RSSHub Feed", "", "", "rsshub://bilibili/weekly", nil)
+
+	worker.RefreshFeedIconURL(*feed)
+
+	feed = db.GetFeed(feed.Id)
+	if requestPath != "/bilibili/weekly" {
+		t.Fatalf("got request path %q", requestPath)
+	}
+	if feed.IconURL != serverB.URL+"/icon.png" {
+		t.Fatalf("icon url got %q", feed.IconURL)
+	}
+}
+
+func TestRefreshFeedIconURLLimitsRSSHubAttempts(t *testing.T) {
+	db := testStorage(t)
+	bases := ""
+	for i := 0; i < RSSHUB_MAX_ATTEMPTS+2; i++ {
+		if bases != "" {
+			bases += "\n"
+		}
+		bases += "https://example" + string(rune('a'+i)) + ".com"
+	}
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": bases}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	worker := NewWorker(db)
+	feed := db.CreateFeed("RSSHub Feed", "", "", "rsshub://bilibili/weekly", nil)
+
+	links, err := worker.resolveLinks(feed.FeedLink)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links) != RSSHUB_MAX_ATTEMPTS {
+		t.Fatalf("got %d links", len(links))
+	}
+}
+
 func TestRefreshRSSHubPreservesSavedMetadataAndFeedLink(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")

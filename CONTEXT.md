@@ -216,6 +216,8 @@ _Avoid_: Browser back, 返回上一页
 - **更新订阅源图标链接** uses an icon link declared by the **订阅源** without checking whether the image is reachable.
 - **更新订阅源图标链接** replaces a saved **订阅源图标链接** only when a new link is discovered.
 - If **更新订阅源图标链接** cannot discover a valid link for a **订阅源**, yarr keeps the existing **订阅源图标链接**.
+- For an **RSSHub 订阅链接**, **更新订阅源图标链接** tries available **RSSHub 基础链接** first.
+- **更新订阅源图标链接** tries at most five **RSSHub 基础链接** for one **RSSHub 订阅链接**.
 - **文章详情** presents one selected **文章**.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.
