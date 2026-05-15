@@ -736,6 +736,7 @@ select.form-control:not([multiple]):not([size]) {
   display: grid;
   grid-template-columns: minmax(0, 40%) minmax(0, 60%);
   align-items: center;
+  column-gap: .5rem;
   line-height: 1.25;
   min-width: 0;
   text-decoration: none;
