@@ -48,6 +48,10 @@ _Avoid_: Auto-refresh, 自动更新
 A user-managed setting that requires credentials before accessing yarr reader data and protected actions.
 _Avoid_: 登录功能, Auth
 
+**数据备份**:
+A saved copy of yarr reader data for preserving subscriptions, settings, and articles outside the active database.
+_Avoid_: Backup, 数据导出
+
 **文件夹**:
 A user-created grouping for subscription sources.
 _Avoid_: Folder, 分类
@@ -197,6 +201,8 @@ _Avoid_: Browser back, 返回上一页
 - Enabling **访问认证** requires a username and password.
 - Disabling **访问认证** removes the login requirement.
 - Disabling **访问认证** clears the saved username and password.
+- A **数据备份** preserves **文件夹**, **订阅源**, **文章**, and user settings.
+- A **数据备份** is not a restore workflow.
 - A **订阅源** has one **内容方式**.
 - The default **内容方式** for a **订阅源** is **普通模式**.
 - Opening an **文章** in **文章详情** uses its **订阅源** **内容方式**.

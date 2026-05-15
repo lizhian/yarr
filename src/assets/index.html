@@ -456,6 +456,10 @@
                         <span class="icon mr-2">{% inline "sliders.svg" %}</span>
                         访问认证
                     </button>
+                    <button class="settings-dialog-action" :disabled="loading.backup" @click="backupData()">
+                        <span class="icon mr-2">{% inline "download.svg" %}</span>
+                        备份数据
+                    </button>
                     <button class="settings-dialog-action" @click="showSettings('shortcuts')">
                         <span class="icon mr-2">{% inline "help-circle.svg" %}</span>
                         快捷键
@@ -679,7 +683,7 @@
         <modal class="settings-modal" :open="dialog.open" @hide="cancelDialog()">
             <form @submit.prevent="submitDialog()">
                 <p class="cursor-default"><b>{{ dialog.title }}</b></p>
-                <p class="mt-4 mb-0 text-break">{{ dialog.message }}</p>
+                <p class="mt-4 mb-0 text-break dialog-message">{{ dialog.message }}</p>
                 <input v-if="dialog.type == 'prompt'"
                        class="form-control mt-3"
                        :type="dialog.inputType"

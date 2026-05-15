@@ -16,6 +16,7 @@ type Server struct {
 	Addr        string
 	db          *storage.Storage
 	worker      *worker.Worker
+	backups     *BackupService
 	cache       map[string]interface{}
 	cache_mutex *sync.Mutex
 
@@ -37,6 +38,10 @@ func NewServer(db *storage.Storage, addr string) *Server {
 	return s
 }
 
+func (s *Server) SetBackupService(backups *BackupService) {
+	s.backups = backups
+}
+
 func (h *Server) GetAddr() string {
 	proto := "http"
 	if h.CertFile != "" && h.KeyFile != "" {
@@ -49,6 +54,7 @@ func (s *Server) Start() {
 	refreshRate := s.db.GetSettingsValueInt64("refresh_rate")
 	s.worker.FindFavicons()
 	s.worker.StartFeedCleaner()
+	s.startBackupScheduler()
 	s.worker.SetRefreshRate(refreshRate)
 	if refreshRate > 0 {
 		s.worker.RefreshFeeds()

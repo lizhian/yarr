@@ -114,6 +114,7 @@ func main() {
 
 	worker.SetVersion(Version)
 	srv := server.NewServer(store, addr)
+	srv.SetBackupService(server.NewBackupService(store, db))
 
 	if basepath != "" {
 		srv.BasePath = "/" + strings.Trim(basepath, "/")

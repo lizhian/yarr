@@ -418,6 +418,7 @@ var vm = new Vue({
         'deletefeeds': false,
         'items': false,
         'readability': false,
+        'backup': false,
       },
       'feedStats': {},
       'theme': {
@@ -1281,6 +1282,31 @@ var vm = new Vue({
           vm.alertDialog('用户名和密码不能为空。')
         }
       })
+    },
+    backupData: function() {
+      if (this.loading.backup) return
+      this.loading.backup = true
+      api.backups.create().then(function(result) {
+        vm.alertDialog(vm.backupSummaryMessage(result), '备份完成')
+      }).catch(function() {
+        vm.alertDialog('备份失败。')
+      }).then(function() {
+        vm.loading.backup = false
+      })
+    },
+    backupSummaryMessage: function(result) {
+      var tableCounts = result.table_counts || {}
+      var tableNames = Object.keys(tableCounts).sort()
+      var lines = [
+        '订阅源：' + (result.feed_count || 0) + ' 个',
+        '备份目录：' + (result.path || ''),
+        '',
+        '表数据：',
+      ]
+      tableNames.forEach(function(name) {
+        lines.push(name + '：' + tableCounts[name] + ' 行')
+      })
+      return lines.join('\n')
     },
     toggleReadability: function() {
       this.setItemSelectedContentMode(this.itemSelectedContentMode == 'readability' ? 'normal' : 'readability')

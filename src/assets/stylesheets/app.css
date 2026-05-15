@@ -613,6 +613,10 @@ select.form-control:not([multiple]):not([size]) {
   padding: .7rem .85rem;
 }
 
+.dialog-message {
+  white-space: pre-wrap;
+}
+
 .settings-dialog p {
   margin-bottom: 0;
 }

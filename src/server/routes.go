@@ -50,6 +50,7 @@ func (s *Server) handler() http.Handler {
 	r.For("/api/items", s.handleItemList)
 	r.For("/api/items/:id", s.handleItem)
 	r.For("/api/settings", s.handleSettings)
+	r.For("/api/backups", s.handleBackup)
 	r.For("/opml/import", s.handleOPMLImport)
 	r.For("/opml/export", s.handleOPMLExport)
 	r.For("/page", s.handlePageCrawl)
@@ -547,42 +548,26 @@ func (s *Server) handleOPMLExport(c *router.Context) {
 	if c.Req.Method == "GET" {
 		c.Out.Header().Set("Content-Type", "application/xml; charset=utf-8")
 		c.Out.Header().Set("Content-Disposition", `attachment; filename="subscriptions.opml"`)
-
-		doc := opml.Folder{}
-
-		feedsByFolderID := make(map[int64][]*storage.Feed)
-		for _, feed := range s.db.ListFeeds() {
-			feed := feed
-			if feed.FolderId == nil {
-				doc.Feeds = append(doc.Feeds, opml.Feed{
-					Title:   feed.Title,
-					FeedUrl: feed.FeedLink,
-					SiteUrl: feed.Link,
-				})
-			} else {
-				id := *feed.FolderId
-				feedsByFolderID[id] = append(feedsByFolderID[id], &feed)
-			}
-		}
-
-		for _, folder := range s.db.ListFolders() {
-			folderFeeds := feedsByFolderID[folder.Id]
-			if len(folderFeeds) == 0 {
-				continue
-			}
-			opmlfolder := opml.Folder{Title: folder.Title}
-			for _, feed := range folderFeeds {
-				opmlfolder.Feeds = append(opmlfolder.Feeds, opml.Feed{
-					Title:   feed.Title,
-					FeedUrl: feed.FeedLink,
-					SiteUrl: feed.Link,
-				})
-			}
-			doc.Folders = append(doc.Folders, opmlfolder)
-		}
-
-		c.Out.Write([]byte(doc.OPML()))
+		c.Out.Write([]byte(BuildOPML(s.db).OPML()))
 	}
+}
+
+func (s *Server) handleBackup(c *router.Context) {
+	if c.Req.Method != "POST" {
+		c.Out.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.backups == nil {
+		c.Out.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	result, err := s.backups.Run()
+	if err != nil {
+		log.Print(err)
+		c.Out.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func (s *Server) handlePageCrawl(c *router.Context) {

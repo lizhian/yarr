@@ -100,6 +100,11 @@
         return api('put', './api/auth', data)
       },
     },
+    backups: {
+      create: function() {
+        return api('post', './api/backups').then(json)
+      },
+    },
     status: function() {
       return api('get', './api/status').then(json)
     },
