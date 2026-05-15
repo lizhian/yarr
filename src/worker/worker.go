@@ -20,6 +20,7 @@ type Worker struct {
 	stopper            chan bool
 	rsshubAvailability map[string]rsshubAvailability
 	rsshubMu           sync.RWMutex
+	rsshubHits         map[int64]string
 	rsshubRefresh      *time.Ticker
 	rsshubStopper      chan bool
 }
@@ -30,6 +31,7 @@ func NewWorker(db *storage.Storage) *Worker {
 		db:                 db,
 		pending:            &pending,
 		rsshubAvailability: make(map[string]rsshubAvailability),
+		rsshubHits:         make(map[int64]string),
 	}
 }
 
@@ -193,6 +195,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 			w.db.CreateItems(result.Items)
 			w.db.SetFeedSize(result.Items[0].FeedId, len(result.Items))
 		}
+		w.recordRSSHubRefreshHit(result)
 		atomic.AddInt32(w.pending, -1)
 		w.db.SyncSearch()
 	}

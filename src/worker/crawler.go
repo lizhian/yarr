@@ -33,6 +33,7 @@ type DiscoverResult struct {
 type FeedRefreshResult struct {
 	FeedID         int64
 	StoredFeedLink string
+	RSSHubBase     string
 	Feed           *parser.Feed
 	FeedLink       string
 	Items          []storage.Item
@@ -291,6 +292,7 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 	}
 	defer res.Body.Close()
 
+	rsshubBase := rsshubBaseForRequestLink(f.FeedLink, requestLink, db)
 	switch {
 	case res.StatusCode < 200 || res.StatusCode > 399:
 		if res.StatusCode == 404 {
@@ -298,7 +300,12 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 		}
 		return nil, fmt.Errorf("status code %d", res.StatusCode)
 	case res.StatusCode == http.StatusNotModified:
-		return nil, nil
+		return &FeedRefreshResult{
+			FeedID:         f.Id,
+			StoredFeedLink: f.FeedLink,
+			RSSHubBase:     rsshubBase,
+			FeedLink:       requestLink,
+		}, nil
 	}
 
 	feed, err := parser.ParseAndFix(res.Body, requestLink, getCharset(res))
@@ -318,10 +325,28 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 	return &FeedRefreshResult{
 		FeedID:         f.Id,
 		StoredFeedLink: f.FeedLink,
+		RSSHubBase:     rsshubBase,
 		Feed:           feed,
 		FeedLink:       feedLink,
 		Items:          ConvertItems(feed.Items, f),
 	}, nil
+}
+
+func rsshubBaseForRequestLink(link, requestLink string, db *storage.Storage) string {
+	if !rsshub.IsLink(link) {
+		return ""
+	}
+	bases, err := rsshub.EnabledBases(db.GetSettingsValueString("rsshub_base_url"))
+	if err != nil {
+		return ""
+	}
+	for _, base := range bases {
+		resolved, err := rsshub.Resolve(link, base)
+		if err == nil && resolved == requestLink {
+			return base
+		}
+	}
+	return ""
 }
 
 func logCandidateFailure(link, requestLink string, err error) {
