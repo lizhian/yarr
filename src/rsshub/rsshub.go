@@ -11,8 +11,9 @@ import (
 const Scheme = "rsshub"
 
 var (
-	bilibiliUIDRe = regexp.MustCompile(`^[0-9]+$`)
-	telegramIDRe  = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	bilibiliUIDRe       = regexp.MustCompile(`^[0-9]+$`)
+	bilibiliUIDPrefixRe = regexp.MustCompile(`(?i)^uid\s*:\s*([0-9]+)$`)
+	telegramIDRe        = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 )
 
 func IsLink(link string) bool {
@@ -44,6 +45,9 @@ func NormalizeSubscriptionInput(raw string) (string, bool) {
 		return raw, false
 	}
 
+	if uid := parseBilibiliUIDPrefix(raw); uid != "" {
+		return bilibiliUserVideoLink(uid), true
+	}
 	if link, ok := normalizeBilibiliSubscriptionInput(raw); ok {
 		return link, true
 	}
@@ -58,6 +62,9 @@ func NormalizeBilibiliInput(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
 	if bilibiliUIDRe.MatchString(raw) {
 		return bilibiliUserVideoLink(raw), true
+	}
+	if uid := parseBilibiliUIDPrefix(raw); uid != "" {
+		return bilibiliUserVideoLink(uid), true
 	}
 	return normalizeBilibiliSubscriptionInput(raw)
 }
@@ -110,6 +117,14 @@ func normalizeTelegramSubscriptionInput(raw string) (string, bool) {
 
 func bilibiliUserVideoLink(uid string) string {
 	return "rsshub://bilibili/user/video/" + uid
+}
+
+func parseBilibiliUIDPrefix(raw string) string {
+	match := bilibiliUIDPrefixRe.FindStringSubmatch(strings.TrimSpace(raw))
+	if match == nil {
+		return ""
+	}
+	return match[1]
 }
 
 func telegramChannelLink(id string) string {

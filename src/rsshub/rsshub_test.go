@@ -88,6 +88,9 @@ func TestNormalizeSubscriptionInput(t *testing.T) {
 		{name: "regular URL", raw: "https://example.com/feed.xml", want: "https://example.com/feed.xml", ok: false},
 		{name: "rsshub link", raw: "rsshub://bilibili/weekly", want: "rsshub://bilibili/weekly", ok: false},
 		{name: "Bilibili UID", raw: " 703186600 ", want: "703186600", ok: false},
+		{name: "Bilibili UID prefix", raw: "UID:703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Bilibili UID prefix with spaces", raw: "uid : 703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "Bilibili invalid UID prefix", raw: "UID:abc", want: "UID:abc", ok: false},
 		{name: "Bilibili space", raw: "https://space.bilibili.com/703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
 		{name: "Bilibili dynamic", raw: "https://space.bilibili.com/703186600/dynamic", want: "rsshub://bilibili/user/video/703186600", ok: true},
 		{name: "Bilibili upload video", raw: "https://space.bilibili.com/703186600/upload/video", want: "rsshub://bilibili/user/video/703186600", ok: true},
@@ -121,7 +124,11 @@ func TestNormalizeBilibiliInput(t *testing.T) {
 		ok   bool
 	}{
 		{name: "UID", raw: " 703186600 ", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "UID prefix", raw: "UID:703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "UID prefix with spaces", raw: "uid : 703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
 		{name: "space URL", raw: "https://space.bilibili.com/703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
+		{name: "invalid UID prefix", raw: "UID:abc", want: "UID:abc", ok: false},
+		{name: "Chinese colon UID prefix", raw: "UID：703186600", want: "UID：703186600", ok: false},
 		{name: "Telegram URL", raw: "https://t.me/me888888888888", want: "https://t.me/me888888888888", ok: false},
 	}
 

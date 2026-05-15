@@ -48,6 +48,10 @@ _Avoid_: Feed URL, Feed link
 A settings action that creates an RSSHub subscription link from a supported service template and a user-entered identifier.
 _Avoid_: RSSHub preset, RSSHub shortcut
 
+**Bilibili UID**:
+The numeric Bilibili user identifier used to create a Bilibili user video subscription source.
+_Avoid_: B站 ID, Bilibili 用户 ID
+
 **自动刷新**:
 A setting that periodically checks subscription sources for new articles without user action.
 _Avoid_: Auto-refresh, 自动更新
@@ -234,6 +238,8 @@ _Avoid_: Browser back, 返回上一页
 - If an original article page cannot be shown in **嵌入模式**, yarr keeps the selected **内容方式** and lets the user switch modes or open the original article.
 - OPML import and export do not preserve **内容方式**.
 - An **RSSHub 订阅链接** is stored as the **订阅源** subscription link before it is first fetched successfully.
+- A case-insensitive `UID:`-prefixed **Bilibili UID** with optional spaces around the colon creates a Bilibili user videos **RSSHub 订阅链接**.
+- Bilibili **RSSHub 快速添加** also accepts a **Bilibili UID** as digits or a Bilibili space link.
 - An **RSSHub 刷新命中** belongs to one **订阅源** and one **RSSHub 基础链接**.
 - **RSSHub 刷新详情** counts **订阅源** by their latest **RSSHub 刷新命中**, not by total refresh attempts.
 - Changing the **RSSHub 基础链接** changes where unfetched **RSSHub 订阅链接** resolve without rewriting those links.

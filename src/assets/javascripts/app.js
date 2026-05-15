@@ -88,6 +88,9 @@ function normalizeRSSHubSubscriptionInput(raw) {
 }
 
 function normalizeBilibiliSubscriptionInput(raw) {
+  var uid = parseBilibiliUIDPrefix(raw)
+  if (uid) return {value: 'rsshub://bilibili/user/video/' + uid, normalized: true}
+
   var url = parseURL(raw)
   if (!url || (url.protocol != 'http:' && url.protocol != 'https:') || url.hostname.toLowerCase() != 'space.bilibili.com') {
     return {value: raw, normalized: false}
@@ -117,10 +120,16 @@ function normalizeTelegramSubscriptionInput(raw) {
 
 function normalizeBilibiliQuickAddInput(raw) {
   raw = (raw || '').trim()
-  if (/^\d+$/.test(raw)) {
-    return {value: 'rsshub://bilibili/user/video/' + raw, normalized: true}
+  var match = raw.match(/^(\d+)$/)
+  if (match) {
+    return {value: 'rsshub://bilibili/user/video/' + match[1], normalized: true}
   }
   return normalizeBilibiliSubscriptionInput(raw)
+}
+
+function parseBilibiliUIDPrefix(raw) {
+  var match = (raw || '').trim().match(/^uid\s*:\s*(\d+)$/i)
+  return match ? match[1] : null
 }
 
 function normalizeTelegramQuickAddInput(raw) {
