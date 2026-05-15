@@ -773,6 +773,11 @@ var vm = new Vue({
         night: '夜间',
       }[theme] || theme
     },
+    hasRSSHubFeedDetails: function() {
+      return this.rsshubDetails.some(function(detail) {
+        return detail.details && detail.details.length
+      })
+    },
     scheduleStatusPoll: function(delay) {
       clearTimeout(this.statusPollTimeout)
       this.statusPollTimeout = setTimeout(function() {

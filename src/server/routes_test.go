@@ -85,6 +85,10 @@ func TestStatusIncludesRSSHubDetails(t *testing.T) {
 		RSSHubDetails []struct {
 			BaseURL string `json:"base_url"`
 			Feeds   int    `json:"feeds"`
+			Details []struct {
+				Title string `json:"title"`
+				Link  string `json:"link"`
+			} `json:"details"`
 		} `json:"rsshub_details"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {

@@ -20,6 +20,11 @@ const (
 	rsshubUnavailable
 )
 
+type rsshubRefreshHit struct {
+	BaseURL string
+	Link    string
+}
+
 func (w *Worker) setRSSHubRefreshRate(minute int64) {
 	if w.rsshubStopper != nil {
 		w.rsshubRefresh.Stop()
@@ -59,7 +64,7 @@ func (w *Worker) ResetRSSHubAvailability() {
 
 func (w *Worker) ResetRSSHubRefreshHits() {
 	w.rsshubMu.Lock()
-	w.rsshubHits = make(map[int64]string)
+	w.rsshubHits = make(map[int64]rsshubRefreshHit)
 	w.rsshubMu.Unlock()
 }
 
@@ -187,17 +192,26 @@ func (w *Worker) resolveLinks(link string) ([]string, error) {
 }
 
 func (w *Worker) recordRSSHubRefreshHit(result *FeedRefreshResult) {
-	if result == nil || !rsshub.IsLink(result.StoredFeedLink) || result.RSSHubBase == "" {
+	if result == nil || !rsshub.IsLink(result.StoredFeedLink) || result.RSSHubBase == "" || result.RSSHubLink == "" {
 		return
 	}
 	w.rsshubMu.Lock()
-	w.rsshubHits[result.FeedID] = result.RSSHubBase
+	w.rsshubHits[result.FeedID] = rsshubRefreshHit{
+		BaseURL: result.RSSHubBase,
+		Link:    result.RSSHubLink,
+	}
 	w.rsshubMu.Unlock()
 }
 
+type RSSHubRefreshFeedDetail struct {
+	Title string `json:"title"`
+	Link  string `json:"link"`
+}
+
 type RSSHubRefreshDetail struct {
-	BaseURL string `json:"base_url"`
-	Feeds   int    `json:"feeds"`
+	BaseURL string                    `json:"base_url"`
+	Feeds   int                       `json:"feeds"`
+	Details []RSSHubRefreshFeedDetail `json:"details"`
 }
 
 func (w *Worker) RSSHubRefreshDetails() []RSSHubRefreshDetail {
@@ -209,21 +223,26 @@ func (w *Worker) RSSHubRefreshDetails() []RSSHubRefreshDetail {
 	for _, base := range bases {
 		counts[base] = 0
 	}
+	feedDetails := make(map[string][]RSSHubRefreshFeedDetail, len(bases))
 
 	w.rsshubMu.RLock()
-	hits := make(map[int64]string, len(w.rsshubHits))
-	for feedID, base := range w.rsshubHits {
-		hits[feedID] = base
+	hits := make(map[int64]rsshubRefreshHit, len(w.rsshubHits))
+	for feedID, hit := range w.rsshubHits {
+		hits[feedID] = hit
 	}
 	w.rsshubMu.RUnlock()
 
-	for feedID, base := range hits {
+	for feedID, hit := range hits {
 		feed := w.db.GetFeed(feedID)
 		if feed == nil || !rsshub.IsLink(feed.FeedLink) {
 			continue
 		}
-		if _, ok := counts[base]; ok {
-			counts[base]++
+		if _, ok := counts[hit.BaseURL]; ok {
+			counts[hit.BaseURL]++
+			feedDetails[hit.BaseURL] = append(feedDetails[hit.BaseURL], RSSHubRefreshFeedDetail{
+				Title: feed.Title,
+				Link:  hit.Link,
+			})
 		}
 	}
 
@@ -232,6 +251,7 @@ func (w *Worker) RSSHubRefreshDetails() []RSSHubRefreshDetail {
 		details = append(details, RSSHubRefreshDetail{
 			BaseURL: base,
 			Feeds:   counts[base],
+			Details: feedDetails[base],
 		})
 	}
 	return details

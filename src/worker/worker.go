@@ -20,7 +20,7 @@ type Worker struct {
 	stopper            chan bool
 	rsshubAvailability map[string]rsshubAvailability
 	rsshubMu           sync.RWMutex
-	rsshubHits         map[int64]string
+	rsshubHits         map[int64]rsshubRefreshHit
 	rsshubRefresh      *time.Ticker
 	rsshubStopper      chan bool
 }
@@ -31,7 +31,7 @@ func NewWorker(db *storage.Storage) *Worker {
 		db:                 db,
 		pending:            &pending,
 		rsshubAvailability: make(map[string]rsshubAvailability),
-		rsshubHits:         make(map[int64]string),
+		rsshubHits:         make(map[int64]rsshubRefreshHit),
 	}
 }
 

@@ -34,6 +34,7 @@ type FeedRefreshResult struct {
 	FeedID         int64
 	StoredFeedLink string
 	RSSHubBase     string
+	RSSHubLink     string
 	Feed           *parser.Feed
 	FeedLink       string
 	Items          []storage.Item
@@ -306,6 +307,7 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 			FeedID:         f.Id,
 			StoredFeedLink: f.FeedLink,
 			RSSHubBase:     rsshubBase,
+			RSSHubLink:     requestLink,
 			FeedLink:       requestLink,
 		}, nil
 	}
@@ -328,6 +330,7 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 		FeedID:         f.Id,
 		StoredFeedLink: f.FeedLink,
 		RSSHubBase:     rsshubBase,
+		RSSHubLink:     requestLink,
 		Feed:           feed,
 		FeedLink:       feedLink,
 		Items:          ConvertItems(feed.Items, f),
