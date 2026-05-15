@@ -734,6 +734,8 @@ select.form-control:not([multiple]):not([size]) {
 .rsshub-detail-feed-row:active {
   color: inherit;
   display: grid;
+  grid-template-columns: minmax(0, 40%) minmax(0, 60%);
+  align-items: center;
   line-height: 1.25;
   min-width: 0;
   text-decoration: none;
@@ -746,12 +748,16 @@ select.form-control:not([multiple]):not([size]) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
 }
 
 .rsshub-detail-feed-link {
   font-size: .8rem;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .settings-dialog-actions {
