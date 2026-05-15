@@ -365,6 +365,34 @@ select.form-control:not([multiple]):not([size]) {
   stroke-dasharray: 60;
 }
 
+.app-logo svg,
+.login-logo {
+  filter: drop-shadow(0 2px 3px rgba(16, 38, 32, .18));
+  transform-origin: center;
+  transition: filter .18s ease, transform .18s ease;
+}
+
+.app-logo-button:hover .app-logo svg,
+.app-logo-button:focus .app-logo svg {
+  filter: drop-shadow(0 3px 5px rgba(16, 38, 32, .24));
+  transform: translateY(-1px) scale(1.06);
+}
+
+.login-logo {
+  animation: logo-enter .38s ease-out both;
+}
+
+@keyframes logo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .btn-default {
   border: 1px solid var(--action-button-border-color);
   border-radius: .25rem;

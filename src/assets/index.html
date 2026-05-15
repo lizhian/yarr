@@ -28,11 +28,11 @@
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
             <div class="p-2 toolbar d-flex align-items-center">
-                <button class="toolbar-item toolbar-item-icon-only px-2"
+                <button class="toolbar-item toolbar-item-icon-only px-2 app-logo-button"
                         title="设置"
                         aria-label="设置"
                         @click="showSettings('menu')">
-                    <span class="icon toolbar-icon">{% inline "anchor.svg" %}</span>
+                    <span class="icon toolbar-icon app-logo">{% inline "logo.svg" %}</span>
                 </button>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item ml-1"
