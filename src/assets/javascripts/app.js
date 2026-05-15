@@ -1426,9 +1426,8 @@ var vm = new Vue({
     },
     resetColumnWidths: function() {
       var appWidth = this.$el.getBoundingClientRect().width
-      var columnWidth = Math.round(appWidth / 5)
-      this.feedListWidth = columnWidth
-      this.itemListWidth = columnWidth
+      this.feedListWidth = Math.round(appWidth / 5)
+      this.itemListWidth = Math.round(appWidth * 3 / 10)
     },
     resetFeedChoice: function() {
       this.feedNewChoice = []
