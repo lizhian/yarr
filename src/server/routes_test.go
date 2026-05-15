@@ -65,6 +65,39 @@ func TestStaticBanTemplates(t *testing.T) {
 	}
 }
 
+func TestStatusIncludesRSSHubDetails(t *testing.T) {
+	db := testServerDB(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "https://a.example"}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	server := NewServer(db, "127.0.0.1:8000")
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/api/status", nil)
+	server.handler().ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	if response.StatusCode != http.StatusOK {
+		t.Fatal("got", response.StatusCode)
+	}
+
+	var body struct {
+		RSSHubDetails []struct {
+			BaseURL string `json:"base_url"`
+			Feeds   int    `json:"feeds"`
+		} `json:"rsshub_details"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.RSSHubDetails) != 1 {
+		t.Fatalf("got %d details", len(body.RSSHubDetails))
+	}
+	if body.RSSHubDetails[0].BaseURL != "https://a.example" {
+		t.Fatalf("got base %q", body.RSSHubDetails[0].BaseURL)
+	}
+}
+
 func TestAuthConfigEndpoint(t *testing.T) {
 	db := testServerDB(t)
 	handler := NewServer(db, "127.0.0.1:8000").handler()

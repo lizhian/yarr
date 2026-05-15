@@ -20,6 +20,14 @@ _Avoid_: RSSHub 地址池, RSSHub hosts
 Whether an RSSHub base link is reachable at its root URL with an HTTP success or redirect response.
 _Avoid_: RSSHub health, RSSHub status
 
+**RSSHub 刷新详情**:
+A settings view that shows which RSSHub base links last succeeded when refreshing RSSHub subscription links.
+_Avoid_: RSSHub 统计, RSSHub status
+
+**RSSHub 刷新命中**:
+The latest successful refresh association between one RSSHub subscription link and one RSSHub base link in the current server process.
+_Avoid_: RSSHub hit, RSSHub success count
+
 **未知 RSSHub 可用性**:
 The RSSHub availability state before an RSSHub base link has been checked.
 _Avoid_: Pending RSSHub status
@@ -218,6 +226,8 @@ _Avoid_: Browser back, 返回上一页
 - If an original article page cannot be shown in **嵌入模式**, yarr keeps the selected **内容方式** and lets the user switch modes or open the original article.
 - OPML import and export do not preserve **内容方式**.
 - An **RSSHub 订阅链接** is stored as the **订阅源** subscription link before it is first fetched successfully.
+- An **RSSHub 刷新命中** belongs to one **订阅源** and one **RSSHub 基础链接**.
+- **RSSHub 刷新详情** counts **订阅源** by their latest **RSSHub 刷新命中**, not by total refresh attempts.
 - Changing the **RSSHub 基础链接** changes where unfetched **RSSHub 订阅链接** resolve without rewriting those links.
 - An **RSSHub 订阅链接** can be added without checking whether it can currently be reached.
 - An **RSSHub 订阅链接** can be added before any **RSSHub 基础链接** is configured.

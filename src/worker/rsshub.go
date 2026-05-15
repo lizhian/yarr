@@ -57,8 +57,15 @@ func (w *Worker) ResetRSSHubAvailability() {
 	w.rsshubMu.Unlock()
 }
 
+func (w *Worker) ResetRSSHubRefreshHits() {
+	w.rsshubMu.Lock()
+	w.rsshubHits = make(map[int64]string)
+	w.rsshubMu.Unlock()
+}
+
 func (w *Worker) CheckRSSHubAvailability() {
 	w.ResetRSSHubAvailability()
+	w.ResetRSSHubRefreshHits()
 	refreshRate := w.db.GetSettingsValueInt64("refresh_rate")
 	if refreshRate > 0 {
 		go w.RefreshRSSHubAvailability()
@@ -177,4 +184,55 @@ func (w *Worker) resolveLinks(link string) ([]string, error) {
 		return nil, err
 	}
 	return rsshub.ResolveWithBases(link, bases)
+}
+
+func (w *Worker) recordRSSHubRefreshHit(result *FeedRefreshResult) {
+	if result == nil || !rsshub.IsLink(result.StoredFeedLink) || result.RSSHubBase == "" {
+		return
+	}
+	w.rsshubMu.Lock()
+	w.rsshubHits[result.FeedID] = result.RSSHubBase
+	w.rsshubMu.Unlock()
+}
+
+type RSSHubRefreshDetail struct {
+	BaseURL string `json:"base_url"`
+	Feeds   int    `json:"feeds"`
+}
+
+func (w *Worker) RSSHubRefreshDetails() []RSSHubRefreshDetail {
+	bases, err := rsshub.EnabledBases(w.db.GetSettingsValueString("rsshub_base_url"))
+	if err != nil {
+		return nil
+	}
+	counts := make(map[string]int, len(bases))
+	for _, base := range bases {
+		counts[base] = 0
+	}
+
+	w.rsshubMu.RLock()
+	hits := make(map[int64]string, len(w.rsshubHits))
+	for feedID, base := range w.rsshubHits {
+		hits[feedID] = base
+	}
+	w.rsshubMu.RUnlock()
+
+	for feedID, base := range hits {
+		feed := w.db.GetFeed(feedID)
+		if feed == nil || !rsshub.IsLink(feed.FeedLink) {
+			continue
+		}
+		if _, ok := counts[base]; ok {
+			counts[base]++
+		}
+	}
+
+	details := make([]RSSHubRefreshDetail, 0, len(bases))
+	for _, base := range bases {
+		details = append(details, RSSHubRefreshDetail{
+			BaseURL: base,
+			Feeds:   counts[base],
+		})
+	}
+	return details
 }

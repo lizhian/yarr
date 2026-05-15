@@ -452,6 +452,10 @@
                         <span class="icon mr-2">{% inline "rss.svg" %}</span>
                         RSSHub
                     </button>
+                    <button class="settings-dialog-action" @click="showSettings('rsshubdetails')">
+                        <span class="icon mr-2">{% inline "rss.svg" %}</span>
+                        RSSHub 详情
+                    </button>
                     <button class="settings-dialog-action" @click="showSettings('auth')">
                         <span class="icon mr-2">{% inline "sliders.svg" %}</span>
                         访问认证
@@ -655,6 +659,20 @@
                     <textarea id="rsshub-base-url" name="rsshub_base_url" class="form-control" rows="5" autocomplete="off" :value="rsshubBaseUrl" placeholder="https://rsshub.rssforever.com&#10;#https://example.com" v-focus></textarea>
                     <button class="btn btn-block btn-default mt-3" type="submit">保存</button>
                 </form>
+            </div>
+            <div v-else-if="settings=='rsshubdetails'" class="settings-dialog">
+                <p class="cursor-default"><b>RSSHub 详情</b></p>
+
+                <section class="settings-dialog-section mt-3" v-if="rsshubDetails.length">
+                    <header>刷新命中</header>
+                    <div class="settings-dialog-fields">
+                        <div class="settings-dialog-field settings-dialog-field-disabled rsshub-detail-row" v-for="detail in rsshubDetails">
+                            <span class="settings-dialog-field-label">{{ detail.feeds }} 个</span>
+                            <span class="settings-dialog-field-value">{{ detail.base_url }}</span>
+                        </div>
+                    </div>
+                </section>
+                <p class="mt-3 light cursor-default" v-else>暂无 RSSHub 基础链接</p>
             </div>
             <div v-else-if="settings=='shortcuts'">
                 <p class="cursor-default"><b>键盘快捷键</b></p>
