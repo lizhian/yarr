@@ -337,6 +337,8 @@ var vm = new Vue({
       .then(this.refreshFeeds.bind(this))
       .then(this.refreshItems.bind(this, false))
 
+    this.scheduleStatusPoll(60000)
+
     api.feeds.list_errors().then(function(errors) {
       vm.feed_errors = errors
     })
@@ -350,6 +352,7 @@ var vm = new Vue({
     }
   },
   beforeDestroy: function() {
+    clearTimeout(this.statusPollTimeout)
     if (this.$refs.itemlist) {
       this.$refs.itemlist.removeEventListener('scroll', this.handleItemListScroll)
     }
@@ -443,6 +446,7 @@ var vm = new Vue({
         syncPending: false,
         layer: null,
       },
+      'statusPollTimeout': null,
 
       'refreshRateOptions': [
         { title: "0", value: 0 },
@@ -768,14 +772,18 @@ var vm = new Vue({
         night: '夜间',
       }[theme] || theme
     },
+    scheduleStatusPoll: function(delay) {
+      clearTimeout(this.statusPollTimeout)
+      this.statusPollTimeout = setTimeout(function() {
+        vm.refreshStats()
+      }, delay)
+    },
     refreshStats: function(loopMode) {
       return api.status().then(function(data) {
         if (loopMode && !vm.itemSelected) vm.refreshItems()
 
         vm.loading.feeds = data.running
-        if (data.running) {
-          setTimeout(vm.refreshStats.bind(vm, true), 500)
-        }
+        vm.scheduleStatusPoll(data.running ? 500 : 60000)
         vm.feedStats = data.stats.reduce(function(acc, stat) {
           acc[stat.feed_id] = stat
           return acc

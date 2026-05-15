@@ -44,6 +44,10 @@ _Avoid_: RSSHub preset, RSSHub shortcut
 A setting that periodically checks subscription sources for new articles without user action.
 _Avoid_: Auto-refresh, 自动更新
 
+**状态轮询**:
+A browser-side timer that keeps refresh state and unread counts current by checking yarr server status.
+_Avoid_: Status refresh, 状态刷新
+
 **访问认证**:
 A user-managed setting that requires credentials before accessing yarr reader data and protected actions.
 _Avoid_: 登录功能, Auth
@@ -257,6 +261,10 @@ _Avoid_: Browser back, 返回上一页
 - RSSHub availability checks and **自动刷新** are separate scheduled tasks.
 - RSSHub availability checks run once immediately when the scheduled task starts, then on the **自动刷新** interval.
 - **自动刷新** reads the current **RSSHub 可用性** snapshot and does not wait for an availability check to finish.
+- **状态轮询** is a browser-side timer that repeatedly calls `/api/status` to keep the feed refresh indicator and feed stats current.
+- **状态轮询** does not trigger feed fetching.
+- **状态轮询** is independent of **自动刷新**.
+- **状态轮询** runs only while the reader UI is open.
 - An **文章** can be **未读** or **已读**.
 - An **文章** can be **收藏** independently of whether it is read.
 - **全部** includes **已读**, **未读**, and **收藏** articles.
