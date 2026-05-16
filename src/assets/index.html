@@ -180,6 +180,21 @@
                 </button>
             </div>
             <div id="item-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1" v-scroll="loadMoreItems" ref="itemlist">
+                <div v-if="showItemListSkeleton" class="item-list-skeleton" :class="'item-list-skeleton-' + articleListLayout" aria-hidden="true">
+                    <div v-for="row in itemListSkeletonRows" :key="row" class="item-list-skeleton-row">
+                        <div class="item-list-skeleton-card">
+                            <div class="item-list-skeleton-image item-list-skeleton-shimmer"></div>
+                            <div class="item-list-skeleton-text">
+                                <div class="item-list-skeleton-meta">
+                                    <span class="item-list-skeleton-line item-list-skeleton-line-feed item-list-skeleton-shimmer"></span>
+                                    <span class="item-list-skeleton-line item-list-skeleton-line-time item-list-skeleton-shimmer"></span>
+                                </div>
+                                <div class="item-list-skeleton-line item-list-skeleton-line-title item-list-skeleton-shimmer"></div>
+                                <div class="item-list-skeleton-line item-list-skeleton-line-title-short item-list-skeleton-shimmer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <label v-for="item in items" :key="item.id"
                        :data-item-id="item.id"
                        class="selectgroup">
@@ -218,21 +233,23 @@
         </div>
         <!-- item show -->
         <div id="col-item" class="vh-100 d-flex flex-column w-100" style="min-width: 0;">
-            <div class="toolbar px-2 d-flex align-items-center" v-if="itemSelectedDetails">
+            <div class="toolbar px-2 d-flex align-items-center" v-if="itemSelected">
                 <button class="toolbar-item"
-                        :class="{'toolbar-status-active': itemSelectedDetails.status=='starred'}"
+                        :disabled="!itemSelectedDetails"
+                        :class="{'toolbar-status-active': itemSelectedDetails && itemSelectedDetails.status=='starred'}"
                         @click="toggleItemStarred(itemSelectedDetails)"
                         title="标为收藏">
-                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status=='starred'" >{% inline "star-full.svg" %}</span>
-                    <span class="icon toolbar-icon" v-else-if="itemSelectedDetails.status!='starred'" >{% inline "star.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails && itemSelectedDetails.status=='starred'" >{% inline "star-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else >{% inline "star.svg" %}</span>
                     <span class="toolbar-label">收藏</span>
                 </button>
                 <button class="toolbar-item"
-                        :class="{'toolbar-status-active': itemSelectedDetails.status=='unread'}"
+                        :disabled="!itemSelectedDetails"
+                        :class="{'toolbar-status-active': itemSelectedDetails && itemSelectedDetails.status=='unread'}"
                         title="标为未读"
                         @click="toggleItemRead(itemSelectedDetails)">
-                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status=='unread'">{% inline "circle-full.svg" %}</span>
-                    <span class="icon toolbar-icon" v-if="itemSelectedDetails.status!='unread'">{% inline "circle.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails && itemSelectedDetails.status=='unread'">{% inline "circle-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "circle.svg" %}</span>
                     <span class="toolbar-label">未读</span>
                 </button>
                 <dropdown class="settings-dropdown" toggle-class="toolbar-item px-2" drop="center" title="外观">
@@ -248,6 +265,7 @@
                 </dropdown>
                 <div class="content-mode-switch" role="group" aria-label="内容方式">
                     <button class="toolbar-item"
+                            :disabled="!itemSelectedDetails"
                             :class="{'toolbar-status-active': itemSelectedContentMode == 'normal'}"
                             :aria-pressed="itemSelectedContentMode == 'normal'"
                             @click="setItemSelectedContentMode('normal')"
@@ -256,6 +274,7 @@
                         <span class="toolbar-label">普通</span>
                     </button>
                     <button class="toolbar-item"
+                            :disabled="!itemSelectedDetails"
                             :class="{'toolbar-status-active': itemSelectedContentMode == 'readability'}"
                             :aria-pressed="itemSelectedContentMode == 'readability'"
                             @click="setItemSelectedContentMode('readability')"
@@ -264,6 +283,7 @@
                         <span class="toolbar-label">正文</span>
                     </button>
                     <button class="toolbar-item"
+                            :disabled="!itemSelectedDetails"
                             :class="{'toolbar-status-active': itemSelectedContentMode == 'embed'}"
                             :aria-pressed="itemSelectedContentMode == 'embed'"
                             @click="setItemSelectedContentMode('embed')"
@@ -273,27 +293,27 @@
                     </button>
                 </div>
                 <div class="flex-grow-1"></div>
-                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(-1)" title="上一篇文章" :disabled="itemSelected == items[0].id">
+                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(-1)" title="上一篇文章" :disabled="itemAtStart">
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
                 </button>
-                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(+1)" title="下一篇文章" :disabled="itemSelected == items[items.length - 1].id">
+                <button class="toolbar-item toolbar-item-icon-only" @click="navigateToItem(+1)" title="下一篇文章" :disabled="itemAtEnd">
                     <span class="icon toolbar-icon">{% inline "chevron-right.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only" @click="closeItem()" title="关闭文章">
                     <span class="icon toolbar-icon">{% inline "x.svg" %}</span>
                 </button>
             </div>
-            <div v-if="itemSelectedDetails"
+            <div v-if="itemSelected"
                  ref="content"
                  class="content px-4 pt-3 pb-5 border-top overflow-auto scroll-touch"
                  :style="{'font-size': theme.size + 'rem'}">
                 <div class="content-wrapper">
-                    <h1>
+                    <h1 v-if="showItemDetailsMeta">
                         <a class="content-title-link" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
                             <b>{{ itemSelectedDetails.title || '无标题' }}</b>
                         </a>
                     </h1>
-                    <div class="text-muted">
+                    <div v-if="showItemDetailsMeta" class="text-muted">
                         <div>
                             <span class="cursor-pointer" @click="feedSelected = 'feed:'+(feedsById[itemSelectedDetails.feed_id] || {}).id">
                                 {{ (feedsById[itemSelectedDetails.feed_id] || {}).title }}
@@ -302,7 +322,27 @@
                         <time>{{ formatDate(itemSelectedDetails.date) }}</time>
                     </div>
                     <hr>
-                    <div v-if="itemSelectedContentMode == 'embed'">
+                    <div v-if="showItemDetailsSkeleton" class="content-skeleton" aria-hidden="true">
+                        <div v-if="!showItemDetailsMeta" class="content-skeleton-header">
+                            <div class="content-skeleton-line content-skeleton-title item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-title-short item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-meta">
+                                <span class="content-skeleton-line content-skeleton-feed item-list-skeleton-shimmer"></span>
+                                <span class="content-skeleton-line content-skeleton-time item-list-skeleton-shimmer"></span>
+                            </div>
+                        </div>
+                        <div class="content-skeleton-body">
+                            <div class="content-skeleton-line item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-line-wide item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-line-medium item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-line-short item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-media item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-line-wide item-list-skeleton-shimmer"></div>
+                            <div class="content-skeleton-line content-skeleton-line-medium item-list-skeleton-shimmer"></div>
+                        </div>
+                    </div>
+                    <div v-else-if="itemSelectedContentMode == 'embed'">
                         <iframe class="content-embed" :src="itemSelectedDetails.link" referrerpolicy="no-referrer" v-if="itemSelectedDetails.link"></iframe>
                         <p class="content-mode-message" v-else>当前文章没有原文链接，无法嵌入。</p>
                     </div>
@@ -314,17 +354,17 @@
                         <button class="btn btn-outline content-open-original-prev"
                                 type="button"
                                 @click="navigateToItem(-1)"
-                                :disabled="itemSelected == items[0].id"
+                                :disabled="itemAtStart"
                                 title="上一篇文章">
                             上一篇
                         </button>
-                        <a class="btn btn-outline" :href="itemSelectedDetails.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接">
+                        <a class="btn btn-outline" :href="itemSelectedLink" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" title="打开链接" :aria-disabled="!itemSelectedLink" :tabindex="itemSelectedLink ? 0 : -1">
                             打开原文
                         </a>
                         <button class="btn btn-outline content-open-original-next"
                                 type="button"
                                 @click="navigateToItem(+1)"
-                                :disabled="itemSelected == items[items.length - 1].id"
+                                :disabled="itemAtEnd"
                                 title="下一篇文章">
                             下一篇
                         </button>

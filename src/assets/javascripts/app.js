@@ -430,6 +430,7 @@ var vm = new Vue({
         'newfeed': false,
         'deletefeeds': false,
         'items': false,
+        'itemDetails': false,
         'readability': false,
         'backup': false,
         'icons': false,
@@ -521,12 +522,33 @@ var vm = new Vue({
       return {type: type, feed: feed, folder: folder}
     },
     itemSelectedContent: function() {
-      if (!this.itemSelected) return ''
+      if (!this.itemSelectedDetails) return ''
 
       if (this.itemSelectedContentMode == 'readability')
         return this.itemSelectedReadability
 
       return this.itemSelectedDetails.content || ''
+    },
+    showItemListSkeleton: function() {
+      return this.loading.items && this.items.length == 0 && this.feedSelected !== null
+    },
+    itemListSkeletonRows: function() {
+      return this.articleListLayout == 'card' ? 3 : 6
+    },
+    showItemDetailsSkeleton: function() {
+      return this.loading.itemDetails || (!!this.itemSelectedDetails && this.itemSelectedContentMode == 'readability' && this.loading.readability)
+    },
+    showItemDetailsMeta: function() {
+      return !!this.itemSelectedDetails
+    },
+    itemSelectedLink: function() {
+      return this.itemSelectedDetails && this.itemSelectedDetails.link || ''
+    },
+    itemAtStart: function() {
+      return !this.items.length || this.itemSelected == this.items[0].id
+    },
+    itemAtEnd: function() {
+      return !this.items.length || this.itemSelected == this.items[this.items.length - 1].id
     },
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
@@ -595,22 +617,29 @@ var vm = new Vue({
       this.itemSelectedReadabilityError = ''
       this.itemSelectedContentMode = 'normal'
       this.loading.readability = false
+      this.loading.itemDetails = false
       if (newVal === null) {
         this.itemSelectedDetails = null
         this.syncNavigationHistory()
         return
       }
+      this.itemSelectedDetails = null
+      this.loading.itemDetails = true
       if (this.$refs.content) this.$refs.content.scrollTop = 0
       this.syncNavigationHistory()
 
       api.items.get(newVal).then(function(item) {
         if (this.itemSelected !== newVal) return
         this.itemSelectedDetails = item
+        this.loading.itemDetails = false
         this.itemSelectedContentMode = normalizeContentMode((this.feedsById[item.feed_id] || {}).content_mode)
         this.loadSelectedContentMode()
         this.markItemRead(this.itemSelectedDetails)
       }.bind(this)).catch(function() {
-        if (this.itemSelected === newVal) this.itemSelected = null
+        if (this.itemSelected === newVal) {
+          this.loading.itemDetails = false
+          this.itemSelected = null
+        }
       }.bind(this))
     },
     'itemSearch': debounce(function(newVal) {
@@ -848,6 +877,7 @@ var vm = new Vue({
       if (this.feedSelected === null) {
         vm.items = []
         vm.itemsHasMore = false
+        vm.loading.items = false
         vm.resetItemListAutoRead()
         return
       }
@@ -857,6 +887,8 @@ var vm = new Vue({
         query.after = vm.items[vm.items.length-1].id
       } else {
         this.resetItemListAutoRead()
+        this.items = []
+        this.itemsHasMore = false
       }
 
       this.loading.items = true
@@ -876,6 +908,9 @@ var vm = new Vue({
             vm.refreshItems(true)
           }
         })
+      }).catch(function(err) {
+        vm.loading.items = false
+        throw err
       })
     },
     itemListCloseToBottom: function() {

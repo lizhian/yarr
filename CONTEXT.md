@@ -160,6 +160,10 @@ _Avoid_: Thumbnail, 预览图
 A browser-local user preference that controls whether articles are shown as a list or as cards in the article list.
 _Avoid_: 卡片模型, Item layout
 
+**加载骨架**:
+A temporary placeholder layout that matches the structure of **文章列表** or **文章详情** while content is loading.
+_Avoid_: Skeleton loader, 占位动画
+
 **订阅源设置**:
 A group of information rows and actions for one subscription source, including source links, renaming, moving, and deleting it.
 _Avoid_: 订阅项设置, Feed settings
@@ -223,6 +227,8 @@ _Avoid_: Browser back, 返回上一页
 - For an **RSSHub 订阅链接**, **更新订阅源图标链接** tries available **RSSHub 基础链接** first.
 - **更新订阅源图标链接** tries at most five **RSSHub 基础链接** for one **RSSHub 订阅链接**.
 - **文章详情** presents one selected **文章**.
+- Entering **文章列表** or **文章详情** can show a **加载骨架** while content is loading.
+- When the current **文章列表** or **文章详情** starts loading new content, the old content should not remain visible in the primary reading area until the new content arrives.
 - **文章详情** lets users open the original article from the title or the bottom **打开原文** action.
 - **文章详情** bottom navigation moves to the previous or next **文章** in the current **文章** list order.
 - **文章详情** indents text paragraphs without indenting paragraphs that contain media or structural content.
