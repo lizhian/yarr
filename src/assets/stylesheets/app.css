@@ -1174,6 +1174,8 @@ select.form-control:not([multiple]):not([size]) {
 .content iframe {
   display: block;
   max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 0.5rem;
 }
 
