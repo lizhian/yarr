@@ -41,6 +41,111 @@ Vue.directive('scroll', {
   },
 })
 
+var PULL_REFRESH_DISTANCE = 64
+var PULL_REFRESH_MAX_OFFSET = 96
+
+function pullRefreshEnabled(config) {
+  return config &&
+    isMobileLayout() &&
+    !config.loading &&
+    typeof config.action == 'function'
+}
+
+function resetPullRefresh(el, state) {
+  state.tracking = false
+  state.pulling = false
+  state.refreshing = false
+  state.distance = 0
+  el.style.removeProperty('--pull-refresh-offset')
+  el.classList.remove('pull-refresh-pulling')
+  el.classList.remove('pull-refresh-ready')
+  el.classList.remove('pull-refresh-refreshing')
+}
+
+Vue.directive('pull-refresh', {
+  inserted: function(el, binding) {
+    var state = {
+      config: binding.value || {},
+      startY: 0,
+      distance: 0,
+      tracking: false,
+      pulling: false,
+      refreshing: false,
+    }
+
+    state.touchstart = function(event) {
+      if (!pullRefreshEnabled(state.config)) return
+      if (state.refreshing || event.touches.length != 1 || el.scrollTop > 0) return
+
+      state.startY = event.touches[0].clientY
+      state.distance = 0
+      state.tracking = true
+      state.pulling = false
+    }
+
+    state.touchmove = function(event) {
+      if (!state.tracking) return
+      if (!pullRefreshEnabled(state.config) || event.touches.length != 1) return resetPullRefresh(el, state)
+
+      var distance = event.touches[0].clientY - state.startY
+      if (distance <= 0) return resetPullRefresh(el, state)
+      if (el.scrollTop > 0) return resetPullRefresh(el, state)
+
+      if (event.cancelable) event.preventDefault()
+
+      state.pulling = true
+      state.distance = Math.min(PULL_REFRESH_MAX_OFFSET, distance * 0.5)
+      el.style.setProperty('--pull-refresh-offset', Math.round(state.distance) + 'px')
+      el.classList.add('pull-refresh-pulling')
+      el.classList.toggle('pull-refresh-ready', state.distance >= PULL_REFRESH_DISTANCE)
+    }
+
+    state.touchend = function() {
+      if (!state.tracking) return
+
+      if (!state.pulling || state.distance < PULL_REFRESH_DISTANCE || !pullRefreshEnabled(state.config)) {
+        resetPullRefresh(el, state)
+        return
+      }
+
+      state.tracking = false
+      state.refreshing = true
+      el.style.setProperty('--pull-refresh-offset', PULL_REFRESH_DISTANCE + 'px')
+      el.classList.remove('pull-refresh-pulling')
+      el.classList.add('pull-refresh-refreshing')
+
+      Promise.resolve(state.config.action()).then(function() {
+        resetPullRefresh(el, state)
+      }, function() {
+        resetPullRefresh(el, state)
+      })
+    }
+
+    state.touchcancel = function() {
+      resetPullRefresh(el, state)
+    }
+
+    el._pullRefreshState = state
+    el.addEventListener('touchstart', state.touchstart, {passive: true})
+    el.addEventListener('touchmove', state.touchmove, {passive: false})
+    el.addEventListener('touchend', state.touchend)
+    el.addEventListener('touchcancel', state.touchcancel)
+  },
+  update: function(el, binding) {
+    if (!el._pullRefreshState) return
+    el._pullRefreshState.config = binding.value || {}
+  },
+  unbind: function(el) {
+    var state = el._pullRefreshState
+    if (!state) return
+    el.removeEventListener('touchstart', state.touchstart)
+    el.removeEventListener('touchmove', state.touchmove)
+    el.removeEventListener('touchend', state.touchend)
+    el.removeEventListener('touchcancel', state.touchcancel)
+    delete el._pullRefreshState
+  },
+})
+
 Vue.directive('focus', {
   inserted: function(el) {
     el.focus()
@@ -1545,6 +1650,10 @@ var vm = new Vue({
       this.feedListWidth = Math.round(appWidth / 5)
       this.itemListWidth = Math.round(appWidth * 3 / 10)
     },
+    refreshCurrentItems: function() {
+      if (this.loading.items) return Promise.resolve()
+      return this.refreshItems(false)
+    },
     resetFeedChoice: function() {
       this.feedNewChoice = []
       this.feedNewChoiceSelected = ''
@@ -1554,9 +1663,12 @@ var vm = new Vue({
     },
     fetchAllFeeds: function() {
       this.resetColumnWidths()
-      if (this.loading.feeds) return
-      api.feeds.refresh().then(function() {
-        vm.refreshStats()
+      return this.refreshAllFeeds()
+    },
+    refreshAllFeeds: function() {
+      if (this.loading.feeds) return Promise.resolve()
+      return api.feeds.refresh().then(function() {
+        return vm.refreshStats()
       })
     },
     refreshFeedIcons: function() {

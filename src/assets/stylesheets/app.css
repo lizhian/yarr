@@ -131,6 +131,47 @@ select.form-control:not([multiple]):not([size]) {
   -webkit-overflow-scrolling: touch;
 }
 
+.pull-refresh-scroll {
+  --pull-refresh-offset: 0px;
+  overscroll-behavior-y: contain;
+  position: relative;
+}
+
+.pull-refresh-scroll > :not(.pull-refresh-indicator) {
+  transform: translateY(var(--pull-refresh-offset));
+  transition: transform .18s ease-out;
+}
+
+.pull-refresh-pulling > :not(.pull-refresh-indicator) {
+  transition: none;
+}
+
+.pull-refresh-indicator {
+  align-items: center;
+  display: flex;
+  height: 2rem;
+  justify-content: center;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: .25rem;
+  transform: translateY(calc(var(--pull-refresh-offset) - 2rem));
+  transition: opacity .18s ease-out, transform .18s ease-out;
+  z-index: 2;
+}
+
+.pull-refresh-pulling .pull-refresh-indicator,
+.pull-refresh-refreshing .pull-refresh-indicator {
+  opacity: .7;
+}
+
+.pull-refresh-ready .pull-refresh-indicator,
+.pull-refresh-refreshing .pull-refresh-indicator {
+  opacity: 1;
+}
+
 #feed-list-scroll,
 #item-list-scroll {
   flex: 1 1 auto;

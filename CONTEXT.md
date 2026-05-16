@@ -80,6 +80,14 @@ _Avoid_: Folder, 分类
 A single item published by a subscription source.
 _Avoid_: Item, 条目
 
+**文章列表**:
+A reader view that shows articles matching the selected subscription source, folder, filter, and search.
+_Avoid_: Item list, 条目列表
+
+**刷新文章列表**:
+A user-triggered action that reloads the current article list without checking subscription sources for new articles.
+_Avoid_: 刷新文章, Refresh items
+
 **文章详情**:
 The reading view for one selected article.
 _Avoid_: 详情页, Item detail
@@ -208,10 +216,15 @@ _Avoid_: PC 端视图, 宽屏视图, Desktop
 A mobile navigation behavior where Back moves from article details to the article list, then from the article list to the subscription source list.
 _Avoid_: Browser back, 返回上一页
 
+**下拉刷新**:
+A mobile reader gesture where dragging down from the top of a list triggers that list's refresh action.
+_Avoid_: Pull-to-refresh
+
 ## Relationships
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- An **文章列表** shows zero or more **文章**.
 - A **订阅源** has one **订阅链接**.
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.

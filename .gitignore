@@ -9,3 +9,4 @@
 *.syso
 versioninfo.rc
 .DS_Store
+.idea

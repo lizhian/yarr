@@ -73,7 +73,15 @@
                     <span class="icon toolbar-icon">{% inline "plus.svg" %}</span>
                 </button>
             </div>
-            <div id="feed-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1">
+            <div id="feed-list-scroll"
+                 class="p-2 overflow-auto scroll-touch border-top flex-grow-1 pull-refresh-scroll"
+                 v-pull-refresh="{
+                   loading: loading.feeds,
+                   action: refreshAllFeeds
+                 }">
+                <div class="pull-refresh-indicator" aria-hidden="true">
+                    <span class="icon loading"></span>
+                </div>
                 <label class="selectgroup">
                     <input type="radio" name="feed" value="" v-model="feedSelected">
                     <div class="selectgroup-label d-flex align-items-center w-100">
@@ -179,7 +187,17 @@
                     <span class="icon toolbar-icon">{% inline "check.svg" %}</span>
                 </button>
             </div>
-            <div id="item-list-scroll" class="p-2 overflow-auto scroll-touch border-top flex-grow-1" v-scroll="loadMoreItems" ref="itemlist">
+            <div id="item-list-scroll"
+                 class="p-2 overflow-auto scroll-touch border-top flex-grow-1 pull-refresh-scroll"
+                 v-scroll="loadMoreItems"
+                 v-pull-refresh="{
+                   loading: loading.items,
+                   action: refreshCurrentItems
+                 }"
+                 ref="itemlist">
+                <div class="pull-refresh-indicator" aria-hidden="true">
+                    <span class="icon loading"></span>
+                </div>
                 <div v-if="showItemListSkeleton" class="item-list-skeleton" :class="'item-list-skeleton-' + articleListLayout" aria-hidden="true">
                     <div v-for="row in itemListSkeletonRows" :key="row" class="item-list-skeleton-row">
                         <div class="item-list-skeleton-card">
