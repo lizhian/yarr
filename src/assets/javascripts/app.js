@@ -1035,9 +1035,25 @@ var vm = new Vue({
       var closeToBottom = (el.scrollHeight - el.scrollTop - el.offsetHeight) < prefetchDistance
       return closeToBottom
     },
+    itemListPrefetchTriggerVisible: function(el) {
+      el = el || this.$refs.itemlist
+      if (!el || el.scrollHeight === 0) return false
+
+      var labels = el.querySelectorAll('.selectgroup[data-item-id]')
+      if (!labels.length) return false
+
+      var triggerIndex = Math.max(0, labels.length - 10)
+      var triggerLabel = labels[triggerIndex]
+      if (!triggerLabel) return false
+
+      var scrollRect = el.getBoundingClientRect()
+      var labelRect = triggerLabel.getBoundingClientRect()
+      return labelRect.bottom > scrollRect.top && labelRect.top < scrollRect.bottom
+    },
     loadMoreItems: function(event, el) {
       if (!this.itemsHasMore) return
       if (this.loading.items) return
+      if (this.itemListPrefetchTriggerVisible(el)) return this.refreshItems(true)
       if (this.itemListCloseToBottom()) return this.refreshItems(true)
       if (this.itemSelected && this.itemSelected === this.items[this.items.length - 1].id) return this.refreshItems(true)
     },
