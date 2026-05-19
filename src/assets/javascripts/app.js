@@ -486,6 +486,7 @@ var vm = new Vue({
       'feedDeleteSelectedIds': [],
       'items': [],
       'itemsHasMore': true,
+      'itemsRequestSeq': 0,
       'itemsAutoReadSeen': {},
       'itemsAutoReadPending': {},
       'itemListLastScrollTop': 0,
@@ -979,6 +980,7 @@ var vm = new Vue({
         })
     },
     refreshItems: function(loadMore = false) {
+      var requestSeq = ++this.itemsRequestSeq
       if (this.feedSelected === null) {
         vm.items = []
         vm.itemsHasMore = false
@@ -998,6 +1000,8 @@ var vm = new Vue({
 
       this.loading.items = true
       return api.items.list(query).then(function(data) {
+        if (requestSeq != vm.itemsRequestSeq) return
+
         if (loadMore) {
           vm.items = vm.items.concat(data.list)
         } else {
@@ -1014,20 +1018,21 @@ var vm = new Vue({
           }
         })
       }).catch(function(err) {
-        vm.loading.items = false
-        throw err
+        if (requestSeq == vm.itemsRequestSeq) {
+          vm.loading.items = false
+          throw err
+        }
       })
     },
     itemListCloseToBottom: function() {
-      // approx. vertical space at the bottom of the list (loading el & paddings) when 1rem = 16px
-      var bottomSpace = 70
-      var scale = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16
-
       var el = this.$refs.itemlist
 
-      if (el.scrollHeight === 0) return false  // element is invisible (responsive design)
+      if (!el || el.scrollHeight === 0) return false  // element is invisible (responsive design)
 
-      var closeToBottom = (el.scrollHeight - el.scrollTop - el.offsetHeight) < bottomSpace * scale
+      var scale = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16
+      var prefetchDistance = Math.max(320 * scale, el.offsetHeight * 0.75)
+
+      var closeToBottom = (el.scrollHeight - el.scrollTop - el.offsetHeight) < prefetchDistance
       return closeToBottom
     },
     loadMoreItems: function(event, el) {

@@ -88,6 +88,10 @@ _Avoid_: Item list, 条目列表
 A user-triggered action that reloads the current article list without checking subscription sources for new articles.
 _Avoid_: 刷新文章, Refresh items
 
+**文章列表预加载**:
+A reader behavior that loads the next page of **文章** before the user reaches the bottom of the **文章列表**.
+_Avoid_: 提前加载, Item prefetch, Infinite scroll
+
 **文章详情**:
 The reading view for one selected article.
 _Avoid_: 详情页, Item detail
@@ -225,6 +229,7 @@ _Avoid_: Pull-to-refresh
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
 - An **文章列表** shows zero or more **文章**.
+- **文章列表预加载** appends additional **文章** to the current **文章列表**.
 - A **订阅源** has one **订阅链接**.
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
