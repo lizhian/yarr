@@ -56,6 +56,25 @@ func TestToolbarDisplayDefault(t *testing.T) {
 	}
 }
 
+func TestColumnWidthDefaultsUnset(t *testing.T) {
+	db := testDB()
+
+	if got := db.GetSettingsValue("feed_list_width"); got != 0 {
+		t.Fatalf("invalid feed_list_width default: %#v", got)
+	}
+	if got := db.GetSettingsValue("item_list_width"); got != 0 {
+		t.Fatalf("invalid item_list_width default: %#v", got)
+	}
+
+	settings := db.GetSettings()
+	if got := settings["feed_list_width"]; got != 0 {
+		t.Fatalf("invalid feed_list_width setting: %#v", got)
+	}
+	if got := settings["item_list_width"]; got != 0 {
+		t.Fatalf("invalid item_list_width setting: %#v", got)
+	}
+}
+
 func TestUpdateToolbarDisplay(t *testing.T) {
 	db := testDB()
 

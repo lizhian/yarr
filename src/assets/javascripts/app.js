@@ -460,6 +460,9 @@ var vm = new Vue({
     this.updateBodyClass()
   },
   mounted: function() {
+    if (!app.settings.feed_list_width || !app.settings.item_list_width) {
+      this.resetColumnWidths()
+    }
     this.initNavigationHistory()
     if (this.$refs.itemlist) {
       this.$refs.itemlist.addEventListener('scroll', this.handleItemListScroll, {passive: true})

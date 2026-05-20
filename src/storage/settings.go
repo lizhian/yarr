@@ -12,8 +12,8 @@ func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
 		"filter":            "",
 		"feed":              "",
-		"feed_list_width":   300,
-		"item_list_width":   300,
+		"feed_list_width":   0,
+		"item_list_width":   0,
 		"sort_newest_first": true,
 		"theme_name":        "light",
 		"theme_font":        "lxgw-wenkai",
