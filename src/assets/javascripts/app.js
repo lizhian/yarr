@@ -1137,12 +1137,32 @@ var vm = new Vue({
     },
     markItemsRead: function() {
       var query = this.getItemsQuery()
+      var keepCurrentItems = this.filterSelected == ''
+      var feedSelected = this.feedSelected
+      var filterSelected = this.filterSelected
+      var itemSearch = this.itemSearch
+      var itemSortNewestFirst = this.itemSortNewestFirst
       api.items.mark_read(query).then(function() {
-        vm.items = []
-        vm.itemsPage = {'cur': 1, 'num': 1}
-        vm.itemSelected = null
-        vm.itemsHasMore = false
-        vm.resetItemListAutoRead()
+        var sameItemList = vm.feedSelected == feedSelected &&
+          vm.filterSelected == filterSelected &&
+          vm.itemSearch == itemSearch &&
+          vm.itemSortNewestFirst == itemSortNewestFirst
+
+        if (keepCurrentItems) {
+          if (sameItemList) {
+            vm.items.forEach(function(item) {
+              if (item.status == 'unread') item.status = 'read'
+            })
+            if (vm.itemSelectedDetails && vm.itemSelectedDetails.status == 'unread') {
+              vm.itemSelectedDetails.status = 'read'
+            }
+          }
+        } else if (sameItemList) {
+          vm.items = []
+          vm.itemSelected = null
+          vm.itemsHasMore = false
+        }
+        if (sameItemList) vm.resetItemListAutoRead()
         vm.refreshStats()
       })
     },
