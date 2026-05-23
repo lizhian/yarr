@@ -649,6 +649,7 @@
                                :class="{active: feedNewFolderId === folder.id}"
                                v-for="folder in folders">
                             <input type="radio" name="folder_id" :value="folder.id" v-model="feedNewFolderId">
+                            <span class="icon mr-2">{% inline "folder.svg" %}</span>
                             <span class="text-truncate">{{ folder.title }}</span>
                         </label>
                     </div>

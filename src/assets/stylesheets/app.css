@@ -1082,6 +1082,10 @@ select.form-control:not([multiple]):not([size]) {
   min-width: 0;
 }
 
+.feed-folder-picker .icon {
+  flex: 0 0 auto;
+}
+
 .settings-segmented .btn,
 .refresh-rate-picker .btn {
   border-radius: 6px;
