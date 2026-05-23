@@ -485,6 +485,7 @@ var vm = new Vue({
       'feedIconErrors': {},
       'feedNewChoice': [],
       'feedNewChoiceSelected': '',
+      'feedNewFolderId': null,
       'feedNewContentMode': 'normal',
       'feedDeleteSelectedIds': [],
       'items': [],
@@ -1197,11 +1198,7 @@ var vm = new Vue({
         if (!title) return
         api.folders.create({'title': title}).then(function(result) {
           vm.refreshFeeds().then(function() {
-            vm.$nextTick(function() {
-              if (vm.$refs.newFeedFolder) {
-                vm.$refs.newFeedFolder.value = result.id
-              }
-            })
+            vm.feedNewFolderId = result.id
           })
         })
       })
@@ -1359,10 +1356,15 @@ var vm = new Vue({
     },
     createFeed: function(event) {
       var form = event.target
+      var contentSelector = ''
+      if (this.feedNewContentMode == 'readability') {
+        var contentSelectorInput = form.querySelector('input[name=content_selector]')
+        contentSelector = contentSelectorInput ? contentSelectorInput.value : ''
+      }
       var data = {
         url: normalizeRSSHubSubscriptionInput(form.querySelector('input[name=url]').value).value,
-        folder_id: parseInt(form.querySelector('select[name=folder_id]').value) || null,
-        content_selector: form.querySelector('input[name=content_selector]').value,
+        folder_id: this.feedNewFolderId,
+        content_selector: contentSelector,
         content_mode: this.feedNewContentMode,
       }
       if (this.feedNewChoiceSelected) {
@@ -1583,6 +1585,7 @@ var vm = new Vue({
       if (settings === 'create') {
         vm.feedNewChoice = []
         vm.feedNewChoiceSelected = ''
+        vm.feedNewFolderId = vm.current.feed.folder_id || vm.current.folder.id || null
         vm.feedNewContentMode = 'normal'
       } else if (settings === 'deletefeeds') {
         vm.feedDeleteSelectedIds = []

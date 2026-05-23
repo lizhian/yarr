@@ -1054,10 +1054,32 @@ select.form-control:not([multiple]):not([size]) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.feed-folder-picker {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .content-mode-picker input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+}
+
+.feed-folder-picker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.feed-folder-picker .btn {
+  align-items: center;
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.feed-folder-picker .btn span {
+  min-width: 0;
 }
 
 .settings-segmented .btn,
