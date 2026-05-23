@@ -21,8 +21,18 @@ type Worker struct {
 	rsshubAvailability map[string]rsshubAvailability
 	rsshubMu           sync.RWMutex
 	rsshubHits         map[int64]rsshubRefreshHit
+	rsshubLastSuccess  map[int64]string
+	rsshubRoundRobin   int
+	refreshDetails     map[int64]FeedRefreshDetail
+	refreshDetailsMu   sync.RWMutex
 	rsshubRefresh      *time.Ticker
 	rsshubStopper      chan bool
+}
+
+type feedRefreshJobResult struct {
+	feed   storage.Feed
+	result *FeedRefreshResult
+	err    error
 }
 
 func NewWorker(db *storage.Storage) *Worker {
@@ -32,6 +42,8 @@ func NewWorker(db *storage.Storage) *Worker {
 		pending:            &pending,
 		rsshubAvailability: make(map[string]rsshubAvailability),
 		rsshubHits:         make(map[int64]rsshubRefreshHit),
+		rsshubLastSuccess:  make(map[int64]string),
+		refreshDetails:     make(map[int64]FeedRefreshDetail),
 	}
 }
 
@@ -178,7 +190,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	w.db.ResetFeedErrors()
 
 	srcqueue := make(chan storage.Feed, len(feeds))
-	dstqueue := make(chan *FeedRefreshResult)
+	dstqueue := make(chan feedRefreshJobResult)
 
 	for i := 0; i < NUM_WORKERS; i++ {
 		go w.worker(srcqueue, dstqueue)
@@ -188,7 +200,12 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		srcqueue <- feed
 	}
 	for i := 0; i < len(feeds); i++ {
-		result := <-dstqueue
+		job := <-dstqueue
+		result := job.result
+		newItems := 0
+		if job.err != nil {
+			w.db.SetFeedError(job.feed.Id, job.err)
+		}
 		if result != nil && result.Feed != nil {
 			feedLink := result.FeedLink
 			if rsshub.IsLink(result.StoredFeedLink) {
@@ -198,10 +215,14 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 			w.updateRefreshedFeedIcon(result)
 		}
 		if result != nil && len(result.Items) > 0 {
+			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
 			w.db.CreateItems(result.Items)
+			after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
+			newItems = after - before
 			w.db.SetFeedSize(result.Items[0].FeedId, len(result.Items))
 		}
 		w.recordRSSHubRefreshHit(result)
+		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, newItems)
 		atomic.AddInt32(w.pending, -1)
 		w.db.SyncSearch()
 	}
@@ -211,18 +232,14 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	log.Printf("Finished refreshing %d feeds", len(feeds))
 }
 
-func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- *FeedRefreshResult) {
+func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- feedRefreshJobResult) {
 	for feed := range srcqueue {
-		requestLinks, err := w.resolveLinks(feed.FeedLink)
+		requestLinks, err := w.refreshLinks(feed)
 		if err != nil {
-			w.db.SetFeedError(feed.Id, err)
-			dstqueue <- nil
+			dstqueue <- feedRefreshJobResult{feed: feed, err: err}
 			continue
 		}
 		result, err := refreshFeedFromLinks(feed, requestLinks, w.db)
-		if err != nil {
-			w.db.SetFeedError(feed.Id, err)
-		}
-		dstqueue <- result
+		dstqueue <- feedRefreshJobResult{feed: feed, result: result, err: err}
 	}
 }

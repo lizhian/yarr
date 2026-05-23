@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nkanaev/yarr/src/rsshub"
+	"github.com/nkanaev/yarr/src/storage"
 )
 
 const RSSHUB_MAX_ATTEMPTS = 5
@@ -65,6 +66,8 @@ func (w *Worker) ResetRSSHubAvailability() {
 func (w *Worker) ResetRSSHubRefreshHits() {
 	w.rsshubMu.Lock()
 	w.rsshubHits = make(map[int64]rsshubRefreshHit)
+	w.rsshubLastSuccess = make(map[int64]string)
+	w.rsshubRoundRobin = 0
 	w.rsshubMu.Unlock()
 }
 
@@ -153,6 +156,17 @@ func checkRSSHubBase(base string) rsshubAvailability {
 }
 
 func (w *Worker) rsshubBasesForRequest() ([]string, error) {
+	bases, err := w.enabledRSSHubBasesForRequest()
+	if err != nil {
+		return nil, err
+	}
+	if len(bases) > RSSHUB_MAX_ATTEMPTS {
+		bases = bases[:RSSHUB_MAX_ATTEMPTS]
+	}
+	return bases, nil
+}
+
+func (w *Worker) enabledRSSHubBasesForRequest() ([]string, error) {
 	enabled, err := rsshub.EnabledBases(w.db.GetSettingsValueString("rsshub_base_url"))
 	if err != nil {
 		return nil, err
@@ -174,10 +188,44 @@ func (w *Worker) rsshubBasesForRequest() ([]string, error) {
 	if len(available) > 0 {
 		bases = available
 	}
-	if len(bases) > RSSHUB_MAX_ATTEMPTS {
-		bases = bases[:RSSHUB_MAX_ATTEMPTS]
-	}
 	return bases, nil
+}
+
+func (w *Worker) rsshubBasesForRefresh(feedID int64) ([]string, error) {
+	bases, err := w.enabledRSSHubBasesForRequest()
+	if err != nil {
+		return nil, err
+	}
+
+	w.rsshubMu.Lock()
+	defer w.rsshubMu.Unlock()
+
+	lastSuccess := w.rsshubLastSuccess[feedID]
+	selected := make([]string, 0, RSSHUB_MAX_ATTEMPTS)
+	used := make(map[string]bool)
+	if lastSuccess != "" && containsString(bases, lastSuccess) {
+		selected = append(selected, lastSuccess)
+		used[lastSuccess] = true
+	}
+
+	start := 0
+	if len(bases) > 0 {
+		start = w.rsshubRoundRobin % len(bases)
+	}
+	consumed := 0
+	for offset := 0; offset < len(bases) && len(selected) < RSSHUB_MAX_ATTEMPTS; offset++ {
+		consumed = offset + 1
+		base := bases[(start+offset)%len(bases)]
+		if used[base] {
+			continue
+		}
+		selected = append(selected, base)
+		used[base] = true
+	}
+	if len(bases) > 0 {
+		w.rsshubRoundRobin = (start + consumed) % len(bases)
+	}
+	return selected, nil
 }
 
 func (w *Worker) resolveLinks(link string) ([]string, error) {
@@ -191,6 +239,17 @@ func (w *Worker) resolveLinks(link string) ([]string, error) {
 	return rsshub.ResolveWithBases(link, bases)
 }
 
+func (w *Worker) refreshLinks(feed storage.Feed) ([]string, error) {
+	if !rsshub.IsLink(feed.FeedLink) {
+		return []string{feed.FeedLink}, nil
+	}
+	bases, err := w.rsshubBasesForRefresh(feed.Id)
+	if err != nil {
+		return nil, err
+	}
+	return rsshub.ResolveWithBases(feed.FeedLink, bases)
+}
+
 func (w *Worker) recordRSSHubRefreshHit(result *FeedRefreshResult) {
 	if result == nil || !rsshub.IsLink(result.StoredFeedLink) || result.RSSHubBase == "" || result.RSSHubLink == "" {
 		return
@@ -200,7 +259,17 @@ func (w *Worker) recordRSSHubRefreshHit(result *FeedRefreshResult) {
 		BaseURL: result.RSSHubBase,
 		Link:    result.RSSHubLink,
 	}
+	w.rsshubLastSuccess[result.FeedID] = result.RSSHubBase
 	w.rsshubMu.Unlock()
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 type RSSHubRefreshFeedDetail struct {

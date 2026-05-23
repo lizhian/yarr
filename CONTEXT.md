@@ -16,6 +16,10 @@ _Avoid_: RSSHub host, RSSHub provider URL
 An ordered set of RSSHub base links used as candidates for resolving RSSHub subscription links.
 _Avoid_: RSSHub 地址池, RSSHub hosts
 
+**RSSHub 基础链接轮询**:
+A refresh selection rule that walks through available RSSHub base links across refreshes instead of always starting at the first base link.
+_Avoid_: RSSHub 负载均衡, RSSHub 随机选择
+
 **RSSHub 可用性**:
 Whether an RSSHub base link is reachable at its root URL with an HTTP success or redirect response.
 _Avoid_: RSSHub health, RSSHub status
@@ -23,6 +27,10 @@ _Avoid_: RSSHub health, RSSHub status
 **RSSHub 刷新详情**:
 A settings view that shows which RSSHub base links last succeeded when refreshing RSSHub subscription links.
 _Avoid_: RSSHub 统计, RSSHub status
+
+**订阅源刷新详情**:
+The latest in-memory refresh outcome for one subscription source in the current server process.
+_Avoid_: Feed error, 刷新日志
 
 **RSSHub 刷新命中**:
 The latest successful refresh association between one RSSHub subscription link and one RSSHub base link in the current server process.
@@ -228,6 +236,7 @@ _Avoid_: Pull-to-refresh
 
 - A **文件夹** contains zero or more **订阅源**.
 - A **订阅源** produces zero or more **文章**.
+- A **订阅源** can have one **订阅源刷新详情** in the current server process.
 - An **文章列表** shows zero or more **文章**.
 - **文章列表预加载** appends additional **文章** to the current **文章列表**.
 - A **订阅源** has one **订阅链接**.
@@ -244,6 +253,7 @@ _Avoid_: Pull-to-refresh
 - If **更新订阅源图标链接** cannot discover a valid link for a **订阅源**, yarr keeps the existing **订阅源图标链接**.
 - For an **RSSHub 订阅链接**, **更新订阅源图标链接** tries available **RSSHub 基础链接** first.
 - **更新订阅源图标链接** tries at most five **RSSHub 基础链接** for one **RSSHub 订阅链接**.
+- **RSSHub 基础链接轮询** applies to refreshing **订阅源**, not to **更新订阅源图标链接**.
 - **文章详情** presents one selected **文章**.
 - Entering **文章列表** or **文章详情** can show a **加载骨架** while content is loading.
 - When the current **文章列表** or **文章详情** starts loading new content, the old content should not remain visible in the primary reading area until the new content arrives.
@@ -353,6 +363,7 @@ _Avoid_: Pull-to-refresh
 - A **正文选择器** applies to all **文章** produced by its **订阅源**.
 - **正文模式** uses the selected **文章**'s **订阅源** **正文选择器** when one is configured.
 - A **正文选择器** can be configured regardless of the **订阅源** **内容方式**.
+- **订阅源设置** shows the **正文选择器** row only when the **订阅源** **内容方式** is **正文模式**.
 - OPML import and export preserve **正文选择器**.
 - OPML import and export preserve **订阅源图标链接**.
 - **移动端视图** presents the **订阅源** list, **文章** list, and selected **文章** details as separate navigation layers.
@@ -391,7 +402,7 @@ _Avoid_: Pull-to-refresh
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
 - **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
-- **基础设置** shows the selected **订阅源** title, website link, subscription link, **正文选择器**, and **订阅源图标链接** as fixed rows.
+- **基础设置** shows the selected **订阅源** title, website link, subscription link, and **订阅源图标链接** as fixed rows.
 - Empty **基础设置** values are shown as `未设置`.
 - In **基础设置**, clicking the label of an openable link opens that link while clicking the value edits it.
 - In **基础设置**, only an HTTP(S) **订阅链接** can be opened directly; an **RSSHub 订阅链接** is not opened from the row label.

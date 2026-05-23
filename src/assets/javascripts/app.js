@@ -506,6 +506,7 @@ var vm = new Vue({
       'articleListLayoutApplying': false,
       'rsshubBaseUrl': s.rsshub_base_url || '',
       'rsshubDetails': [],
+      'feedRefreshDetails': {},
       'authConfig': {
         enabled: app.authenticated,
         username: '',
@@ -659,6 +660,13 @@ var vm = new Vue({
     },
     itemAtEnd: function() {
       return !this.items.length || this.itemSelected == this.items[this.items.length - 1].id
+    },
+    currentFeedRefreshDetail: function() {
+      if (!this.settingsFeed) return null
+      return this.feedRefreshDetails[this.settingsFeed.id] || null
+    },
+    showFeedContentSelector: function() {
+      return this.settingsFeed && normalizeContentMode(this.settingsFeed.content_mode) == 'readability'
     },
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
@@ -935,6 +943,7 @@ var vm = new Vue({
 
         vm.loading.feeds = data.running
         vm.rsshubDetails = data.rsshub_details || []
+        vm.feedRefreshDetails = data.feed_refresh_details || {}
         vm.scheduleStatusPoll(data.running ? 500 : 60000)
         vm.feedStats = data.stats.reduce(function(acc, stat) {
           acc[stat.feed_id] = stat

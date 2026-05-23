@@ -240,7 +240,7 @@ func (s *Storage) CountItems(filter ItemFilter) int {
 	var count int
 	query := fmt.Sprintf(`
 		select count(*)
-		from items
+		from items i
 		where %s
 		`, predicate)
 	err := s.db.QueryRow(query, args...).Scan(&count)

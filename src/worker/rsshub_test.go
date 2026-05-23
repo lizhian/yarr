@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/nkanaev/yarr/src/storage"
@@ -128,6 +129,131 @@ func TestRSSHubRefreshDetailsResetWhenBaseListChanges(t *testing.T) {
 	}
 }
 
+func TestRSSHubRefreshLinksPrioritizeLastSuccessfulBase(t *testing.T) {
+	db := testStorage(t)
+	worker := NewWorker(db)
+	feed := db.CreateFeed("A", "", "", "rsshub://bilibili/weekly", nil)
+
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "https://a.example\nhttps://b.example\nhttps://c.example"}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+
+	worker.recordRSSHubRefreshHit(&FeedRefreshResult{
+		FeedID:         feed.Id,
+		StoredFeedLink: feed.FeedLink,
+		RSSHubBase:     "https://b.example",
+		RSSHubLink:     "https://b.example/bilibili/weekly",
+	})
+
+	links, err := worker.refreshLinks(*feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(links) != 3 {
+		t.Fatalf("got %d links", len(links))
+	}
+	if links[0] != "https://b.example/bilibili/weekly" {
+		t.Fatalf("got first link %q", links[0])
+	}
+}
+
+func TestRSSHubRefreshLinksRoundRobinAcrossRequests(t *testing.T) {
+	db := testStorage(t)
+	worker := NewWorker(db)
+	feed := db.CreateFeed("A", "", "", "rsshub://bilibili/weekly", nil)
+
+	bases := []string{
+		"https://a.example",
+		"https://b.example",
+		"https://c.example",
+		"https://d.example",
+		"https://e.example",
+		"https://f.example",
+		"https://g.example",
+	}
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": strings.Join(bases, "\n")}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+
+	first, err := worker.refreshLinks(*feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := worker.refreshLinks(*feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantFirst := []string{
+		"https://a.example/bilibili/weekly",
+		"https://b.example/bilibili/weekly",
+		"https://c.example/bilibili/weekly",
+		"https://d.example/bilibili/weekly",
+		"https://e.example/bilibili/weekly",
+	}
+	wantSecond := []string{
+		"https://f.example/bilibili/weekly",
+		"https://g.example/bilibili/weekly",
+		"https://a.example/bilibili/weekly",
+		"https://b.example/bilibili/weekly",
+		"https://c.example/bilibili/weekly",
+	}
+	assertStringSlicesEqual(t, first, wantFirst)
+	assertStringSlicesEqual(t, second, wantSecond)
+}
+
+func TestRefresherRecordsFeedRefreshDetailSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBody("RSSHub Feed"))
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": server.URL}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	feed := db.CreateFeed("RSSHub Feed", "", "", "rsshub://bilibili/weekly", nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	detail := worker.FeedRefreshDetails()[feed.Id]
+	if !detail.Success {
+		t.Fatalf("got failure: %s", detail.Error)
+	}
+	if detail.FetchedItems != 1 {
+		t.Fatalf("got %d fetched items", detail.FetchedItems)
+	}
+	if detail.NewItems != 1 {
+		t.Fatalf("got %d new items", detail.NewItems)
+	}
+	if detail.RSSHubLink != server.URL+"/bilibili/weekly" {
+		t.Fatalf("got RSSHub link %q", detail.RSSHubLink)
+	}
+}
+
+func TestRefresherRecordsFeedRefreshDetailFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Feed", "", "", server.URL, nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	detail := worker.FeedRefreshDetails()[feed.Id]
+	if detail.Success {
+		t.Fatal("expected failure")
+	}
+	if detail.Error != "status code 500" {
+		t.Fatalf("got error %q", detail.Error)
+	}
+}
+
 func TestRSSHubNotModifiedRefreshRecordsSuccessfulBase(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotModified)
@@ -231,5 +357,17 @@ func TestRefresherRecordsRSSHubFeedDetail(t *testing.T) {
 	}
 	if details[0].Details[0].Link != server.URL+"/bilibili/weekly" {
 		t.Fatalf("got link %q", details[0].Details[0].Link)
+	}
+}
+
+func assertStringSlicesEqual(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("got %d values, want %d: %#v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got[%d] %q, want %q", i, got[i], want[i])
+		}
 	}
 }
