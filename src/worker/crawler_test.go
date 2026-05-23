@@ -257,15 +257,13 @@ func TestRefreshAddsFeedIconFromImageURLWhenMissing(t *testing.T) {
 	}
 }
 
-func TestRefreshKeepsUserIconURLWhenImageURLChanges(t *testing.T) {
-	requestedNewIcon := false
+func TestRefreshOverwritesExistingIconURLFromImageURL(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/feed.xml":
 			w.Header().Set("Content-Type", "application/rss+xml")
 			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
 		case "/new-icon.png":
-			requestedNewIcon = true
 			w.Header().Set("Content-Type", "image/png")
 			w.Write([]byte("new-icon"))
 		default:
@@ -282,11 +280,8 @@ func TestRefreshKeepsUserIconURLWhenImageURLChanges(t *testing.T) {
 	worker.refresher([]storage.Feed{*feed})
 
 	feed = db.GetFeed(feed.Id)
-	if feed.IconURL != "https://example.com/custom-icon.png" {
+	if feed.IconURL != server.URL+"/new-icon.png" {
 		t.Fatalf("icon url got %q", feed.IconURL)
-	}
-	if requestedNewIcon {
-		t.Fatal("requested new icon despite user icon url")
 	}
 }
 

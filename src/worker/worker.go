@@ -109,7 +109,7 @@ func (w *Worker) updateRefreshedFeedIcon(result *FeedRefreshResult) {
 	}
 
 	feed := w.db.GetFeed(result.FeedID)
-	if feed == nil || feed.IconURL != "" {
+	if feed == nil {
 		return
 	}
 	w.findFeedIcon(*feed, result.Feed.ImageURL, result.FeedLink)

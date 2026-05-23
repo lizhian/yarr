@@ -181,7 +181,7 @@ A group of information rows and actions for one subscription source, including s
 _Avoid_: 订阅项设置, Feed settings
 
 **订阅源图标链接**:
-An HTTP(S) image link used to display one subscription source's icon in the subscription source list.
+An HTTP(S) image link used to display one subscription source's icon in the subscription source list. When a refreshed subscription source declares its own icon image link, yarr replaces the saved subscription source icon link with that declared link.
 _Avoid_: Favicon, Feed icon, 订阅源图标
 
 **更新订阅源图标链接**:
