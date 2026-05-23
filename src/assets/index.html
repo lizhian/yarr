@@ -23,7 +23,7 @@
     </script>
 </head>
 <body class="theme-{% .settings.theme_name %} font-{% .settings.theme_font %}">
-    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow, 'toolbar-feed-actions-narrow': toolbarFeedActionsNarrow, 'toolbar-feed-actions-minimal': toolbarFeedActionsMinimal}]" v-cloak>
+    <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">
             <drag :width="feedListWidth" @resize="resizeFeedList"></drag>
@@ -65,12 +65,6 @@
                         aria-label="刷新订阅源"
                         @click="fetchAllFeeds()">
                     <span class="icon toolbar-icon">{% inline "rotate-cw.svg" %}</span>
-                </button>
-                <button class="toolbar-item toolbar-item-icon-only px-2 ml-1 feed-list-toolbar-create"
-                        title="新订阅源"
-                        aria-label="新订阅源"
-                        @click="showSettings('create')">
-                    <span class="icon toolbar-icon">{% inline "plus.svg" %}</span>
                 </button>
             </div>
             <div id="feed-list-scroll"

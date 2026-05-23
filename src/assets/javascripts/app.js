@@ -662,12 +662,6 @@ var vm = new Vue({
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
     },
-    toolbarFeedActionsNarrow: function() {
-      return this.feedListWidth < 260
-    },
-    toolbarFeedActionsMinimal: function() {
-      return this.feedListWidth < 230
-    },
     showBottomMarkItemsRead: function() {
       return this.filterSelected == 'unread' &&
         this.items.length > 0 &&
