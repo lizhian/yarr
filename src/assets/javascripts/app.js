@@ -1151,6 +1151,10 @@ var vm = new Vue({
           vm.filterSelected == filterSelected &&
           vm.itemSearch == itemSearch &&
           vm.itemSortNewestFirst == itemSortNewestFirst
+        var shouldShowFeedList = sameItemList &&
+          filterSelected == 'unread' &&
+          isMobileLayout() &&
+          vm.currentNavigationLayer() == 'items'
 
         if (keepCurrentItems) {
           if (sameItemList) {
@@ -1167,6 +1171,7 @@ var vm = new Vue({
           vm.itemsHasMore = false
         }
         if (sameItemList) vm.resetItemListAutoRead()
+        if (shouldShowFeedList) vm.showFeedList()
         vm.refreshStats()
       })
     },
