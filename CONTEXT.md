@@ -232,6 +232,10 @@ _Avoid_: Browser back, 返回上一页
 A mobile reader gesture where dragging down from the top of a list triggers that list's refresh action.
 _Avoid_: Pull-to-refresh
 
+**文件夹吸附标题**:
+A subscription source list behavior where the currently scrolled expanded **文件夹** title stays visible at the top of the **订阅源** list.
+_Avoid_: Sticky folder, 固定文件夹
+
 ## Relationships
 
 - A **文件夹** contains zero or more **订阅源**.
@@ -243,6 +247,8 @@ _Avoid_: Pull-to-refresh
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.
 - **桌面端视图** can show the **订阅源** list, **文章** list, and **文章详情** together.
+- **文件夹吸附标题** applies only to expanded **文件夹** in the **订阅源** list.
+- **文件夹吸附标题** keeps the **文件夹** title, unread count, expand action, and **文件夹设置** action available while scrolling.
 - Known **订阅源标题后缀** values are removed from saved **订阅源** titles.
 - When a **订阅源** has no **订阅源图标链接**, yarr can automatically discover one from the subscription source or its website.
 - When a user sets a **订阅源图标链接**, automatic refresh does not overwrite it.

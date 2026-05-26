@@ -13,6 +13,7 @@ body {
   --action-button-hover-bg: #f8f9fa;
   --action-button-shadow: 0 2px 5px rgba(0, 0, 0, .16), 0 1px 1px rgba(0, 0, 0, .08);
   --action-button-shadow-active: inset 0 1px 2px rgba(0, 0, 0, .12);
+  --feed-folder-sticky-bg: #fff;
   --toolbar-bg: transparent;
   --toolbar-lift-shadow: var(--action-button-shadow);
   --pane-divider-line: rgba(0, 0, 0, .10);
@@ -254,6 +255,13 @@ select.form-control:not([multiple]):not([size]) {
 
 .selectgroup-label:hover {
   cursor: pointer;
+}
+
+.feed-folder-sticky {
+  background-color: var(--feed-folder-sticky-bg);
+  position: sticky;
+  top: -.5rem;
+  z-index: 2;
 }
 
 .selectgroup-action {
@@ -1367,6 +1375,7 @@ button.theme-light {
   --accent-color: #2f684b;
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+  --feed-folder-sticky-bg: #f7f7f5;
   --item-list-separator-color: #e4e4df;
   --toolbar-bg: #fffffc;
   --toolbar-lift-shadow: 0 3px 10px rgba(0, 0, 0, .13), 0 1px 0 rgba(0, 0, 0, .06);
@@ -1450,6 +1459,7 @@ a,
   --action-button-shadow: 0 2px 6px rgba(83, 67, 35, .24), 0 1px 1px rgba(83, 67, 35, .12);
   --action-button-shadow-active: inset 0 1px 3px rgba(83, 67, 35, .18);
   --item-list-separator-color: #d9c999;
+  --feed-folder-sticky-bg: #f2e6bd;
   --toolbar-bg: #f8edc9;
   --toolbar-lift-shadow: 0 3px 11px rgba(83, 67, 35, .24), 0 1px 0 rgba(83, 67, 35, .10);
   --pane-divider-line: rgba(83, 67, 35, .14);
@@ -1526,6 +1536,7 @@ body.theme-sepia {
   --action-button-shadow: 0 2px 7px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .06);
   --action-button-shadow-active: inset 0 1px 3px rgba(0, 0, 0, .62), 0 1px 0 rgba(255, 255, 255, .04);
   --article-card-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  --feed-folder-sticky-bg: #1f1f1f;
   --item-list-separator-color: #303030;
   --toolbar-bg: #262626;
   --toolbar-lift-shadow: 0 4px 12px rgba(0, 0, 0, .68), 0 1px 0 rgba(255, 255, 255, .05);
