@@ -61,17 +61,18 @@
                 </button>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item toolbar-item-icon-only px-2 feed-list-toolbar-refresh"
-                        title="刷新订阅源"
-                        aria-label="刷新订阅源"
-                        @click="fetchAllFeeds()">
-                    <span class="icon toolbar-icon">{% inline "rotate-cw.svg" %}</span>
+                        title="同步阅读状态"
+                        aria-label="同步阅读状态"
+                        :disabled="loading.readingState"
+                        @click="syncReadingState()">
+                    <span class="icon toolbar-icon" :class="{'icon-loading': loading.readingState}">{% inline "rotate-cw.svg" %}</span>
                 </button>
             </div>
             <div id="feed-list-scroll"
                  class="p-2 overflow-auto scroll-touch border-top flex-grow-1 pull-refresh-scroll"
                  v-pull-refresh="{
-                   loading: loading.feeds,
-                   action: refreshAllFeeds
+                   loading: loading.readingState,
+                   action: syncReadingState
                  }">
                 <div class="pull-refresh-indicator" aria-hidden="true">
                     <span class="icon loading"></span>
