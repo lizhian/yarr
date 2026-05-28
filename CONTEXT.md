@@ -72,6 +72,10 @@ _Avoid_: 手动更新, Refresh feeds
 A browser-side timer that keeps refresh state and unread counts current by checking yarr server status.
 _Avoid_: Status refresh, 状态刷新
 
+**同步阅读状态**:
+A user-triggered action that reloads locally stored article counts and the current article list without checking subscription sources for new articles.
+_Avoid_: 刷新订阅源, 手动更新, Refresh feeds
+
 **访问认证**:
 A user-managed setting that requires credentials before accessing yarr reader data and protected actions.
 _Avoid_: 登录功能, Auth
@@ -243,6 +247,8 @@ _Avoid_: Sticky folder, 固定文件夹
 - A **订阅源** can have one **订阅源刷新详情** in the current server process.
 - An **文章列表** shows zero or more **文章**.
 - **文章列表预加载** appends additional **文章** to the current **文章列表**.
+- **同步阅读状态** updates **未读** and **收藏** counts from locally stored **文章** and can reload the current **文章列表**.
+- **同步阅读状态** does not check **订阅源** for new **文章**.
 - A **订阅源** has one **订阅链接**.
 - A **订阅源** can have one **订阅源图标链接**.
 - A **订阅源** title can include a **订阅源标题后缀** from the publishing service.

@@ -543,6 +543,7 @@ var vm = new Vue({
         'items': false,
         'itemDetails': false,
         'readability': false,
+        'readingState': false,
         'backup': false,
         'icons': false,
         'feed': null,
@@ -1708,6 +1709,19 @@ var vm = new Vue({
     refreshCurrentItems: function() {
       if (this.loading.items) return Promise.resolve()
       return this.refreshItems(false)
+    },
+    syncReadingState: function() {
+      if (this.loading.readingState) return Promise.resolve()
+      this.loading.readingState = true
+      return this.refreshStats()
+        .then(function() {
+          return vm.refreshItems(false)
+        })
+        .then(function() {
+          vm.loading.readingState = false
+        }, function() {
+          vm.loading.readingState = false
+        })
     },
     resetFeedChoice: function() {
       this.feedNewChoice = []
