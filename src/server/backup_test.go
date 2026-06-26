@@ -115,6 +115,39 @@ func TestBackupEndpointTriggersBackup(t *testing.T) {
 	}
 }
 
+func TestScheduledBackupRequiresEnabledSetting(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "storage.db")
+	db, err := storage.New(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewServer(db, "127.0.0.1:8000")
+	backups := NewBackupService(db, dbPath)
+	backups.now = func() time.Time {
+		return time.Date(2026, 5, 15, 0, 0, 0, 0, time.Local)
+	}
+	s.SetBackupService(backups)
+
+	if err := s.runScheduledBackup(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupJSONFile)); !os.IsNotExist(err) {
+		t.Fatalf("backup should not run while disabled: %v", err)
+	}
+
+	if !db.UpdateSettings(map[string]interface{}{"backup_enabled": true}) {
+		t.Fatal("failed to enable backup")
+	}
+	if err := s.runScheduledBackup(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupJSONFile)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOPMLExportMatchesBackupOPML(t *testing.T) {
 	db := testServerDB(t)
 	folder := db.CreateFolder("folder")

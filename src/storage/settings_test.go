@@ -56,6 +56,30 @@ func TestToolbarDisplayDefault(t *testing.T) {
 	}
 }
 
+func TestBackupEnabledDefault(t *testing.T) {
+	db := testDB()
+
+	if got := db.GetSettingsValueBool("backup_enabled"); got {
+		t.Fatalf("invalid backup enabled default: %#v", got)
+	}
+
+	settings := db.GetSettings()
+	if got := settings["backup_enabled"]; got != false {
+		t.Fatalf("invalid backup enabled setting: %#v", got)
+	}
+}
+
+func TestUpdateBackupEnabled(t *testing.T) {
+	db := testDB()
+
+	if !db.UpdateSettings(map[string]interface{}{"backup_enabled": true}) {
+		t.Fatal("did not update backup enabled")
+	}
+	if got := db.GetSettingsValueBool("backup_enabled"); !got {
+		t.Fatalf("invalid backup enabled: %#v", got)
+	}
+}
+
 func TestColumnWidthDefaultsUnset(t *testing.T) {
 	db := testDB()
 

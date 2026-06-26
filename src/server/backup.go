@@ -196,15 +196,25 @@ func (s *Server) startBackupScheduler() {
 	if s.backups == nil {
 		return
 	}
-	go func() {
-		for {
-			now := time.Now()
-			next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-			timer := time.NewTimer(time.Until(next))
-			<-timer.C
-			if _, err := s.backups.Run(); err != nil {
-				log.Print("backup failed: ", err)
+	s.backupsOnce.Do(func() {
+		go func() {
+			for {
+				now := time.Now()
+				next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+				timer := time.NewTimer(time.Until(next))
+				<-timer.C
+				if err := s.runScheduledBackup(); err != nil {
+					log.Print("backup failed: ", err)
+				}
 			}
-		}
-	}()
+		}()
+	})
+}
+
+func (s *Server) runScheduledBackup() error {
+	if s.db == nil || !s.db.GetSettingsValueBool("backup_enabled") {
+		return nil
+	}
+	_, err := s.backups.Run()
+	return err
 }

@@ -17,6 +17,7 @@ type Server struct {
 	db          *storage.Storage
 	worker      *worker.Worker
 	backups     *BackupService
+	backupsOnce sync.Once
 	cache       map[string]interface{}
 	cache_mutex *sync.Mutex
 
@@ -54,7 +55,9 @@ func (s *Server) Start() {
 	refreshRate := s.db.GetSettingsValueInt64("refresh_rate")
 	s.worker.FindFavicons()
 	s.worker.StartFeedCleaner()
-	s.startBackupScheduler()
+	if s.db.GetSettingsValueBool("backup_enabled") {
+		s.startBackupScheduler()
+	}
 	s.worker.SetRefreshRate(refreshRate)
 	if refreshRate > 0 {
 		s.worker.RefreshFeeds()

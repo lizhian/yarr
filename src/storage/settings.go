@@ -21,6 +21,7 @@ func settingsDefaults() map[string]interface{} {
 		"refresh_rate":      0,
 		"rsshub_base_url":   "",
 		"toolbar_display":   "text",
+		"backup_enabled":    false,
 	}
 }
 
@@ -75,6 +76,16 @@ func (s *Storage) GetSettingsValueString(key string) string {
 		}
 	}
 	return ""
+}
+
+func (s *Storage) GetSettingsValueBool(key string) bool {
+	val := s.GetSettingsValue(key)
+	if val != nil {
+		if bval, ok := val.(bool); ok {
+			return bval
+		}
+	}
+	return false
 }
 
 func (s *Storage) GetSettings() map[string]interface{} {

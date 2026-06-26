@@ -64,7 +64,7 @@
                         title="同步阅读状态"
                         aria-label="同步阅读状态"
                         :disabled="loading.readingState"
-                        @click="syncReadingState()">
+                        @click="resetColumnsAndSyncReadingState()">
                     <span class="icon toolbar-icon" :class="{'icon-loading': loading.readingState}">{% inline "rotate-cw.svg" %}</span>
                 </button>
             </div>
@@ -72,7 +72,7 @@
                  class="p-2 overflow-auto scroll-touch border-top flex-grow-1 pull-refresh-scroll"
                  v-pull-refresh="{
                    loading: loading.readingState,
-                   action: syncReadingState
+                   action: resetColumnsAndSyncReadingState
                  }">
                 <div class="pull-refresh-indicator" aria-hidden="true">
                     <span class="icon loading"></span>
@@ -463,6 +463,14 @@
                         <div class="settings-segmented settings-segmented-compact">
                             <button class="btn btn-link" :aria-pressed="itemSortNewestFirst" :class="{active: itemSortNewestFirst}" @click="itemSortNewestFirst=true">最新</button>
                             <button class="btn btn-link" :aria-pressed="!itemSortNewestFirst" :class="{active: !itemSortNewestFirst}" @click="itemSortNewestFirst=false">最早</button>
+                        </div>
+                    </section>
+
+                    <section class="settings-dialog-section">
+                        <header>自动备份</header>
+                        <div class="settings-segmented settings-segmented-compact">
+                            <button class="btn btn-link" :aria-pressed="backupEnabled" :class="{active: backupEnabled}" @click="backupEnabled = true">启用</button>
+                            <button class="btn btn-link" :aria-pressed="!backupEnabled" :class="{active: !backupEnabled}" @click="backupEnabled = false">停用</button>
                         </div>
                     </section>
                 </div>

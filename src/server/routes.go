@@ -539,6 +539,9 @@ func (s *Server) handleSettings(c *router.Context) {
 			if _, ok := settings["rsshub_base_url"]; ok && !refreshRateChanged {
 				s.worker.CheckRSSHubAvailability()
 			}
+			if _, ok := settings["backup_enabled"]; ok && s.db.GetSettingsValueBool("backup_enabled") {
+				s.startBackupScheduler()
+			}
 			c.Out.WriteHeader(http.StatusOK)
 		} else {
 			c.Out.WriteHeader(http.StatusBadRequest)

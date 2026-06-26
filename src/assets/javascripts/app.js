@@ -561,6 +561,7 @@ var vm = new Vue({
         'light': '#f7f7f5',
       },
       'refreshRate': s.refresh_rate,
+      'backupEnabled': !!s.backup_enabled,
       'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
       'fontOptions': FONT_OPTIONS,
       'contentModeOptions': CONTENT_MODE_OPTIONS,
@@ -773,6 +774,10 @@ var vm = new Vue({
     'refreshRate': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({refresh_rate: newVal})
+    },
+    'backupEnabled': function(newVal, oldVal) {
+      if (oldVal === undefined) return  // do nothing, initial setup
+      api.settings.update({backup_enabled: newVal})
     },
     'toolbarDisplay': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
@@ -1722,6 +1727,10 @@ var vm = new Vue({
         }, function() {
           vm.loading.readingState = false
         })
+    },
+    resetColumnsAndSyncReadingState: function() {
+      this.resetColumnWidths()
+      return this.syncReadingState()
     },
     resetFeedChoice: function() {
       this.feedNewChoice = []
