@@ -13,6 +13,8 @@ type Client struct {
 	userAgent  string
 }
 
+const browserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
 func (c *Client) get(url string) (*http.Response, error) {
 	return c.getConditional(url, "", "")
 }
@@ -46,16 +48,13 @@ func shouldRetryGet(err error) bool {
 
 var client *Client
 
-func SetVersion(num string) {
-	client.userAgent = "Yarr/" + num
-}
-
 func init() {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout: 10 * time.Second,
 		}).DialContext,
+		ForceAttemptHTTP2:   true,
 		DisableKeepAlives:   true,
 		TLSHandshakeTimeout: time.Second * 10,
 	}
@@ -65,6 +64,6 @@ func init() {
 	}
 	client = &Client{
 		httpClient: httpClient,
-		userAgent:  "Yarr/1.0",
+		userAgent:  browserUserAgent,
 	}
 }
