@@ -15,6 +15,8 @@ var backupTables = []string{
 	"http_states",
 	"feed_errors",
 	"feed_sizes",
+	"generated_rss_sources",
+	"generated_rss_items",
 }
 
 func (s *Storage) BackupTables() (map[string][]map[string]interface{}, error) {

@@ -13,20 +13,22 @@ import (
 const NUM_WORKERS = 4
 
 type Worker struct {
-	db                 *storage.Storage
-	pending            *int32
-	refresh            *time.Ticker
-	reflock            sync.Mutex
-	stopper            chan bool
-	rsshubAvailability map[string]rsshubAvailability
-	rsshubMu           sync.RWMutex
-	rsshubHits         map[int64]rsshubRefreshHit
-	rsshubLastSuccess  map[int64]string
-	rsshubRoundRobin   int
-	refreshDetails     map[int64]FeedRefreshDetail
-	refreshDetailsMu   sync.RWMutex
-	rsshubRefresh      *time.Ticker
-	rsshubStopper      chan bool
+	db                  *storage.Storage
+	pending             *int32
+	refresh             *time.Ticker
+	reflock             sync.Mutex
+	stopper             chan bool
+	rsshubAvailability  map[string]rsshubAvailability
+	rsshubMu            sync.RWMutex
+	rsshubHits          map[int64]rsshubRefreshHit
+	rsshubLastSuccess   map[int64]string
+	rsshubRoundRobin    int
+	refreshDetails      map[int64]FeedRefreshDetail
+	refreshDetailsMu    sync.RWMutex
+	rsshubRefresh       *time.Ticker
+	rsshubStopper       chan bool
+	generatedRSS        *time.Ticker
+	generatedRSSStopper chan bool
 }
 
 type feedRefreshJobResult struct {
@@ -60,6 +62,32 @@ func (w *Worker) StartFeedCleaner() {
 			w.db.DeleteOldItems()
 		}
 	}()
+}
+
+func (w *Worker) StartGeneratedRSS() {
+	if w.generatedRSSStopper != nil {
+		w.generatedRSS.Stop()
+		w.generatedRSS = nil
+		w.generatedRSSStopper <- true
+		w.generatedRSSStopper = nil
+	}
+
+	w.generatedRSSStopper = make(chan bool)
+	w.generatedRSS = time.NewTicker(time.Hour)
+	go w.RefreshBilibiliTopHubSources()
+
+	go func(fire <-chan time.Time, stop <-chan bool) {
+		log.Print("generated rss: starting")
+		for {
+			select {
+			case <-fire:
+				w.RefreshBilibiliTopHubSources()
+			case <-stop:
+				log.Print("generated rss: stopping")
+				return
+			}
+		}
+	}(w.generatedRSS.C, w.generatedRSSStopper)
 }
 
 func (w *Worker) FindFavicons() {

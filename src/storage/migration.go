@@ -21,6 +21,7 @@ var migrations = []func(*sql.Tx) error{
 	m11_add_feed_content_selector,
 	m12_replace_feed_icon_with_icon_url,
 	m13_add_feed_content_mode,
+	m14_add_generated_rss,
 }
 
 var maxVersion = int64(len(migrations))
@@ -353,6 +354,38 @@ func m12_replace_feed_icon_with_icon_url(tx *sql.Tx) error {
 func m13_add_feed_content_mode(tx *sql.Tx) error {
 	sql := `
 		alter table feeds add column content_mode text not null default 'normal';
+	`
+	_, err := tx.Exec(sql)
+	return err
+}
+
+func m14_add_generated_rss(tx *sql.Tx) error {
+	sql := `
+		create table if not exists generated_rss_sources (
+		 id             integer primary key autoincrement,
+		 key            text not null unique,
+		 title          text not null,
+		 link           text not null,
+		 description    text not null,
+		 created_at     datetime not null,
+		 updated_at     datetime not null
+		);
+
+		create table if not exists generated_rss_items (
+		 id             integer primary key autoincrement,
+		 source_id      references generated_rss_sources(id) on delete cascade,
+		 guid           text not null,
+		 title          text not null,
+		 link           text not null,
+		 content        text not null,
+		 published_at   datetime not null,
+		 created_at     datetime not null,
+		 updated_at     datetime not null,
+		 unique(source_id, guid)
+		);
+
+		create index if not exists idx_generated_rss_items_source_published
+		on generated_rss_items(source_id, published_at desc, id desc);
 	`
 	_, err := tx.Exec(sql)
 	return err

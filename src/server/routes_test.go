@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -107,6 +109,103 @@ func TestStatusIncludesRSSHubDetails(t *testing.T) {
 	}
 	if body.RSSHubDetails[0].BaseURL != "https://a.example" {
 		t.Fatalf("got base %q", body.RSSHubDetails[0].BaseURL)
+	}
+}
+
+func TestBilibiliTopRSS(t *testing.T) {
+	db := testServerDB(t)
+	source := db.UpsertGeneratedRSSSource("bilibili_top", "B站全站热榜", "https://tophub.today/n/74KvxwokxM", "B站全站热榜小时快照")
+	if source == nil {
+		t.Fatal("failed to create source")
+	}
+	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
+	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_top:2026070610", "2026 年 07 月 06 日 10 时 B站全站热榜", source.Link, `<table><tr><td>1</td></tr></table>`, publishedAt) {
+		t.Fatal("failed to create item")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/rss/bilibili/top", nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
+	}
+	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/rss+xml; charset=utf-8" {
+		t.Fatalf("invalid content type: %q", ctype)
+	}
+
+	var doc rssDocument
+	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Channel.Title != "B站全站热榜" {
+		t.Fatalf("invalid channel title: %q", doc.Channel.Title)
+	}
+	if len(doc.Channel.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
+	}
+	item := doc.Channel.Items[0]
+	if item.GUID.Value != "bilibili_top:2026070610" || item.GUID.IsPermaLink != "false" {
+		t.Fatalf("invalid guid: %#v", item.GUID)
+	}
+	if item.PubDate != publishedAt.Format(time.RFC1123Z) {
+		t.Fatalf("invalid pubDate: %q", item.PubDate)
+	}
+	if !strings.Contains(item.Description, "<table>") {
+		t.Fatalf("description missing html content: %q", item.Description)
+	}
+}
+
+func TestBilibiliZhishiRSS(t *testing.T) {
+	db := testServerDB(t)
+	source := db.UpsertGeneratedRSSSource("bilibili_zhishi", "B站知识榜", "https://tophub.today/n/Ywv47GzoPa", "B站知识榜小时快照")
+	if source == nil {
+		t.Fatal("failed to create source")
+	}
+	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
+	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_zhishi:2026070610", "2026 年 07 月 06 日 10 时 B站知识榜", source.Link, `<article>content</article>`, publishedAt) {
+		t.Fatal("failed to create item")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/rss/bilibili/zhishi", nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
+	}
+
+	var doc rssDocument
+	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Channel.Title != "B站知识榜" {
+		t.Fatalf("invalid channel title: %q", doc.Channel.Title)
+	}
+	if len(doc.Channel.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
+	}
+	item := doc.Channel.Items[0]
+	if item.Title != "2026 年 07 月 06 日 10 时 B站知识榜" {
+		t.Fatalf("invalid item title: %q", item.Title)
+	}
+	if item.GUID.Value != "bilibili_zhishi:2026070610" {
+		t.Fatalf("invalid guid: %#v", item.GUID)
+	}
+}
+
+func TestBilibiliTopRSSPublicWithAuth(t *testing.T) {
+	db := testServerDB(t)
+	if !db.SetAuthConfig(true, "username", "password") {
+		t.Fatal("failed to enable auth")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/rss/bilibili/top", nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
 }
 
