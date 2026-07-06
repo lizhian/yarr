@@ -114,7 +114,7 @@ func TestStatusIncludesRSSHubDetails(t *testing.T) {
 
 func TestBilibiliTopRSS(t *testing.T) {
 	db := testServerDB(t)
-	source := db.UpsertGeneratedRSSSource("bilibili_top", "B站全站热榜", "https://tophub.today/n/74KvxwokxM", "B站全站热榜小时快照")
+	source := db.UpsertGeneratedRSSSource("bilibili_top", "B站全站热榜", "rsshub://bilibili/ranking/0", "B站全站热榜小时快照")
 	if source == nil {
 		t.Fatal("failed to create source")
 	}
@@ -158,7 +158,7 @@ func TestBilibiliTopRSS(t *testing.T) {
 
 func TestBilibiliZhishiRSS(t *testing.T) {
 	db := testServerDB(t)
-	source := db.UpsertGeneratedRSSSource("bilibili_zhishi", "B站知识榜", "https://tophub.today/n/Ywv47GzoPa", "B站知识榜小时快照")
+	source := db.UpsertGeneratedRSSSource("bilibili_zhishi", "B站知识榜", "rsshub://bilibili/ranking/knowledge", "B站知识榜小时快照")
 	if source == nil {
 		t.Fatal("failed to create source")
 	}
@@ -190,6 +190,44 @@ func TestBilibiliZhishiRSS(t *testing.T) {
 		t.Fatalf("invalid item title: %q", item.Title)
 	}
 	if item.ID != "bilibili_zhishi:2026070610" {
+		t.Fatalf("invalid id: %q", item.ID)
+	}
+}
+
+func TestBilibiliHotRSS(t *testing.T) {
+	db := testServerDB(t)
+	source := db.UpsertGeneratedRSSSource("bilibili_hot", "B站热门榜", "rsshub://bilibili/popular/all", "B站热门榜小时快照")
+	if source == nil {
+		t.Fatal("failed to create source")
+	}
+	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
+	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_hot:2026070610", "2026 年 07 月 06 日 10 时 B站热门榜", source.Link, `<article>content</article>`, publishedAt) {
+		t.Fatal("failed to create item")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/rss/bilibili/hot", nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
+	}
+
+	var doc atomFeed
+	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Title != "B站热门榜" {
+		t.Fatalf("invalid feed title: %q", doc.Title)
+	}
+	if len(doc.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
+	}
+	item := doc.Entries[0]
+	if item.Title != "2026 年 07 月 06 日 10 时 B站热门榜" {
+		t.Fatalf("invalid item title: %q", item.Title)
+	}
+	if item.ID != "bilibili_hot:2026070610" {
 		t.Fatalf("invalid id: %q", item.ID)
 	}
 }

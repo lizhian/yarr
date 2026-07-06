@@ -51,6 +51,10 @@ func (s *Server) handleBilibiliZhishiRSS(c *router.Context) {
 	s.handleBilibiliTopHubRSS(c, worker.BilibiliZhishiSource)
 }
 
+func (s *Server) handleBilibiliHotRSS(c *router.Context) {
+	s.handleBilibiliTopHubRSS(c, worker.BilibiliHotSource)
+}
+
 func (s *Server) handleBilibiliTopHubRSS(c *router.Context, sourceConfig worker.BilibiliTopHubSource) {
 	if c.Req.Method != "GET" {
 		c.Out.WriteHeader(http.StatusMethodNotAllowed)

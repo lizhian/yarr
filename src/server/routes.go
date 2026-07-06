@@ -62,6 +62,7 @@ func (s *Server) handler() http.Handler {
 	r.For("/api/greader.php/*path", s.handleGReader)
 	r.For("/rss/bilibili/top", s.handleBilibiliTopRSS)
 	r.For("/rss/bilibili/zhishi", s.handleBilibiliZhishiRSS)
+	r.For("/rss/bilibili/hot", s.handleBilibiliHotRSS)
 
 	return r
 }

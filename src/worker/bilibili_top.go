@@ -23,6 +23,11 @@ const (
 	BilibiliZhishiSourceTitle       = "B站知识榜"
 	BilibiliZhishiSourceLink        = "rsshub://bilibili/ranking/knowledge"
 	BilibiliZhishiSourceDescription = "B站知识榜小时快照"
+
+	BilibiliHotSourceKey         = "bilibili_hot"
+	BilibiliHotSourceTitle       = "B站热门榜"
+	BilibiliHotSourceLink        = "rsshub://bilibili/popular/all"
+	BilibiliHotSourceDescription = "B站热门榜小时快照"
 )
 
 type BilibiliTopEntry struct {
@@ -54,9 +59,17 @@ var BilibiliZhishiSource = BilibiliTopHubSource{
 	Description: BilibiliZhishiSourceDescription,
 }
 
+var BilibiliHotSource = BilibiliTopHubSource{
+	Key:         BilibiliHotSourceKey,
+	Title:       BilibiliHotSourceTitle,
+	Link:        BilibiliHotSourceLink,
+	Description: BilibiliHotSourceDescription,
+}
+
 var BilibiliTopHubSources = []BilibiliTopHubSource{
 	BilibiliTopSource,
 	BilibiliZhishiSource,
+	BilibiliHotSource,
 }
 
 var bilibiliTopHubTimeZone = time.FixedZone("UTC+8", 8*60*60)
@@ -250,6 +263,10 @@ func EnsureBilibiliTopSource(db *storage.Storage) {
 
 func EnsureBilibiliZhishiSource(db *storage.Storage) {
 	EnsureBilibiliTopHubSource(db, BilibiliZhishiSource)
+}
+
+func EnsureBilibiliHotSource(db *storage.Storage) {
+	EnsureBilibiliTopHubSource(db, BilibiliHotSource)
 }
 
 func EnsureBilibiliTopHubSource(db *storage.Storage, source BilibiliTopHubSource) {

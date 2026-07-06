@@ -120,6 +120,33 @@ func TestSaveBilibiliZhishi(t *testing.T) {
 	}
 }
 
+func TestSaveBilibiliHot(t *testing.T) {
+	db, err := storage.New(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := NewWorker(db)
+	now := time.Date(2026, 7, 6, 2, 30, 0, 0, time.UTC)
+
+	if !w.SaveBilibiliTopHubSource(BilibiliHotSource, bilibiliRankingRSS, now) {
+		t.Fatal("failed to save bilibili hot")
+	}
+
+	items := db.ListGeneratedRSSItems(BilibiliHotSourceKey, 10)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].GUID != "bilibili_hot:2026070610" {
+		t.Fatalf("invalid guid: %q", items[0].GUID)
+	}
+	if items[0].Title != "2026 年 07 月 06 日 10 时 B站热门榜" {
+		t.Fatalf("invalid title: %q", items[0].Title)
+	}
+	if items[0].Link != BilibiliHotSourceLink {
+		t.Fatalf("invalid link: %q", items[0].Link)
+	}
+}
+
 func TestGeneratedRSSHubRequestsTryAllBases(t *testing.T) {
 	db, err := storage.New(":memory:")
 	if err != nil {
