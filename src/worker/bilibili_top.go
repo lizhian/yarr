@@ -6,7 +6,6 @@ import (
 	"html"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/nkanaev/yarr/src/parser"
@@ -149,7 +148,6 @@ func (w *Worker) fetchBilibiliTopHubFeed(source BilibiliTopHubSource) (*parser.F
 			lastErr = err
 			continue
 		}
-		w.recordGeneratedRSSHubSuccess(source.Key, request.base)
 		return feed, nil
 	}
 	return nil, lastErr
@@ -170,52 +168,15 @@ func (w *Worker) generatedRSSHubRequests(source BilibiliTopHubSource) ([]generat
 		return nil, err
 	}
 
-	w.rsshubMu.Lock()
-	defer w.rsshubMu.Unlock()
-
-	requests := make([]generatedRSSHubRequest, 0, RSSHUB_MAX_ATTEMPTS)
-	used := make(map[string]bool)
-	lastSuccess := w.generatedRSSLastSuccess[source.Key]
-	if lastSuccess != "" && containsString(bases, lastSuccess) {
-		link, err := rsshub.Resolve(source.Link, lastSuccess)
-		if err != nil {
-			return nil, err
-		}
-		requests = append(requests, generatedRSSHubRequest{base: lastSuccess, link: link})
-		used[lastSuccess] = true
-	}
-
-	start := 0
-	if len(bases) > 0 {
-		start = w.generatedRSSRoundRobin[source.Key] % len(bases)
-	}
-	consumed := 0
-	for offset := 0; offset < len(bases) && len(requests) < RSSHUB_MAX_ATTEMPTS; offset++ {
-		consumed = offset + 1
-		base := bases[(start+offset)%len(bases)]
-		if used[base] {
-			continue
-		}
+	requests := make([]generatedRSSHubRequest, 0, len(bases))
+	for _, base := range bases {
 		link, err := rsshub.Resolve(source.Link, base)
 		if err != nil {
 			return nil, err
 		}
 		requests = append(requests, generatedRSSHubRequest{base: base, link: link})
-		used[base] = true
-	}
-	if len(bases) > 0 {
-		w.generatedRSSRoundRobin[source.Key] = (start + consumed) % len(bases)
 	}
 	return requests, nil
-}
-
-func (w *Worker) recordGeneratedRSSHubSuccess(sourceKey, base string) {
-	if strings.TrimSpace(base) == "" {
-		return
-	}
-	w.rsshubMu.Lock()
-	w.generatedRSSLastSuccess[sourceKey] = base
-	w.rsshubMu.Unlock()
 }
 
 func BilibiliRankingEntries(feed *parser.Feed) []BilibiliTopEntry {
