@@ -31,7 +31,7 @@ func (s *Server) handler() http.Handler {
 	if s.db != nil {
 		r.Use((&auth.Middleware{
 			BasePath: s.BasePath,
-			Public:   []string{"/static", "/fever", "/manifest.json"},
+			Public:   []string{"/static", "/fever", "/manifest.json", "/rss"},
 			DB:       s.db,
 		}).Handler)
 	}
@@ -59,6 +59,8 @@ func (s *Server) handler() http.Handler {
 	r.For("/page", s.handlePageCrawl)
 	r.For("/logout", s.handleLogout)
 	r.For("/fever/", s.handleFever)
+	r.For("/rss/bilibili/top", s.handleBilibiliTopRSS)
+	r.For("/rss/bilibili/zhishi", s.handleBilibiliZhishiRSS)
 
 	return r
 }
