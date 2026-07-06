@@ -130,29 +130,29 @@ func TestBilibiliTopRSS(t *testing.T) {
 	if recorder.Result().StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
-	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/rss+xml; charset=utf-8" {
+	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/atom+xml; charset=utf-8" {
 		t.Fatalf("invalid content type: %q", ctype)
 	}
 
-	var doc rssDocument
+	var doc atomFeed
 	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Channel.Title != "B站全站热榜" {
-		t.Fatalf("invalid channel title: %q", doc.Channel.Title)
+	if doc.Title != "B站全站热榜" {
+		t.Fatalf("invalid feed title: %q", doc.Title)
 	}
-	if len(doc.Channel.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
+	if len(doc.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
 	}
-	item := doc.Channel.Items[0]
-	if item.GUID.Value != "bilibili_top:2026070610" || item.GUID.IsPermaLink != "false" {
-		t.Fatalf("invalid guid: %#v", item.GUID)
+	item := doc.Entries[0]
+	if item.ID != "bilibili_top:2026070610" {
+		t.Fatalf("invalid id: %q", item.ID)
 	}
-	if item.PubDate != publishedAt.Format(time.RFC1123Z) {
-		t.Fatalf("invalid pubDate: %q", item.PubDate)
+	if item.Published != publishedAt.Format(time.RFC3339) {
+		t.Fatalf("invalid published: %q", item.Published)
 	}
-	if !strings.Contains(item.Description, "<table>") {
-		t.Fatalf("description missing html content: %q", item.Description)
+	if item.Content.Type != "html" || !strings.Contains(item.Content.Value, "<table>") {
+		t.Fatalf("content missing html content: %#v", item.Content)
 	}
 }
 
@@ -175,22 +175,22 @@ func TestBilibiliZhishiRSS(t *testing.T) {
 		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
 
-	var doc rssDocument
+	var doc atomFeed
 	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Channel.Title != "B站知识榜" {
-		t.Fatalf("invalid channel title: %q", doc.Channel.Title)
+	if doc.Title != "B站知识榜" {
+		t.Fatalf("invalid feed title: %q", doc.Title)
 	}
-	if len(doc.Channel.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
+	if len(doc.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
 	}
-	item := doc.Channel.Items[0]
+	item := doc.Entries[0]
 	if item.Title != "2026 年 07 月 06 日 10 时 B站知识榜" {
 		t.Fatalf("invalid item title: %q", item.Title)
 	}
-	if item.GUID.Value != "bilibili_zhishi:2026070610" {
-		t.Fatalf("invalid guid: %#v", item.GUID)
+	if item.ID != "bilibili_zhishi:2026070610" {
+		t.Fatalf("invalid id: %q", item.ID)
 	}
 }
 

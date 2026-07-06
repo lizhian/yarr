@@ -12,30 +12,35 @@ import (
 
 const generatedRSSItemLimit = 100
 
-type rssDocument struct {
-	XMLName xml.Name   `xml:"rss"`
-	Version string     `xml:"version,attr"`
-	Channel rssChannel `xml:"channel"`
+type atomFeed struct {
+	XMLName  xml.Name    `xml:"http://www.w3.org/2005/Atom feed"`
+	XMLNS    string      `xml:"xmlns,attr"`
+	Title    string      `xml:"title"`
+	ID       string      `xml:"id"`
+	Updated  string      `xml:"updated"`
+	Links    []atomLink  `xml:"link"`
+	Subtitle string      `xml:"subtitle"`
+	Entries  []atomEntry `xml:"entry"`
 }
 
-type rssChannel struct {
-	Title       string    `xml:"title"`
-	Link        string    `xml:"link"`
-	Description string    `xml:"description"`
-	Items       []rssItem `xml:"item"`
+type atomLink struct {
+	Href string `xml:"href,attr"`
+	Rel  string `xml:"rel,attr,omitempty"`
+	Type string `xml:"type,attr,omitempty"`
 }
 
-type rssItem struct {
-	Title       string  `xml:"title"`
-	Link        string  `xml:"link"`
-	GUID        rssGUID `xml:"guid"`
-	PubDate     string  `xml:"pubDate"`
-	Description string  `xml:"description"`
+type atomEntry struct {
+	Title     string      `xml:"title"`
+	ID        string      `xml:"id"`
+	Updated   string      `xml:"updated"`
+	Published string      `xml:"published"`
+	Link      atomLink    `xml:"link"`
+	Content   atomContent `xml:"content"`
 }
 
-type rssGUID struct {
-	IsPermaLink string `xml:"isPermaLink,attr"`
-	Value       string `xml:",chardata"`
+type atomContent struct {
+	Type  string `xml:"type,attr"`
+	Value string `xml:",chardata"`
 }
 
 func (s *Server) handleBilibiliTopRSS(c *router.Context) {
@@ -59,34 +64,45 @@ func (s *Server) handleBilibiliTopHubRSS(c *router.Context, sourceConfig worker.
 		return
 	}
 
-	c.Out.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+	c.Out.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
 	c.Out.WriteHeader(http.StatusOK)
 	c.Out.Write([]byte(xml.Header))
-	xml.NewEncoder(c.Out).Encode(generatedRSSDocument(*source, s.db.ListGeneratedRSSItems(source.Key, generatedRSSItemLimit)))
+	xml.NewEncoder(c.Out).Encode(generatedAtomFeed(*source, s.db.ListGeneratedRSSItems(source.Key, generatedRSSItemLimit), c.Req.URL.String()))
 }
 
-func generatedRSSDocument(source storage.GeneratedRSSSource, items []storage.GeneratedRSSItem) rssDocument {
-	rssItems := make([]rssItem, len(items))
+func generatedAtomFeed(source storage.GeneratedRSSSource, items []storage.GeneratedRSSItem, self string) atomFeed {
+	entries := make([]atomEntry, len(items))
+	updated := time.Now().UTC()
 	for i, item := range items {
-		rssItems[i] = rssItem{
-			Title: item.Title,
-			Link:  item.Link,
-			GUID: rssGUID{
-				IsPermaLink: "false",
-				Value:       item.GUID,
+		if i == 0 {
+			updated = item.PublishedAt
+		}
+		timestamp := item.PublishedAt.Format(time.RFC3339)
+		entries[i] = atomEntry{
+			Title:     item.Title,
+			ID:        item.GUID,
+			Updated:   timestamp,
+			Published: timestamp,
+			Link: atomLink{
+				Href: item.Link,
 			},
-			PubDate:     item.PublishedAt.Format(time.RFC1123Z),
-			Description: item.Content,
+			Content: atomContent{
+				Type:  "html",
+				Value: item.Content,
+			},
 		}
 	}
 
-	return rssDocument{
-		Version: "2.0",
-		Channel: rssChannel{
-			Title:       source.Title,
-			Link:        source.Link,
-			Description: source.Description,
-			Items:       rssItems,
+	return atomFeed{
+		XMLNS:    "http://www.w3.org/2005/Atom",
+		Title:    source.Title,
+		ID:       source.Key,
+		Updated:  updated.Format(time.RFC3339),
+		Subtitle: source.Description,
+		Links: []atomLink{
+			{Href: source.Link, Rel: "alternate"},
+			{Href: self, Rel: "self", Type: "application/atom+xml"},
 		},
+		Entries: entries,
 	}
 }
