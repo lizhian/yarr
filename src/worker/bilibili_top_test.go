@@ -238,10 +238,13 @@ func TestRenderBilibiliTopContent(t *testing.T) {
 	})
 
 	for _, want := range []string{
-		`<article><p><a href="https://www.bilibili.com/video/av1/"><img src="http://i1.hdslb.com/cover.jpg"`,
-		`<p>01｜作者一<a style="text-decoration: none;" href="https://www.bilibili.com/video/av1/">《视频标题一》</a></p>`,
-		`<hr><article>`,
-		`<p>02｜作者二<a style="text-decoration: none;" href="https://www.bilibili.com/video/av2/">《视频标题二》</a></p>`,
+		`<a href="https://www.bilibili.com/video/av1/" style="display:block;color:inherit;text-decoration:none;border:1px solid #e5e5e5;border-radius:12px;overflow:hidden;margin:0 0 16px 0;background:#fff;">`,
+		`<img src="http://i1.hdslb.com/cover.jpg" alt="视频标题一" style="display:block;width:100%;height:auto;">`,
+		`<p style="margin:0 0 6px;color:#666;font-size:14px;line-height:1.35;">01｜作者一</p>`,
+		`<p style="margin:0;font-size:18px;line-height:1.35;">视频标题一</p>`,
+		`<hr><a href="https://www.bilibili.com/video/av2/"`,
+		`<p style="margin:0 0 6px;color:#666;font-size:14px;line-height:1.35;">02｜作者二</p>`,
+		`<p style="margin:0;font-size:18px;line-height:1.35;">视频标题二</p>`,
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("content missing %q: %s", want, content)

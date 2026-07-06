@@ -231,27 +231,29 @@ func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
 		if i > 0 {
 			buffer.WriteString(`<hr>`)
 		}
+		buffer.WriteString(`<a href="`)
+		buffer.WriteString(videoURL)
+		buffer.WriteString(`" style="display:block;color:inherit;text-decoration:none;border:1px solid #e5e5e5;border-radius:12px;overflow:hidden;margin:0 0 16px 0;background:#fff;">`)
 		buffer.WriteString(`<article>`)
 		if coverURL != "" {
-			buffer.WriteString(`<p><a href="`)
-			buffer.WriteString(videoURL)
-			buffer.WriteString(`"><img src="`)
+			buffer.WriteString(`<img src="`)
 			buffer.WriteString(coverURL)
 			buffer.WriteString(`" alt="`)
 			buffer.WriteString(title)
-			buffer.WriteString(`" width="320"></a></p>`)
+			buffer.WriteString(`" style="display:block;width:100%;height:auto;">`)
 		}
-		buffer.WriteString(`<p>`)
+		buffer.WriteString(`<div style="padding:10px 12px 14px;">`)
+		buffer.WriteString(`<p style="margin:0 0 6px;color:#666;font-size:14px;line-height:1.35;">`)
 		buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
 		if author != "" {
 			buffer.WriteString(author)
 		}
-		buffer.WriteString(`<a style="text-decoration: none;" href="`)
-		buffer.WriteString(videoURL)
-		buffer.WriteString(`">《`)
+		buffer.WriteString(`</p>`)
+		buffer.WriteString(`<p style="margin:0;font-size:18px;line-height:1.35;">`)
 		buffer.WriteString(title)
-		buffer.WriteString(`》</a></p>`)
-		buffer.WriteString(`</article>`)
+		buffer.WriteString(`</p>`)
+		buffer.WriteString(`</div>`)
+		buffer.WriteString(`</article></a>`)
 	}
 	return buffer.String()
 }
