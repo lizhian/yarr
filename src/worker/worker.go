@@ -73,7 +73,7 @@ func (w *Worker) StartGeneratedRSS() {
 	}
 
 	w.generatedRSSStopper = make(chan bool)
-	w.generatedRSS = time.NewTicker(time.Minute * 5)
+	w.generatedRSS = time.NewTicker(time.Hour)
 	go w.RefreshBilibiliTopHubSources()
 
 	go func(fire <-chan time.Time, stop <-chan bool) {

@@ -176,7 +176,7 @@ func (w *Worker) generatedRSSHubRequests(source BilibiliTopHubSource) ([]generat
 		return []generatedRSSHubRequest{{link: source.Link}}, nil
 	}
 
-	bases, err := w.enabledRSSHubBasesForRequest()
+	bases, err := w.rsshubBasesForRequest()
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +198,9 @@ func BilibiliRankingEntries(feed *parser.Feed) []BilibiliTopEntry {
 	}
 	entries := make([]BilibiliTopEntry, 0, len(feed.Items))
 	for i, item := range feed.Items {
+		if item.Title == "" || item.URL == "" {
+			continue
+		}
 		entries = append(entries, BilibiliTopEntry{
 			Rank:     i + 1,
 			Title:    item.Title,

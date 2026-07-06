@@ -30,11 +30,11 @@ func TestUpdateSettingsNormalizesRSSHubBaseURL(t *testing.T) {
 func TestRSSHubBaseURLDefault(t *testing.T) {
 	db := testDB()
 
-	if got := db.GetSettingsValueString("rsshub_base_url"); got != DefaultRSSHubBaseURL {
+	if got := db.GetSettingsValueString("rsshub_base_url"); got != "" {
 		t.Fatalf("invalid rsshub_base_url default: %q", got)
 	}
 	settings := db.GetSettings()
-	if got := settings["rsshub_base_url"]; got != DefaultRSSHubBaseURL {
+	if got := settings["rsshub_base_url"]; got != "" {
 		t.Fatalf("invalid rsshub_base_url setting: %#v", got)
 	}
 }

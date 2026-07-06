@@ -63,6 +63,20 @@ func TestBilibiliRankingEntriesEmpty(t *testing.T) {
 	}
 }
 
+func TestBilibiliRankingEntriesSkipsInvalidItems(t *testing.T) {
+	entries := BilibiliRankingEntries(&parser.Feed{Items: []parser.Item{
+		{Title: "", URL: "https://www.bilibili.com/video/BV1/"},
+		{Title: "视频标题二", URL: ""},
+		{Title: "视频标题三", URL: "https://www.bilibili.com/video/BV3/"},
+	}})
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Rank != 3 || entries[0].Title != "视频标题三" {
+		t.Fatalf("invalid entry: %#v", entries[0])
+	}
+}
+
 func TestSaveBilibiliTop(t *testing.T) {
 	db, err := storage.New(":memory:")
 	if err != nil {
@@ -147,7 +161,7 @@ func TestSaveBilibiliHot(t *testing.T) {
 	}
 }
 
-func TestGeneratedRSSHubRequestsTryAllBases(t *testing.T) {
+func TestGeneratedRSSHubRequestsUsesConfiguredAttemptLimit(t *testing.T) {
 	db, err := storage.New(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -179,11 +193,6 @@ func TestGeneratedRSSHubRequestsTryAllBases(t *testing.T) {
 		"https://c.example/bilibili/ranking/0",
 		"https://d.example/bilibili/ranking/0",
 		"https://e.example/bilibili/ranking/0",
-		"https://f.example/bilibili/ranking/0",
-		"https://g.example/bilibili/ranking/0",
-		"https://h.example/bilibili/ranking/0",
-		"https://i.example/bilibili/ranking/0",
-		"https://j.example/bilibili/ranking/0",
 	}
 	if got := generatedRSSHubRequestLinks(requests); !sameStrings(got, want) {
 		t.Fatalf("got %#v", got)
