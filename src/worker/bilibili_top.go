@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/nkanaev/yarr/src/parser"
@@ -243,14 +242,11 @@ func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
 			buffer.WriteString(`" width="320"></a></p>`)
 		}
 		buffer.WriteString(`<p>`)
-		buffer.WriteString(`排名 `)
-		buffer.WriteString(strconv.Itoa(entry.Rank))
+		buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
 		if author != "" {
-			buffer.WriteString(`&nbsp;&nbsp; 作者 `)
 			buffer.WriteString(author)
 		}
-		buffer.WriteString(`</p>`)
-		buffer.WriteString(`<p><a style="text-decoration: none;" href="`)
+		buffer.WriteString(`<a style="text-decoration: none;" href="`)
 		buffer.WriteString(videoURL)
 		buffer.WriteString(`">《`)
 		buffer.WriteString(title)

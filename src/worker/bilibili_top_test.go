@@ -239,10 +239,9 @@ func TestRenderBilibiliTopContent(t *testing.T) {
 
 	for _, want := range []string{
 		`<article><p><a href="https://www.bilibili.com/video/av1/"><img src="http://i1.hdslb.com/cover.jpg"`,
-		`<p>排名 1&nbsp;&nbsp; 作者 作者一</p>`,
-		`<p><a style="text-decoration: none;" href="https://www.bilibili.com/video/av1/">《视频标题一》</a></p>`,
+		`<p>01｜作者一<a style="text-decoration: none;" href="https://www.bilibili.com/video/av1/">《视频标题一》</a></p>`,
 		`<hr><article>`,
-		`<p>排名 2&nbsp;&nbsp; 作者 作者二</p>`,
+		`<p>02｜作者二<a style="text-decoration: none;" href="https://www.bilibili.com/video/av2/">《视频标题二》</a></p>`,
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("content missing %q: %s", want, content)
