@@ -211,19 +211,31 @@ var allowedSvgFilters = sset([]string{
 })
 
 var allowedAttrs = map[string]set{
-	"img":     sset([]string{"alt", "title", "src", "srcset", "sizes"}),
+	"img":     sset([]string{"alt", "title", "src", "srcset", "sizes", "class"}),
+	"article": sset([]string{"class"}),
+	"div":     sset([]string{"class"}),
 	"audio":   sset([]string{"src"}),
 	"video":   sset([]string{"poster", "height", "width", "src"}),
 	"source":  sset([]string{"src", "type", "srcset", "sizes", "media"}),
 	"td":      sset([]string{"rowspan", "colspan"}),
 	"th":      sset([]string{"rowspan", "colspan"}),
 	"q":       sset([]string{"cite"}),
-	"a":       sset([]string{"href", "title"}),
+	"p":       sset([]string{"class"}),
+	"a":       sset([]string{"href", "title", "class"}),
 	"time":    sset([]string{"datetime"}),
 	"abbr":    sset([]string{"title"}),
 	"acronym": sset([]string{"title"}),
 	"iframe":  sset([]string{"width", "height", "frameborder", "src", "allowfullscreen"}),
 }
+
+var allowedClassNames = sset([]string{
+	"bilibili-ranking-body",
+	"bilibili-ranking-card",
+	"bilibili-ranking-image",
+	"bilibili-ranking-link",
+	"bilibili-ranking-meta",
+	"bilibili-ranking-title",
+})
 
 var allowedSvgAttrs = sset([]string{
 	"accent-height",

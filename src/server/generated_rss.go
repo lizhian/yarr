@@ -1,9 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"encoding/xml"
+	"io"
 	"net/http"
 	"time"
+
+	"golang.org/x/net/html"
 
 	"github.com/nkanaev/yarr/src/server/router"
 	"github.com/nkanaev/yarr/src/storage"
@@ -12,35 +16,32 @@ import (
 
 const generatedRSSItemLimit = 100
 
-type atomFeed struct {
-	XMLName  xml.Name    `xml:"http://www.w3.org/2005/Atom feed"`
-	XMLNS    string      `xml:"xmlns,attr"`
-	Title    string      `xml:"title"`
-	ID       string      `xml:"id"`
-	Updated  string      `xml:"updated"`
-	Links    []atomLink  `xml:"link"`
-	Subtitle string      `xml:"subtitle"`
-	Entries  []atomEntry `xml:"entry"`
+type generatedRSSFeed struct {
+	XMLName xml.Name   `xml:"rss"`
+	Version string     `xml:"version,attr"`
+	Channel rssChannel `xml:"channel"`
 }
 
-type atomLink struct {
-	Href string `xml:"href,attr"`
-	Rel  string `xml:"rel,attr,omitempty"`
-	Type string `xml:"type,attr,omitempty"`
+type rssChannel struct {
+	Title       string    `xml:"title"`
+	Link        string    `xml:"link"`
+	Description string    `xml:"description"`
+	LastBuild   string    `xml:"lastBuildDate"`
+	Items       []rssItem `xml:"item"`
 }
 
-type atomEntry struct {
-	Title     string      `xml:"title"`
-	ID        string      `xml:"id"`
-	Updated   string      `xml:"updated"`
-	Published string      `xml:"published"`
-	Link      atomLink    `xml:"link"`
-	Content   atomContent `xml:"content"`
+type rssItem struct {
+	Title       string        `xml:"title"`
+	GUID        string        `xml:"guid"`
+	Link        string        `xml:"link"`
+	PubDate     string        `xml:"pubDate"`
+	Description string        `xml:"description"`
+	Enclosure   *rssEnclosure `xml:"enclosure,omitempty"`
 }
 
-type atomContent struct {
-	Type  string `xml:"type,attr"`
-	Value string `xml:",chardata"`
+type rssEnclosure struct {
+	URL  string `xml:"url,attr"`
+	Type string `xml:"type,attr"`
 }
 
 func (s *Server) handleBilibiliTopRSS(c *router.Context) {
@@ -68,45 +69,75 @@ func (s *Server) handleBilibiliTopHubRSS(c *router.Context, sourceConfig worker.
 		return
 	}
 
-	c.Out.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+	c.Out.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
 	c.Out.WriteHeader(http.StatusOK)
 	c.Out.Write([]byte(xml.Header))
-	xml.NewEncoder(c.Out).Encode(generatedAtomFeed(*source, s.db.ListGeneratedRSSItems(source.Key, generatedRSSItemLimit), c.Req.URL.String()))
+	xml.NewEncoder(c.Out).Encode(generatedRSSFeedForSource(*source, s.db.ListGeneratedRSSItems(source.Key, generatedRSSItemLimit), c.Req.URL.String()))
 }
 
-func generatedAtomFeed(source storage.GeneratedRSSSource, items []storage.GeneratedRSSItem, self string) atomFeed {
-	entries := make([]atomEntry, len(items))
+func generatedRSSFeedForSource(source storage.GeneratedRSSSource, items []storage.GeneratedRSSItem, self string) generatedRSSFeed {
+	rssItems := make([]rssItem, len(items))
 	updated := time.Now().UTC()
 	for i, item := range items {
 		if i == 0 {
 			updated = item.PublishedAt
 		}
-		timestamp := item.PublishedAt.Format(time.RFC3339)
-		entries[i] = atomEntry{
-			Title:     item.Title,
-			ID:        item.GUID,
-			Updated:   timestamp,
-			Published: timestamp,
-			Link: atomLink{
-				Href: item.Link,
-			},
-			Content: atomContent{
-				Type:  "html",
-				Value: item.Content,
-			},
+		rssItems[i] = rssItem{
+			Title:       item.Title,
+			GUID:        item.GUID,
+			Link:        item.Link,
+			PubDate:     item.PublishedAt.Format(time.RFC1123Z),
+			Description: item.Content,
+			Enclosure:   generatedRSSEnclosure(item),
 		}
 	}
 
-	return atomFeed{
-		XMLNS:    "http://www.w3.org/2005/Atom",
-		Title:    source.Title,
-		ID:       source.Key,
-		Updated:  updated.Format(time.RFC3339),
-		Subtitle: source.Description,
-		Links: []atomLink{
-			{Href: source.Link, Rel: "alternate"},
-			{Href: self, Rel: "self", Type: "application/atom+xml"},
+	channelLink := self
+	if channelLink == "" {
+		channelLink = source.Link
+	}
+
+	return generatedRSSFeed{
+		Version: "2.0",
+		Channel: rssChannel{
+			Title:       source.Title,
+			Link:        channelLink,
+			Description: source.Description,
+			LastBuild:   updated.Format(time.RFC1123Z),
+			Items:       rssItems,
 		},
-		Entries: entries,
+	}
+}
+
+func generatedRSSEnclosure(item storage.GeneratedRSSItem) *rssEnclosure {
+	if enclosureURL := firstImageURL(item.Content); enclosureURL != "" {
+		return &rssEnclosure{
+			URL:  enclosureURL,
+			Type: "image/jpeg",
+		}
+	}
+	return nil
+}
+
+func firstImageURL(content string) string {
+	tokenizer := html.NewTokenizer(bytes.NewBufferString(content))
+	for {
+		switch tokenizer.Next() {
+		case html.ErrorToken:
+			if tokenizer.Err() != io.EOF {
+				return ""
+			}
+			return ""
+		case html.StartTagToken, html.SelfClosingTagToken:
+			token := tokenizer.Token()
+			if token.Data != "img" {
+				continue
+			}
+			for _, attr := range token.Attr {
+				if attr.Key == "src" {
+					return attr.Val
+				}
+			}
+		}
 	}
 }

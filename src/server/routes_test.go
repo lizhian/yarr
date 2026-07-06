@@ -119,7 +119,8 @@ func TestBilibiliTopRSS(t *testing.T) {
 		t.Fatal("failed to create source")
 	}
 	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
-	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_top:2026070610", "2026 年 07 月 06 日 10 时 B站全站热榜", source.Link, `<table><tr><td>1</td></tr></table>`, publishedAt) {
+	content := `<article><img src="https://example.com/cover.jpg"><p>content</p><img src="https://example.com/ignored.jpg"></article>`
+	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_top:2026070610", "2026 年 07 月 06 日 10 时 B站全站热榜", source.Link, content, publishedAt) {
 		t.Fatal("failed to create item")
 	}
 
@@ -130,29 +131,45 @@ func TestBilibiliTopRSS(t *testing.T) {
 	if recorder.Result().StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
-	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/atom+xml; charset=utf-8" {
+	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/rss+xml; charset=utf-8" {
 		t.Fatalf("invalid content type: %q", ctype)
 	}
 
-	var doc atomFeed
+	var doc generatedRSSFeed
 	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Title != "B站全站热榜" {
-		t.Fatalf("invalid feed title: %q", doc.Title)
+	if doc.Channel.Title != "B站全站热榜" {
+		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
 	}
-	if len(doc.Entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
+	if len(doc.Channel.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
 	}
-	item := doc.Entries[0]
-	if item.ID != "bilibili_top:2026070610" {
-		t.Fatalf("invalid id: %q", item.ID)
+	item := doc.Channel.Items[0]
+	if item.GUID != "bilibili_top:2026070610" {
+		t.Fatalf("invalid guid: %q", item.GUID)
 	}
-	if item.Published != publishedAt.Format(time.RFC3339) {
-		t.Fatalf("invalid published: %q", item.Published)
+	if item.PubDate != publishedAt.Format(time.RFC1123Z) {
+		t.Fatalf("invalid pubDate: %q", item.PubDate)
 	}
-	if item.Content.Type != "html" || !strings.Contains(item.Content.Value, "<table>") {
-		t.Fatalf("content missing html content: %#v", item.Content)
+	if !strings.Contains(item.Description, "cover.jpg") {
+		t.Fatalf("content missing html content: %#v", item.Description)
+	}
+	if item.Link != source.Link {
+		t.Fatalf("invalid item link: %q", item.Link)
+	}
+	if item.Enclosure == nil || item.Enclosure.URL != "https://example.com/cover.jpg" || item.Enclosure.Type != "image/jpeg" {
+		t.Fatalf("invalid enclosure: %#v", item.Enclosure)
+	}
+}
+
+func TestGeneratedRSSEnclosureWithoutImage(t *testing.T) {
+	item := storage.GeneratedRSSItem{
+		Link:    "rsshub://bilibili/ranking/0",
+		Content: `<article><p>content</p></article>`,
+	}
+	if enclosure := generatedRSSEnclosure(item); enclosure != nil {
+		t.Fatalf("expected no enclosure, got %#v", enclosure)
 	}
 }
 
@@ -175,22 +192,22 @@ func TestBilibiliZhishiRSS(t *testing.T) {
 		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
 
-	var doc atomFeed
+	var doc generatedRSSFeed
 	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Title != "B站知识榜" {
-		t.Fatalf("invalid feed title: %q", doc.Title)
+	if doc.Channel.Title != "B站知识榜" {
+		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
 	}
-	if len(doc.Entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
+	if len(doc.Channel.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
 	}
-	item := doc.Entries[0]
+	item := doc.Channel.Items[0]
 	if item.Title != "2026 年 07 月 06 日 10 时 B站知识榜" {
 		t.Fatalf("invalid item title: %q", item.Title)
 	}
-	if item.ID != "bilibili_zhishi:2026070610" {
-		t.Fatalf("invalid id: %q", item.ID)
+	if item.GUID != "bilibili_zhishi:2026070610" {
+		t.Fatalf("invalid guid: %q", item.GUID)
 	}
 }
 
@@ -213,22 +230,22 @@ func TestBilibiliHotRSS(t *testing.T) {
 		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
 
-	var doc atomFeed
+	var doc generatedRSSFeed
 	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Title != "B站热门榜" {
-		t.Fatalf("invalid feed title: %q", doc.Title)
+	if doc.Channel.Title != "B站热门榜" {
+		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
 	}
-	if len(doc.Entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(doc.Entries))
+	if len(doc.Channel.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
 	}
-	item := doc.Entries[0]
+	item := doc.Channel.Items[0]
 	if item.Title != "2026 年 07 月 06 日 10 时 B站热门榜" {
 		t.Fatalf("invalid item title: %q", item.Title)
 	}
-	if item.ID != "bilibili_hot:2026070610" {
-		t.Fatalf("invalid id: %q", item.ID)
+	if item.GUID != "bilibili_hot:2026070610" {
+		t.Fatalf("invalid guid: %q", item.GUID)
 	}
 }
 

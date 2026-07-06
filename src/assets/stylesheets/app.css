@@ -1289,6 +1289,50 @@ select.form-control:not([multiple]):not([size]) {
   color: var(--accent-color);
 }
 
+.content .bilibili-ranking-link,
+.content .bilibili-ranking-link:hover,
+.content .bilibili-ranking-link:focus {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.content .bilibili-ranking-card {
+  overflow: hidden;
+  margin: 0 0 1rem;
+  border: 1px solid var(--generated-card-border);
+  border-radius: 12px;
+  background: var(--generated-card-bg);
+  box-shadow: var(--article-card-shadow);
+}
+
+.content .bilibili-ranking-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+.content .bilibili-ranking-body {
+  padding: 0;
+}
+
+.content .bilibili-ranking-meta {
+  margin: 0 0 0.375rem;
+  color: var(--generated-card-meta-color);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.content .bilibili-ranking-title {
+  margin: 0;
+  color: var(--generated-card-title-color);
+  font-size: 1.125rem;
+  line-height: 1.35;
+  text-indent: 2em;
+}
+
 .content-embed {
   border: 1px solid #ced4da;
   border-radius: 3px;
@@ -1376,6 +1420,10 @@ button.theme-light {
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(0, 0, 0, .08);
   --feed-folder-sticky-bg: #f7f7f5;
+  --generated-card-bg: #fffffc;
+  --generated-card-border: #d9d9d2;
+  --generated-card-meta-color: #6c757d;
+  --generated-card-title-color: #212529;
   --item-list-separator-color: #e4e4df;
   --toolbar-bg: #fffffc;
   --toolbar-lift-shadow: 0 3px 10px rgba(0, 0, 0, .13), 0 1px 0 rgba(0, 0, 0, .06);
@@ -1460,6 +1508,10 @@ a,
   --action-button-shadow-active: inset 0 1px 3px rgba(83, 67, 35, .18);
   --item-list-separator-color: #d9c999;
   --feed-folder-sticky-bg: #f2e6bd;
+  --generated-card-bg: #faf3db;
+  --generated-card-border: #d2bd84;
+  --generated-card-meta-color: #7a6b50;
+  --generated-card-title-color: #302716;
   --toolbar-bg: #f8edc9;
   --toolbar-lift-shadow: 0 3px 11px rgba(83, 67, 35, .24), 0 1px 0 rgba(83, 67, 35, .10);
   --pane-divider-line: rgba(83, 67, 35, .14);
@@ -1537,6 +1589,10 @@ body.theme-sepia {
   --action-button-shadow-active: inset 0 1px 3px rgba(0, 0, 0, .62), 0 1px 0 rgba(255, 255, 255, .04);
   --article-card-shadow: 0 2px 10px rgba(0, 0, 0, .35);
   --feed-folder-sticky-bg: #1f1f1f;
+  --generated-card-bg: #262626;
+  --generated-card-border: #3a3a3a;
+  --generated-card-meta-color: #9b9b9b;
+  --generated-card-title-color: #e6e6e6;
   --item-list-separator-color: #303030;
   --toolbar-bg: #262626;
   --toolbar-lift-shadow: 0 4px 12px rgba(0, 0, 0, .68), 0 1px 0 rgba(255, 255, 255, .05);

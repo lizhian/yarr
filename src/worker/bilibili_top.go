@@ -222,34 +222,31 @@ func firstImageMediaLink(links []parser.MediaLink) string {
 
 func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
 	var buffer bytes.Buffer
-	for i, entry := range entries {
+	for _, entry := range entries {
 		title := html.EscapeString(entry.Title)
 		videoURL := html.EscapeString(entry.VideoURL)
 		coverURL := html.EscapeString(entry.CoverURL)
 		author := html.EscapeString(entry.Author)
 
-		if i > 0 {
-			buffer.WriteString(`<hr>`)
-		}
 		buffer.WriteString(`<a href="`)
 		buffer.WriteString(videoURL)
-		buffer.WriteString(`" style="display:block;color:inherit;text-decoration:none;border:1px solid #e5e5e5;border-radius:12px;overflow:hidden;margin:0 0 16px 0;background:#fff;">`)
-		buffer.WriteString(`<article>`)
+		buffer.WriteString(`" class="bilibili-ranking-link">`)
+		buffer.WriteString(`<article class="bilibili-ranking-card">`)
 		if coverURL != "" {
 			buffer.WriteString(`<img src="`)
 			buffer.WriteString(coverURL)
 			buffer.WriteString(`" alt="`)
 			buffer.WriteString(title)
-			buffer.WriteString(`" style="display:block;width:100%;height:auto;">`)
+			buffer.WriteString(`" class="bilibili-ranking-image">`)
 		}
-		buffer.WriteString(`<div style="padding:10px 12px 14px;">`)
-		buffer.WriteString(`<p style="margin:0 0 6px;color:#666;font-size:14px;line-height:1.35;">`)
+		buffer.WriteString(`<div class="bilibili-ranking-body">`)
+		buffer.WriteString(`<p class="bilibili-ranking-meta">`)
 		buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
 		if author != "" {
 			buffer.WriteString(author)
 		}
 		buffer.WriteString(`</p>`)
-		buffer.WriteString(`<p style="margin:0;font-size:18px;line-height:1.35;">`)
+		buffer.WriteString(`<p class="bilibili-ranking-title">`)
 		buffer.WriteString(title)
 		buffer.WriteString(`</p>`)
 		buffer.WriteString(`</div>`)

@@ -16,6 +16,16 @@ func TestValidInput(t *testing.T) {
 	}
 }
 
+func TestBilibiliRankingClasses(t *testing.T) {
+	input := `<a class="bilibili-ranking-link external" href="https://example.org/video"><article class="bilibili-ranking-card unknown"><img class="bilibili-ranking-image ignored" src="https://example.org/cover.jpg"><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta x">01｜作者</p><p class="bilibili-ranking-title">标题</p></div></article></a>`
+	want := `<a class="bilibili-ranking-link" href="https://example.org/video" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer"><article class="bilibili-ranking-card"><img class="bilibili-ranking-image" src="https://example.org/cover.jpg" loading="lazy" referrerpolicy="no-referrer"><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta">01｜作者</p><p class="bilibili-ranking-title">标题</p></div></article></a>`
+	have := Sanitize("https://example.org/", input)
+
+	if have != want {
+		t.Errorf("Wrong output:\nwant: %s\nhave: %s", want, have)
+	}
+}
+
 func TestImgWithTextDataURL(t *testing.T) {
 	input := `<img src="data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==" alt="Example">`
 	expected := ``

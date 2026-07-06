@@ -124,6 +124,13 @@ func sanitizeAttributes(baseURL, tagName string, attributes []html.Attribute) ([
 			value = sanitizeSrcsetAttr(baseURL, value)
 		}
 
+		if attribute.Key == "class" {
+			value = sanitizeClassAttr(value)
+			if value == "" {
+				continue
+			}
+		}
+
 		if isExternalResourceAttribute(attribute.Key) {
 			if tagName == "iframe" {
 				if isValidIframeSource(baseURL, attribute.Val) {
@@ -171,6 +178,16 @@ func getExtraAttributes(tagName string) ([]string, []string) {
 	default:
 		return nil, nil
 	}
+}
+
+func sanitizeClassAttr(value string) string {
+	allowed := make([]string, 0)
+	for _, class := range strings.Fields(value) {
+		if allowedClassNames.has(class) {
+			allowed = append(allowed, class)
+		}
+	}
+	return strings.Join(allowed, " ")
 }
 
 func isValidTag(tagName string) bool {
@@ -280,6 +297,7 @@ func isValidIframeSource(baseURL, src string) bool {
 func getTagAllowList() map[string][]string {
 	whitelist := make(map[string][]string)
 	whitelist["img"] = []string{"alt", "title", "src", "srcset", "sizes"}
+	whitelist["article"] = []string{"class"}
 	whitelist["picture"] = []string{}
 	whitelist["audio"] = []string{"src"}
 	whitelist["video"] = []string{"poster", "height", "width", "src"}
@@ -306,13 +324,13 @@ func getTagAllowList() map[string][]string {
 	whitelist["pre"] = []string{}
 	whitelist["blockquote"] = []string{}
 	whitelist["q"] = []string{"cite"}
-	whitelist["p"] = []string{}
+	whitelist["p"] = []string{"class"}
 	whitelist["ul"] = []string{}
 	whitelist["li"] = []string{}
 	whitelist["ol"] = []string{}
 	whitelist["br"] = []string{}
 	whitelist["del"] = []string{}
-	whitelist["a"] = []string{"href", "title"}
+	whitelist["a"] = []string{"href", "title", "class"}
 	whitelist["figure"] = []string{}
 	whitelist["figcaption"] = []string{}
 	whitelist["cite"] = []string{}
@@ -334,6 +352,7 @@ func getTagAllowList() map[string][]string {
 	whitelist["rtc"] = []string{}
 	whitelist["ruby"] = []string{}
 	whitelist["iframe"] = []string{"width", "height", "frameborder", "src", "allowfullscreen"}
+	whitelist["div"] = []string{"class"}
 	return whitelist
 }
 
