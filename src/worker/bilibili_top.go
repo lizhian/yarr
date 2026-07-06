@@ -60,6 +60,8 @@ var BilibiliTopHubSources = []BilibiliTopHubSource{
 	BilibiliZhishiSource,
 }
 
+var bilibiliTopHubTimeZone = time.FixedZone("UTC+8", 8*60*60)
+
 func (w *Worker) RefreshBilibiliTopHubSources() {
 	for _, source := range BilibiliTopHubSources {
 		w.RefreshBilibiliTopHubSource(source)
@@ -98,7 +100,7 @@ func (w *Worker) SaveBilibiliTopHubSource(source BilibiliTopHubSource, body stri
 		return false
 	}
 
-	localNow := now.Local().Truncate(time.Hour)
+	localNow := now.In(bilibiliTopHubTimeZone).Truncate(time.Hour)
 	title := fmt.Sprintf("%04d 年 %02d 月 %02d 日 %02d 时 %s",
 		localNow.Year(), localNow.Month(), localNow.Day(), localNow.Hour(), source.Title,
 	)

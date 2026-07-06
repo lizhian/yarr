@@ -65,7 +65,7 @@ func TestSaveBilibiliTop(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := NewWorker(db)
-	now := time.Date(2026, 7, 6, 10, 30, 0, 0, time.Local)
+	now := time.Date(2026, 7, 6, 2, 30, 0, 0, time.UTC)
 
 	if !w.SaveBilibiliTop(bilibiliTopHTML, now) {
 		t.Fatal("failed to save bilibili top")
@@ -95,7 +95,7 @@ func TestSaveBilibiliZhishi(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := NewWorker(db)
-	now := time.Date(2026, 7, 6, 10, 30, 0, 0, time.Local)
+	now := time.Date(2026, 7, 6, 2, 30, 0, 0, time.UTC)
 
 	if !w.SaveBilibiliTopHubSource(BilibiliZhishiSource, bilibiliTopHTML, now) {
 		t.Fatal("failed to save bilibili zhishi")
