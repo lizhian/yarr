@@ -6,9 +6,11 @@ import (
 	"html"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nkanaev/yarr/src/parser"
+	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/storage"
 )
 
@@ -121,35 +123,99 @@ func (w *Worker) SaveBilibiliTopHubFeed(source BilibiliTopHubSource, feed *parse
 }
 
 func (w *Worker) fetchBilibiliTopHubFeed(source BilibiliTopHubSource) (*parser.Feed, error) {
-	requestLinks, err := w.resolveLinks(source.Link)
+	requests, err := w.generatedRSSHubRequests(source)
 	if err != nil {
 		return nil, err
 	}
 	var lastErr error
-	for _, requestLink := range requestLinks {
-		res, err := client.get(requestLink)
+	for _, request := range requests {
+		res, err := client.get(request.link)
 		if err != nil {
-			logCandidateFailure(source.Link, requestLink, err)
+			logCandidateFailure(source.Link, request.link, err)
 			lastErr = err
 			continue
 		}
 		if res.StatusCode < 200 || res.StatusCode > 399 {
 			err := fmt.Errorf("status code %d", res.StatusCode)
 			res.Body.Close()
-			logCandidateFailure(source.Link, requestLink, err)
+			logCandidateFailure(source.Link, request.link, err)
 			lastErr = err
 			continue
 		}
-		feed, err := parser.ParseAndFix(res.Body, requestLink, getCharset(res))
+		feed, err := parser.ParseAndFix(res.Body, request.link, getCharset(res))
 		res.Body.Close()
 		if err != nil {
-			logCandidateFailure(source.Link, requestLink, err)
+			logCandidateFailure(source.Link, request.link, err)
 			lastErr = err
 			continue
 		}
+		w.recordGeneratedRSSHubSuccess(source.Key, request.base)
 		return feed, nil
 	}
 	return nil, lastErr
+}
+
+type generatedRSSHubRequest struct {
+	base string
+	link string
+}
+
+func (w *Worker) generatedRSSHubRequests(source BilibiliTopHubSource) ([]generatedRSSHubRequest, error) {
+	if !rsshub.IsLink(source.Link) {
+		return []generatedRSSHubRequest{{link: source.Link}}, nil
+	}
+
+	bases, err := w.enabledRSSHubBasesForRequest()
+	if err != nil {
+		return nil, err
+	}
+
+	w.rsshubMu.Lock()
+	defer w.rsshubMu.Unlock()
+
+	requests := make([]generatedRSSHubRequest, 0, RSSHUB_MAX_ATTEMPTS)
+	used := make(map[string]bool)
+	lastSuccess := w.generatedRSSLastSuccess[source.Key]
+	if lastSuccess != "" && containsString(bases, lastSuccess) {
+		link, err := rsshub.Resolve(source.Link, lastSuccess)
+		if err != nil {
+			return nil, err
+		}
+		requests = append(requests, generatedRSSHubRequest{base: lastSuccess, link: link})
+		used[lastSuccess] = true
+	}
+
+	start := 0
+	if len(bases) > 0 {
+		start = w.generatedRSSRoundRobin[source.Key] % len(bases)
+	}
+	consumed := 0
+	for offset := 0; offset < len(bases) && len(requests) < RSSHUB_MAX_ATTEMPTS; offset++ {
+		consumed = offset + 1
+		base := bases[(start+offset)%len(bases)]
+		if used[base] {
+			continue
+		}
+		link, err := rsshub.Resolve(source.Link, base)
+		if err != nil {
+			return nil, err
+		}
+		requests = append(requests, generatedRSSHubRequest{base: base, link: link})
+		used[base] = true
+	}
+	if len(bases) > 0 {
+		w.generatedRSSRoundRobin[source.Key] = (start + consumed) % len(bases)
+	}
+	return requests, nil
+}
+
+func (w *Worker) recordGeneratedRSSHubSuccess(sourceKey, base string) {
+	if strings.TrimSpace(base) == "" {
+		return
+	}
+	w.rsshubMu.Lock()
+	w.generatedRSSLastSuccess[sourceKey] = base
+	w.rsshubMu.Unlock()
 }
 
 func BilibiliRankingEntries(feed *parser.Feed) []BilibiliTopEntry {

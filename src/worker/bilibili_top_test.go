@@ -120,6 +120,111 @@ func TestSaveBilibiliZhishi(t *testing.T) {
 	}
 }
 
+func TestGeneratedRSSHubRequestsRotateAcrossRefreshes(t *testing.T) {
+	db, err := storage.New(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker := NewWorker(db)
+	bases := []string{
+		"https://a.example",
+		"https://b.example",
+		"https://c.example",
+		"https://d.example",
+		"https://e.example",
+		"https://f.example",
+		"https://g.example",
+		"https://h.example",
+		"https://i.example",
+		"https://j.example",
+	}
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": strings.Join(bases, "\n")}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+
+	first, err := worker.generatedRSSHubRequests(BilibiliTopSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := worker.generatedRSSHubRequests(BilibiliTopSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantFirst := []string{
+		"https://a.example/bilibili/ranking/0",
+		"https://b.example/bilibili/ranking/0",
+		"https://c.example/bilibili/ranking/0",
+		"https://d.example/bilibili/ranking/0",
+		"https://e.example/bilibili/ranking/0",
+	}
+	wantSecond := []string{
+		"https://f.example/bilibili/ranking/0",
+		"https://g.example/bilibili/ranking/0",
+		"https://h.example/bilibili/ranking/0",
+		"https://i.example/bilibili/ranking/0",
+		"https://j.example/bilibili/ranking/0",
+	}
+	if got := generatedRSSHubRequestLinks(first); !sameStrings(got, wantFirst) {
+		t.Fatalf("first got %#v", got)
+	}
+	if got := generatedRSSHubRequestLinks(second); !sameStrings(got, wantSecond) {
+		t.Fatalf("second got %#v", got)
+	}
+}
+
+func TestGeneratedRSSHubRequestsPreferLastSuccess(t *testing.T) {
+	db, err := storage.New(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker := NewWorker(db)
+	bases := []string{
+		"https://a.example",
+		"https://b.example",
+		"https://c.example",
+		"https://d.example",
+		"https://e.example",
+		"https://f.example",
+	}
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": strings.Join(bases, "\n")}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+	worker.recordGeneratedRSSHubSuccess(BilibiliTopSourceKey, "https://f.example")
+
+	requests, err := worker.generatedRSSHubRequests(BilibiliTopSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	links := generatedRSSHubRequestLinks(requests)
+	if len(links) != RSSHUB_MAX_ATTEMPTS {
+		t.Fatalf("got %d links", len(links))
+	}
+	if links[0] != "https://f.example/bilibili/ranking/0" {
+		t.Fatalf("got first link %q", links[0])
+	}
+}
+
+func generatedRSSHubRequestLinks(requests []generatedRSSHubRequest) []string {
+	links := make([]string, len(requests))
+	for i, request := range requests {
+		links[i] = request.link
+	}
+	return links
+}
+
+func sameStrings(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func TestRenderBilibiliTopContent(t *testing.T) {
 	content := RenderBilibiliTopContent([]BilibiliTopEntry{
 		{

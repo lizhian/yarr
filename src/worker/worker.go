@@ -13,22 +13,24 @@ import (
 const NUM_WORKERS = 4
 
 type Worker struct {
-	db                  *storage.Storage
-	pending             *int32
-	refresh             *time.Ticker
-	reflock             sync.Mutex
-	stopper             chan bool
-	rsshubAvailability  map[string]rsshubAvailability
-	rsshubMu            sync.RWMutex
-	rsshubHits          map[int64]rsshubRefreshHit
-	rsshubLastSuccess   map[int64]string
-	rsshubRoundRobin    int
-	refreshDetails      map[int64]FeedRefreshDetail
-	refreshDetailsMu    sync.RWMutex
-	rsshubRefresh       *time.Ticker
-	rsshubStopper       chan bool
-	generatedRSS        *time.Ticker
-	generatedRSSStopper chan bool
+	db                      *storage.Storage
+	pending                 *int32
+	refresh                 *time.Ticker
+	reflock                 sync.Mutex
+	stopper                 chan bool
+	rsshubAvailability      map[string]rsshubAvailability
+	rsshubMu                sync.RWMutex
+	rsshubHits              map[int64]rsshubRefreshHit
+	rsshubLastSuccess       map[int64]string
+	rsshubRoundRobin        int
+	generatedRSSLastSuccess map[string]string
+	generatedRSSRoundRobin  map[string]int
+	refreshDetails          map[int64]FeedRefreshDetail
+	refreshDetailsMu        sync.RWMutex
+	rsshubRefresh           *time.Ticker
+	rsshubStopper           chan bool
+	generatedRSS            *time.Ticker
+	generatedRSSStopper     chan bool
 }
 
 type feedRefreshJobResult struct {
@@ -40,12 +42,14 @@ type feedRefreshJobResult struct {
 func NewWorker(db *storage.Storage) *Worker {
 	pending := int32(0)
 	return &Worker{
-		db:                 db,
-		pending:            &pending,
-		rsshubAvailability: make(map[string]rsshubAvailability),
-		rsshubHits:         make(map[int64]rsshubRefreshHit),
-		rsshubLastSuccess:  make(map[int64]string),
-		refreshDetails:     make(map[int64]FeedRefreshDetail),
+		db:                      db,
+		pending:                 &pending,
+		rsshubAvailability:      make(map[string]rsshubAvailability),
+		rsshubHits:              make(map[int64]rsshubRefreshHit),
+		rsshubLastSuccess:       make(map[int64]string),
+		generatedRSSLastSuccess: make(map[string]string),
+		generatedRSSRoundRobin:  make(map[string]int),
+		refreshDetails:          make(map[int64]FeedRefreshDetail),
 	}
 }
 
@@ -73,7 +77,7 @@ func (w *Worker) StartGeneratedRSS() {
 	}
 
 	w.generatedRSSStopper = make(chan bool)
-	w.generatedRSS = time.NewTicker(time.Hour)
+	w.generatedRSS = time.NewTicker(time.Minute * 5)
 	go w.RefreshBilibiliTopHubSources()
 
 	go func(fire <-chan time.Time, stop <-chan bool) {
