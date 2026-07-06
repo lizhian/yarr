@@ -8,6 +8,17 @@ import (
 	"github.com/nkanaev/yarr/src/rsshub"
 )
 
+const DefaultRSSHubBaseURL = "https://reader.aptzone.cc\n" +
+	"https://rsshub.app\n" +
+	"https://rsshub.0726868.xyz\n" +
+	"https://rsshub.rssforever.com\n" +
+	"https://rsshub.umzzz.com\n" +
+	"https://rsshub.ktachibana.party\n" +
+	"https://rss.datuan.dev\n" +
+	"https://rss.spriple.org\n" +
+	"https://rsshub-balancer.virworks.moe\n" +
+	"https://rss.4040940.xyz"
+
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
 		"filter":            "",
@@ -19,7 +30,7 @@ func settingsDefaults() map[string]interface{} {
 		"theme_font":        "lxgw-wenkai",
 		"theme_size":        1,
 		"refresh_rate":      0,
-		"rsshub_base_url":   "",
+		"rsshub_base_url":   DefaultRSSHubBaseURL,
 		"toolbar_display":   "text",
 		"backup_enabled":    false,
 	}

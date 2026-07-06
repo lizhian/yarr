@@ -31,6 +31,7 @@ type rssImage struct {
 type rssItem struct {
 	GUID        rssGuid        `xml:"guid"`
 	Title       string         `xml:"title"`
+	Author      string         `xml:"author"`
 	Link        string         `xml:"rss link"`
 	Description rssDescription `xml:"rss description"`
 	PubDate     string         `xml:"pubDate"`
@@ -201,6 +202,7 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 			Date:       dateParse(firstNonEmpty(srcitem.DublinCoreDate, srcitem.PubDate)),
 			URL:        firstNonEmpty(srcitem.OrigLink, srcitem.Link, permalink),
 			Title:      srcitem.Title,
+			Author:     strings.TrimSpace(srcitem.Author),
 			Content:    firstNonEmpty(srcitem.ContentEncoded, srcitem.Description.String(), srcitem.firstMediaDescription()),
 			MediaLinks: mediaLinks,
 		})

@@ -6,30 +6,28 @@ import (
 	"html"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/nkanaev/yarr/src/content/htmlutil"
+	"github.com/nkanaev/yarr/src/parser"
 	"github.com/nkanaev/yarr/src/storage"
-	xhtml "golang.org/x/net/html"
 )
 
 const (
 	BilibiliTopSourceKey         = "bilibili_top"
 	BilibiliTopSourceTitle       = "B站全站热榜"
-	BilibiliTopSourceLink        = "https://tophub.today/n/74KvxwokxM"
+	BilibiliTopSourceLink        = "rsshub://bilibili/ranking/0"
 	BilibiliTopSourceDescription = "B站全站热榜小时快照"
 
 	BilibiliZhishiSourceKey         = "bilibili_zhishi"
 	BilibiliZhishiSourceTitle       = "B站知识榜"
-	BilibiliZhishiSourceLink        = "https://tophub.today/n/Ywv47GzoPa"
+	BilibiliZhishiSourceLink        = "rsshub://bilibili/ranking/knowledge"
 	BilibiliZhishiSourceDescription = "B站知识榜小时快照"
 )
 
 type BilibiliTopEntry struct {
 	Rank     int
 	Title    string
-	Views    string
+	Author   string
 	CoverURL string
 	VideoURL string
 }
@@ -75,12 +73,12 @@ func (w *Worker) RefreshBilibiliTop() {
 func (w *Worker) RefreshBilibiliTopHubSource(source BilibiliTopHubSource) {
 	EnsureBilibiliTopHubSource(w.db, source)
 
-	body, err := GetBody(source.Link)
+	feed, err := w.fetchBilibiliTopHubFeed(source)
 	if err != nil {
 		log.Printf("failed to fetch %s: %s", source.Title, err)
 		return
 	}
-	if !w.SaveBilibiliTopHubSource(source, body, time.Now()) {
+	if !w.SaveBilibiliTopHubFeed(source, feed, time.Now()) {
 		log.Printf("failed to save %s", source.Title)
 	}
 }
@@ -90,11 +88,16 @@ func (w *Worker) SaveBilibiliTop(body string, now time.Time) bool {
 }
 
 func (w *Worker) SaveBilibiliTopHubSource(source BilibiliTopHubSource, body string, now time.Time) bool {
-	entries, err := ParseBilibiliTop(body)
+	feed, err := parser.ParseAndFix(bytes.NewBufferString(body), source.Link, "")
 	if err != nil {
 		log.Printf("failed to parse %s: %s", source.Title, err)
 		return false
 	}
+	return w.SaveBilibiliTopHubFeed(source, feed, now)
+}
+
+func (w *Worker) SaveBilibiliTopHubFeed(source BilibiliTopHubSource, feed *parser.Feed, now time.Time) bool {
+	entries := BilibiliRankingEntries(feed)
 	if len(entries) == 0 {
 		log.Printf("%s has no entries", source.Title)
 		return false
@@ -117,74 +120,62 @@ func (w *Worker) SaveBilibiliTopHubSource(source BilibiliTopHubSource, body stri
 	)
 }
 
-func ParseBilibiliTop(body string) ([]BilibiliTopEntry, error) {
-	root, err := xhtml.Parse(strings.NewReader(body))
+func (w *Worker) fetchBilibiliTopHubFeed(source BilibiliTopHubSource) (*parser.Feed, error) {
+	requestLinks, err := w.resolveLinks(source.Link)
 	if err != nil {
 		return nil, err
 	}
-
-	entries := make([]BilibiliTopEntry, 0)
-	for _, tr := range htmlutil.Query(root, "tr") {
-		entry, ok := parseBilibiliTopRow(tr)
-		if ok {
-			entries = append(entries, entry)
+	var lastErr error
+	for _, requestLink := range requestLinks {
+		res, err := client.get(requestLink)
+		if err != nil {
+			logCandidateFailure(source.Link, requestLink, err)
+			lastErr = err
+			continue
 		}
+		if res.StatusCode < 200 || res.StatusCode > 399 {
+			err := fmt.Errorf("status code %d", res.StatusCode)
+			res.Body.Close()
+			logCandidateFailure(source.Link, requestLink, err)
+			lastErr = err
+			continue
+		}
+		feed, err := parser.ParseAndFix(res.Body, requestLink, getCharset(res))
+		res.Body.Close()
+		if err != nil {
+			logCandidateFailure(source.Link, requestLink, err)
+			lastErr = err
+			continue
+		}
+		return feed, nil
 	}
-	return entries, nil
+	return nil, lastErr
 }
 
-func parseBilibiliTopRow(row *xhtml.Node) (BilibiliTopEntry, bool) {
-	cells := childElements(row, "td")
-	if len(cells) < 3 {
-		return BilibiliTopEntry{}, false
+func BilibiliRankingEntries(feed *parser.Feed) []BilibiliTopEntry {
+	if feed == nil {
+		return nil
 	}
-
-	rankText := strings.TrimSuffix(strings.TrimSpace(htmlutil.Text(cells[0])), ".")
-	rank, err := strconv.Atoi(rankText)
-	if err != nil {
-		return BilibiliTopEntry{}, false
+	entries := make([]BilibiliTopEntry, 0, len(feed.Items))
+	for i, item := range feed.Items {
+		entries = append(entries, BilibiliTopEntry{
+			Rank:     i + 1,
+			Title:    item.Title,
+			Author:   item.Author,
+			CoverURL: firstImageMediaLink(item.MediaLinks),
+			VideoURL: item.URL,
+		})
 	}
-
-	var coverURL string
-	if imgs := htmlutil.Query(cells[1], "img"); len(imgs) > 0 {
-		coverURL = strings.TrimSpace(htmlutil.Attr(imgs[0], "src"))
-	}
-
-	links := htmlutil.Query(cells[2], "a")
-	if len(links) == 0 {
-		return BilibiliTopEntry{}, false
-	}
-	videoURL := strings.TrimSpace(htmlutil.Attr(links[0], "href"))
-	title := strings.TrimSpace(htmlutil.Text(links[0]))
-	if title == "" || videoURL == "" {
-		return BilibiliTopEntry{}, false
-	}
-
-	views := ""
-	for _, div := range htmlutil.Query(cells[2], "div") {
-		if strings.Contains(" "+htmlutil.Attr(div, "class")+" ", " item-desc ") {
-			views = strings.TrimSpace(htmlutil.Text(div))
-			break
-		}
-	}
-
-	return BilibiliTopEntry{
-		Rank:     rank,
-		Title:    title,
-		Views:    views,
-		CoverURL: coverURL,
-		VideoURL: videoURL,
-	}, true
+	return entries
 }
 
-func childElements(node *xhtml.Node, name string) []*xhtml.Node {
-	result := make([]*xhtml.Node, 0)
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		if child.Type == xhtml.ElementNode && child.Data == name {
-			result = append(result, child)
+func firstImageMediaLink(links []parser.MediaLink) string {
+	for _, link := range links {
+		if link.Type == "image" && link.URL != "" {
+			return link.URL
 		}
 	}
-	return result
+	return ""
 }
 
 func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
@@ -193,7 +184,7 @@ func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
 		title := html.EscapeString(entry.Title)
 		videoURL := html.EscapeString(entry.VideoURL)
 		coverURL := html.EscapeString(entry.CoverURL)
-		views := html.EscapeString(entry.Views)
+		author := html.EscapeString(entry.Author)
 
 		if i > 0 {
 			buffer.WriteString(`<hr>`)
@@ -211,9 +202,9 @@ func RenderBilibiliTopContent(entries []BilibiliTopEntry) string {
 		buffer.WriteString(`<p>`)
 		buffer.WriteString(`排名 `)
 		buffer.WriteString(strconv.Itoa(entry.Rank))
-		if views != "" {
-			buffer.WriteString(`&nbsp;&nbsp; 播放量 `)
-			buffer.WriteString(views)
+		if author != "" {
+			buffer.WriteString(`&nbsp;&nbsp; 作者 `)
+			buffer.WriteString(author)
 		}
 		buffer.WriteString(`</p>`)
 		buffer.WriteString(`<p><a style="text-decoration: none;" href="`)

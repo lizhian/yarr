@@ -600,6 +600,9 @@ func TestRefreshRSSHubFillsPlaceholderMetadata(t *testing.T) {
 
 func TestListItemsRequiresRSSHubBaseURL(t *testing.T) {
 	db := testStorage(t)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": ""}) {
+		t.Fatal("failed to clear RSSHub base URL")
+	}
 	feed := db.CreateFeed("RSSHub Feed", "", "", "rsshub://bilibili/weekly", nil)
 
 	_, err := listItems(*feed, db)
