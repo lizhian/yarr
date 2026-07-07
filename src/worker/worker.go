@@ -223,12 +223,22 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		if result != nil && len(result.Items) > 0 {
 			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
 			created := w.db.CreateItems(result.Items)
-			if created {
-				w.cacheInsertedRankingModeItems(result.FeedID, result.Items, time.Now())
-			}
 			after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
 			newItems = after - before
 			w.db.SetFeedSize(result.FeedID, fetchedItems)
+			if !created {
+				log.Printf("failed to create items for feed %d", result.FeedID)
+			}
+		}
+		if result != nil && result.RankingItem != nil {
+			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
+			if w.db.CreateRankingModeItem(result.RankingItem.Item, result.RankingItem.MD5) {
+				w.cacheRankingModeGUID(result.FeedID, result.RankingItem.Item.GUID, time.Now())
+				after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
+				newItems += after - before
+			} else {
+				log.Printf("failed to create ranking mode item for feed %d", result.FeedID)
+			}
 		}
 		w.recordRSSHubRefreshHit(result)
 		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, fetchedItems, newItems)

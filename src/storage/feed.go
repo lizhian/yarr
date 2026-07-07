@@ -47,6 +47,8 @@ type Feed struct {
 	ContentSelector string `json:"content_selector"`
 	ContentMode     string `json:"content_mode"`
 	RankingMode     string `json:"ranking_mode"`
+	LastRankingItem string `json:"last_ranking_item"`
+	LastRankingMD5  string `json:"last_ranking_md5"`
 	IconURL         string `json:"icon_url"`
 }
 
@@ -94,7 +96,7 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 				when ? then ?
 				else feeds.ranking_mode
 			end
-		returning id, content_selector, content_mode, ranking_mode, icon_url`,
+		returning id, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url`,
 		title, description, link, feedLink, contentSelector, contentMode, contentMode, rankingMode, rankingMode, folderId,
 		folderId,
 		contentMode, contentMode,
@@ -103,7 +105,8 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 
 	var id int64
 	var iconURL string
-	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &iconURL)
+	var lastRankingItem, lastRankingMD5 string
+	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &lastRankingItem, &lastRankingMD5, &iconURL)
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -117,6 +120,8 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 		ContentSelector: contentSelector,
 		ContentMode:     contentMode,
 		RankingMode:     rankingMode,
+		LastRankingItem: lastRankingItem,
+		LastRankingMD5:  lastRankingMD5,
 		IconURL:         iconURL,
 		FolderId:        folderId,
 	}
@@ -214,7 +219,7 @@ func (s *Storage) UpdateFeedIconURL(feedId int64, iconURL string) bool {
 	return err == nil
 }
 
-const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, icon_url`
+const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url`
 
 type feedScanner interface {
 	Scan(dest ...interface{}) error
@@ -232,6 +237,8 @@ func scanFeed(scanner feedScanner) (Feed, error) {
 		&f.ContentSelector,
 		&f.ContentMode,
 		&f.RankingMode,
+		&f.LastRankingItem,
+		&f.LastRankingMD5,
 		&f.IconURL,
 	)
 	return f, err

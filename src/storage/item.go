@@ -132,28 +132,7 @@ func (s *Storage) CreateItems(items []Item) bool {
 	sort.Sort(itemsSorted)
 
 	for _, item := range itemsSorted {
-		_, err = tx.Exec(`
-			insert into items (
-				guid, feed_id, title, link, date,
-				content, media_links,
-				date_arrived, status
-			)
-			values (
-				?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', ?),
-				?, ?,
-				?, ?
-			)
-			on conflict (feed_id, guid) do update set
-				media_links = case
-					when json_array_length(coalesce(items.media_links, '[]')) = 0
-					 and json_array_length(coalesce(excluded.media_links, '[]')) > 0
-					then excluded.media_links
-					else items.media_links
-				end`,
-			item.GUID, item.FeedId, item.Title, item.Link, item.Date,
-			item.Content, item.MediaLinks,
-			now, UNREAD,
-		)
+		err = createItemTx(tx, item, now)
 		if err != nil {
 			log.Print(err)
 			if err = tx.Rollback(); err != nil {
@@ -168,6 +147,66 @@ func (s *Storage) CreateItems(items []Item) bool {
 		return false
 	}
 	return true
+}
+
+func (s *Storage) CreateRankingModeItem(item Item, rankingMD5 string) bool {
+	tx, err := s.db.Begin()
+	if err != nil {
+		log.Print(err)
+		return false
+	}
+
+	if err = createItemTx(tx, item, time.Now().UTC()); err != nil {
+		log.Print(err)
+		if err = tx.Rollback(); err != nil {
+			log.Print(err)
+		}
+		return false
+	}
+	_, err = tx.Exec(`
+		update feeds
+		set last_ranking_item = ?, last_ranking_md5 = ?
+		where id = ?`,
+		item.GUID, rankingMD5, item.FeedId,
+	)
+	if err != nil {
+		log.Print(err)
+		if err = tx.Rollback(); err != nil {
+			log.Print(err)
+		}
+		return false
+	}
+	if err = tx.Commit(); err != nil {
+		log.Print(err)
+		return false
+	}
+	return true
+}
+
+func createItemTx(tx *sql.Tx, item Item, arrivedAt time.Time) error {
+	_, err := tx.Exec(`
+		insert into items (
+			guid, feed_id, title, link, date,
+			content, media_links,
+			date_arrived, status
+		)
+		values (
+			?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', ?),
+			?, ?,
+			?, ?
+		)
+		on conflict (feed_id, guid) do update set
+			media_links = case
+				when json_array_length(coalesce(items.media_links, '[]')) = 0
+				 and json_array_length(coalesce(excluded.media_links, '[]')) > 0
+				then excluded.media_links
+				else items.media_links
+			end`,
+		item.GUID, item.FeedId, item.Title, item.Link, item.Date,
+		item.Content, item.MediaLinks,
+		arrivedAt, UNREAD,
+	)
+	return err
 }
 
 func listQueryPredicate(filter ItemFilter, newestFirst bool) (string, []interface{}) {
@@ -326,6 +365,28 @@ func (s *Storage) GetItem(id int64) *Item {
 		from items i
 		where i.id = ?
 	`, id).Scan(
+		&i.Id, &i.GUID, &i.FeedId, &i.Title, &i.Link, &i.Content,
+		&i.Date, &i.Status, &i.MediaLinks,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		log.Print(err)
+		return nil
+	}
+	return i
+}
+
+func (s *Storage) GetItemByGUID(feedID int64, guid string) *Item {
+	i := &Item{}
+	err := s.db.QueryRow(`
+		select
+			i.id, i.guid, i.feed_id, i.title, i.link, i.content,
+			i.date, i.status, i.media_links
+		from items i
+		where i.feed_id = ? and i.guid = ?
+	`, feedID, guid).Scan(
 		&i.Id, &i.GUID, &i.FeedId, &i.Title, &i.Link, &i.Content,
 		&i.Date, &i.Status, &i.MediaLinks,
 	)

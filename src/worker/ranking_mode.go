@@ -2,9 +2,12 @@ package worker
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/nkanaev/yarr/src/parser"
@@ -14,16 +17,23 @@ import (
 const rankingModeCacheTTL = 2 * time.Hour
 
 type RankingEntry struct {
-	Rank     int
-	Title    string
-	Author   string
-	CoverURL string
-	URL      string
-	Content  string
-	Date     time.Time
+	Rank       int
+	RankChange string
+	Title      string
+	Author     string
+	CoverURL   string
+	URL        string
+	Content    string
+	Date       time.Time
+}
+
+type RankingModeItem struct {
+	Item storage.Item
+	MD5  string
 }
 
 var rankingModeTimeZone = time.FixedZone("UTC+8", 8*60*60)
+var rankingEntryURLCommentRe = regexp.MustCompile(`<!-- ranking-entry-url:([^>]*) -->`)
 
 func (w *Worker) appendRankingModeItem(feed storage.Feed, result *FeedRefreshResult, now time.Time) {
 	if feed.RankingMode == storage.FeedRankingModeOff || result == nil || result.Feed == nil || len(result.Feed.Items) == 0 {
@@ -34,25 +44,31 @@ func (w *Worker) appendRankingModeItem(feed storage.Feed, result *FeedRefreshRes
 	if !ok {
 		return
 	}
-	result.Items = append(result.Items, item)
+	result.RankingItem = &item
 }
 
-func (w *Worker) rankingModeItem(feed storage.Feed, feedData *parser.Feed, now time.Time) (storage.Item, bool) {
+func (w *Worker) rankingModeItem(feed storage.Feed, feedData *parser.Feed, now time.Time) (RankingModeItem, bool) {
 	entries := RankingEntries(feedData)
 	if len(entries) == 0 {
 		log.Printf("ranking mode feed %s has no entries", feed.Title)
-		return storage.Item{}, false
+		return RankingModeItem{}, false
 	}
 
 	localNow := now.In(rankingModeTimeZone).Truncate(time.Hour)
 	guid := fmt.Sprintf("ranking:%s", localNow.Format("2006010215"))
 	if w.rankingModeGUIDCached(feed.Id, guid, now) {
-		return storage.Item{}, false
+		return RankingModeItem{}, false
 	}
 	if w.db.ItemGUIDExists(feed.Id, guid) {
 		w.cacheRankingModeGUID(feed.Id, guid, now)
-		return storage.Item{}, false
+		return RankingModeItem{}, false
 	}
+
+	rankingMD5 := RankingMD5(entries)
+	if feed.LastRankingMD5 == rankingMD5 {
+		return RankingModeItem{}, false
+	}
+	applyRankingChanges(entries, w.previousRankingPositions(feed))
 
 	link := feed.Link
 	if link == "" {
@@ -70,15 +86,7 @@ func (w *Worker) rankingModeItem(feed storage.Feed, feedData *parser.Feed, now t
 		Date:       localNow,
 		MediaLinks: RankingMediaLinks(entries, feed.RankingMode),
 	}
-	return item, true
-}
-
-func (w *Worker) cacheInsertedRankingModeItems(feedID int64, items []storage.Item, now time.Time) {
-	for _, item := range items {
-		if item.FeedId == feedID && isRankingModeGUID(item.GUID) {
-			w.cacheRankingModeGUID(feedID, item.GUID, now)
-		}
-	}
+	return RankingModeItem{Item: item, MD5: rankingMD5}, true
 }
 
 func (w *Worker) rankingModeGUIDCached(feedID int64, guid string, now time.Time) bool {
@@ -136,6 +144,56 @@ func RankingEntries(feed *parser.Feed) []RankingEntry {
 	return entries
 }
 
+func RankingMD5(entries []RankingEntry) string {
+	hash := md5.New()
+	for _, entry := range entries {
+		hash.Write([]byte(entry.URL))
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func (w *Worker) previousRankingPositions(feed storage.Feed) map[string]int {
+	if feed.LastRankingItem == "" {
+		return nil
+	}
+	item := w.db.GetItemByGUID(feed.Id, feed.LastRankingItem)
+	if item == nil {
+		return nil
+	}
+	return RankingPositionsFromContent(item.Content)
+}
+
+func RankingPositionsFromContent(content string) map[string]int {
+	matches := rankingEntryURLCommentRe.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	positions := make(map[string]int, len(matches))
+	for i, match := range matches {
+		if len(match) < 2 || match[1] == "" {
+			continue
+		}
+		positions[html.UnescapeString(match[1])] = i + 1
+	}
+	return positions
+}
+
+func applyRankingChanges(entries []RankingEntry, previous map[string]int) {
+	for i := range entries {
+		previousRank, ok := previous[entries[i].URL]
+		switch {
+		case !ok:
+			entries[i].RankChange = "🆕"
+		case previousRank == entries[i].Rank:
+			entries[i].RankChange = "➡️"
+		case previousRank > entries[i].Rank:
+			entries[i].RankChange = fmt.Sprintf("📈%d", previousRank-entries[i].Rank)
+		default:
+			entries[i].RankChange = fmt.Sprintf("📉%d", entries[i].Rank-previousRank)
+		}
+	}
+}
+
 func firstImageMediaLink(links []parser.MediaLink) string {
 	for _, link := range links {
 		if link.Type == "image" && link.URL != "" {
@@ -167,6 +225,9 @@ func RenderRankingContent(entries []RankingEntry, mode string, now time.Time) st
 		dateTime := html.EscapeString(entry.Date.Format(time.RFC3339))
 		dateText := html.EscapeString(rankingDateRepr(entry.Date, now))
 
+		buffer.WriteString(`<!-- ranking-entry-url:`)
+		buffer.WriteString(entryURL)
+		buffer.WriteString(` -->`)
 		buffer.WriteString(`<article class="bilibili-ranking-card">`)
 		if mode == storage.FeedRankingModeWithImage && coverURL != "" {
 			buffer.WriteString(`<a href="`)
@@ -183,6 +244,8 @@ func RenderRankingContent(entries []RankingEntry, mode string, now time.Time) st
 		buffer.WriteString(`<p class="bilibili-ranking-meta">`)
 		buffer.WriteString(`<span>`)
 		buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
+		buffer.WriteString(entry.RankChange)
+		buffer.WriteString(`｜`)
 		if author != "" {
 			buffer.WriteString(author)
 		}

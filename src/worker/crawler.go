@@ -38,6 +38,7 @@ type FeedRefreshResult struct {
 	Feed           *parser.Feed
 	FeedLink       string
 	Items          []storage.Item
+	RankingItem    *RankingModeItem
 }
 
 func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {

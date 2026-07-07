@@ -115,7 +115,7 @@
                             <div class="selectgroup-label d-flex align-items-center w-100">
                                 <span class="icon mr-2" v-if="!feed.icon_url || feedIconErrored(feed)">{% inline "rss.svg" %}</span>
                                 <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
-                                <span class="flex-fill text-left text-truncate">{{ feed.title }}</span>
+                                <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
                                 <span class="counter text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                 <span class="icon flex-shrink-0 mx-2"
                                       :title="feed_errors[feed.id]"

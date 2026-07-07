@@ -152,6 +152,9 @@ func TestCreateFeedRankingMode(t *testing.T) {
 	if feed.RankingMode != FeedRankingModeOff {
 		t.Fatalf("expected ranking mode to default off, got %q", feed.RankingMode)
 	}
+	if feed.LastRankingItem != "" || feed.LastRankingMD5 != "" {
+		t.Fatalf("expected empty last ranking state, got %q %q", feed.LastRankingItem, feed.LastRankingMD5)
+	}
 
 	feed = db.CreateFeedWithRankingMode("feed", "", "http://example.com", "http://example.com/feed.xml", "", FeedContentModeNormal, FeedRankingModeWithoutImage, nil)
 	if feed.RankingMode != FeedRankingModeWithoutImage {
@@ -161,6 +164,38 @@ func TestCreateFeedRankingMode(t *testing.T) {
 	feed = db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
 	if feed.RankingMode != FeedRankingModeWithoutImage {
 		t.Fatal("expected existing ranking mode to be preserved")
+	}
+	if feed.LastRankingItem != "" || feed.LastRankingMD5 != "" {
+		t.Fatalf("expected empty last ranking state, got %q %q", feed.LastRankingItem, feed.LastRankingMD5)
+	}
+}
+
+func TestCreateRankingModeItemUpdatesFeedState(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeedWithRankingMode("feed", "", "http://example.com", "http://example.com/feed.xml", "", FeedContentModeNormal, FeedRankingModeWithImage, nil)
+	item := Item{
+		GUID:    "ranking:2026070610",
+		FeedId:  feed.Id,
+		Title:   "ranking",
+		Link:    "http://example.com",
+		Date:    time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC),
+		Content: "content",
+	}
+
+	if !db.CreateRankingModeItem(item, "md5") {
+		t.Fatal("failed to create ranking item")
+	}
+
+	feed = db.GetFeed(feed.Id)
+	if feed.LastRankingItem != item.GUID {
+		t.Fatalf("last ranking item got %q", feed.LastRankingItem)
+	}
+	if feed.LastRankingMD5 != "md5" {
+		t.Fatalf("last ranking md5 got %q", feed.LastRankingMD5)
+	}
+	stored := db.GetItemByGUID(feed.Id, item.GUID)
+	if stored == nil || stored.Content != "content" {
+		t.Fatalf("invalid ranking item: %#v", stored)
 	}
 }
 

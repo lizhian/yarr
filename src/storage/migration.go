@@ -26,6 +26,7 @@ var migrations = []func(*sql.Tx) error{
 	m16_change_feed_ranking_mode_to_text,
 	m17_add_item_list_indexes,
 	m18_remove_feed_setting,
+	m19_add_feed_last_ranking_state,
 }
 
 var maxVersion = int64(len(migrations))
@@ -457,5 +458,39 @@ func m17_add_item_list_indexes(tx *sql.Tx) error {
 
 func m18_remove_feed_setting(tx *sql.Tx) error {
 	_, err := tx.Exec(`delete from settings where key = 'feed';`)
+	return err
+}
+
+func m19_add_feed_last_ranking_state(tx *sql.Tx) error {
+	if err := addColumnIfMissing(tx, "feeds", "last_ranking_item", "last_ranking_item text not null default ''"); err != nil {
+		return err
+	}
+	return addColumnIfMissing(tx, "feeds", "last_ranking_md5", "last_ranking_md5 text not null default ''")
+}
+
+func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {
+	rows, err := tx.Query(fmt.Sprintf(`pragma table_info(%s)`, table))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notNull int
+		var defaultValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return rows.Err()
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = tx.Exec(fmt.Sprintf(`alter table %s add column %s`, table, definition))
 	return err
 }
