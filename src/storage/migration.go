@@ -22,6 +22,8 @@ var migrations = []func(*sql.Tx) error{
 	m12_replace_feed_icon_with_icon_url,
 	m13_add_feed_content_mode,
 	m14_add_generated_rss,
+	m15_add_feed_ranking_mode,
+	m16_change_feed_ranking_mode_to_text,
 }
 
 var maxVersion = int64(len(migrations))
@@ -43,7 +45,7 @@ func migrate(db *sql.DB) error {
 		// Must come with `pragma foreign_key_check` at the end. See:
 		// "Making Other Kinds Of Table Schema Changes"
 		// https://www.sqlite.org/lang_altertable.html
-		trickyAlteration := (v == 3)
+		trickyAlteration := (v == 3 || v == 16)
 
 		log.Printf("[migration:%d] starting", v)
 
@@ -386,6 +388,56 @@ func m14_add_generated_rss(tx *sql.Tx) error {
 
 		create index if not exists idx_generated_rss_items_source_published
 		on generated_rss_items(source_id, published_at desc, id desc);
+	`
+	_, err := tx.Exec(sql)
+	return err
+}
+
+func m15_add_feed_ranking_mode(tx *sql.Tx) error {
+	sql := `
+		alter table feeds add column ranking_mode boolean not null default false;
+		drop table if exists generated_rss_items;
+		drop table if exists generated_rss_sources;
+	`
+	_, err := tx.Exec(sql)
+	return err
+}
+
+func m16_change_feed_ranking_mode_to_text(tx *sql.Tx) error {
+	sql := `
+		create table if not exists new_feeds (
+		 id               integer primary key autoincrement,
+		 folder_id        references folders(id) on delete set null,
+		 title            text not null,
+		 description      text,
+		 link             text,
+		 feed_link        text not null,
+		 content_selector text not null default '',
+		 icon_url         text not null default '',
+		 content_mode     text not null default 'normal',
+		 ranking_mode     text not null default 'off'
+		);
+
+		insert into new_feeds (
+			id, folder_id, title, description, link, feed_link,
+			content_selector, icon_url, content_mode, ranking_mode
+		)
+		select
+			id, folder_id, title, description, link, feed_link,
+			content_selector, icon_url, content_mode,
+			case
+				when ranking_mode = true or ranking_mode = 'true' or ranking_mode = '1' then 'with_image'
+				when ranking_mode in ('with_image', 'without_image') then ranking_mode
+				else 'off'
+			end
+		from feeds;
+
+		drop table feeds;
+		alter table new_feeds rename to feeds;
+
+		create index if not exists idx_feed_folder_id on feeds(folder_id);
+		create unique index if not exists idx_feed_feed_link on feeds(feed_link);
+		pragma foreign_key_check;
 	`
 	_, err := tx.Exec(sql)
 	return err

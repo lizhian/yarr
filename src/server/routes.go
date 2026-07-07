@@ -31,7 +31,7 @@ func (s *Server) handler() http.Handler {
 	if s.db != nil {
 		r.Use((&auth.Middleware{
 			BasePath: s.BasePath,
-			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json", "/rss"},
+			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json"},
 			DB:       s.db,
 		}).Handler)
 	}
@@ -60,10 +60,6 @@ func (s *Server) handler() http.Handler {
 	r.For("/logout", s.handleLogout)
 	r.For("/fever/", s.handleFever)
 	r.For("/api/greader.php/*path", s.handleGReader)
-	r.For("/rss/bilibili/top", s.handleBilibiliTopRSS)
-	r.For("/rss/bilibili/zhishi", s.handleBilibiliZhishiRSS)
-	r.For("/rss/bilibili/hot", s.handleBilibiliHotRSS)
-
 	return r
 }
 
@@ -264,6 +260,14 @@ func (s *Server) handleFeedList(c *router.Context) {
 			c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
 			return
 		}
+		form.RankingMode = strings.TrimSpace(form.RankingMode)
+		if form.RankingMode == "" {
+			form.RankingMode = storage.FeedRankingModeOff
+		}
+		if !storage.ValidFeedRankingMode(form.RankingMode) {
+			c.JSON(http.StatusBadRequest, map[string]string{"error": "榜单模式设置不支持。"})
+			return
+		}
 		if form.ContentSelector != "" {
 			if _, err := htmlutil.CompileSelector(form.ContentSelector); err != nil {
 				c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
@@ -276,7 +280,7 @@ func (s *Server) handleFeedList(c *router.Context) {
 				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
 				return
 			}
-			feed := s.db.CreateFeedWithContentMode("", "", "", form.Url, form.ContentSelector, form.ContentMode, form.FolderID)
+			feed := s.db.CreateFeedWithRankingMode("", "", "", form.Url, form.ContentSelector, form.ContentMode, form.RankingMode, form.FolderID)
 			c.JSON(http.StatusOK, map[string]interface{}{
 				"status": "success",
 				"feed":   feed,
@@ -296,13 +300,14 @@ func (s *Server) handleFeedList(c *router.Context) {
 		case len(result.Sources) > 0:
 			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
 		case result.Feed != nil:
-			feed := s.db.CreateFeedWithContentMode(
+			feed := s.db.CreateFeedWithRankingMode(
 				result.Feed.Title,
 				"",
 				result.Feed.SiteURL,
 				result.FeedLink,
 				form.ContentSelector,
 				form.ContentMode,
+				form.RankingMode,
 				form.FolderID,
 			)
 			items := worker.ConvertItems(result.Feed.Items, *feed)
@@ -399,6 +404,17 @@ func (s *Server) handleFeed(c *router.Context) {
 			mode := strings.TrimSpace(mode.(string))
 			if !s.db.UpdateFeedContentMode(id, mode) {
 				c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
+				return
+			}
+		}
+		if rankingMode, ok := body["ranking_mode"]; ok {
+			if rankingMode == nil || reflect.TypeOf(rankingMode).Kind() != reflect.String {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "榜单模式设置不支持。"})
+				return
+			}
+			mode := strings.TrimSpace(rankingMode.(string))
+			if !s.db.UpdateFeedRankingMode(id, mode) {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "榜单模式设置不支持。"})
 				return
 			}
 		}

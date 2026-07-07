@@ -251,6 +251,23 @@ func (s *Storage) CountItems(filter ItemFilter) int {
 	return count
 }
 
+func (s *Storage) ItemGUIDExists(feedID int64, guid string) bool {
+	var exists bool
+	err := s.db.QueryRow(`
+		select exists (
+			select 1
+			from items
+			where feed_id = ? and guid = ?
+		)`,
+		feedID, guid,
+	).Scan(&exists)
+	if err != nil {
+		log.Print(err)
+		return false
+	}
+	return exists
+}
+
 func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, withContent bool) []Item {
 	predicate, args := listQueryPredicate(filter, newestFirst)
 	result := make([]Item, 0, 0)

@@ -95,6 +95,38 @@ func TestRSSFeedSiteURLIgnoresAtomSelfLink(t *testing.T) {
 	}
 }
 
+func TestRSSDublinCoreCreator(t *testing.T) {
+	feed, err := Parse(strings.NewReader(`
+		<?xml version="1.0"?>
+		<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+		<channel>
+			<title>Feed</title>
+			<link>https://example.com</link>
+			<item>
+				<title>Title 1</title>
+				<link>https://example.com/1</link>
+				<dc:creator><![CDATA[scp]]></dc:creator>
+			</item>
+			<item>
+				<title>Title 2</title>
+				<link>https://example.com/2</link>
+				<author>author wins</author>
+				<dc:creator>dc creator</dc:creator>
+			</item>
+		</channel>
+		</rss>
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if feed.Items[0].Author != "scp" {
+		t.Fatalf("got %q", feed.Items[0].Author)
+	}
+	if feed.Items[1].Author != "author wins" {
+		t.Fatalf("got %q", feed.Items[1].Author)
+	}
+}
+
 func TestRSSMediaContentThumbnail(t *testing.T) {
 	// see: https://vimeo.com/channels/staffpicks/videos/rss
 	feed, _ := Parse(strings.NewReader(`

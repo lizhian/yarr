@@ -22,6 +22,23 @@ func testStorage(t *testing.T) *storage.Storage {
 	return db
 }
 
+func testItemGUIDs(items []storage.Item) []string {
+	guids := make([]string, 0, len(items))
+	for _, item := range items {
+		guids = append(guids, item.GUID)
+	}
+	return guids
+}
+
+func testHasGUIDPrefix(items []storage.Item, prefix string) bool {
+	for _, item := range items {
+		if len(item.GUID) >= len(prefix) && item.GUID[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDiscoverFeedWithLinkPreservesStoredLink(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
@@ -185,6 +202,50 @@ func TestRefreshPreservesSavedFeedMetadata(t *testing.T) {
 	}
 	if feed.FeedLink != server.URL+"/feed.xml" {
 		t.Fatalf("feed_link got %q", feed.FeedLink)
+	}
+}
+
+func TestRefreshCreatesRankingModeItem(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fresh Title</title>
+    <link>https://example.com/fresh</link>
+    <item>
+      <title>Article One</title>
+      <link>https://example.com/article-1</link>
+      <guid>article-1</guid>
+      <enclosure url="https://example.com/cover.jpg" type="image/jpeg"></enclosure>
+    </item>
+    <item>
+      <title>Article Two</title>
+      <link>https://example.com/article-2</link>
+      <guid>article-2</guid>
+    </item>
+  </channel>
+</rss>`)
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeedWithRankingMode("Feed", "", "https://example.com", server.URL+"/feed.xml", "", "", storage.FeedRankingModeWithImage, nil)
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	items := db.ListItems(storage.ItemFilter{FeedID: &feed.Id}, 10, true, true)
+	if len(items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(items))
+	}
+	if !testHasGUIDPrefix(items, "ranking:") {
+		t.Fatalf("expected ranking item, got %#v", testItemGUIDs(items))
+	}
+
+	worker.refresher([]storage.Feed{*feed})
+	if count := db.CountItems(storage.ItemFilter{FeedID: &feed.Id}); count != 3 {
+		t.Fatalf("expected duplicate ranking item to be skipped, got %d items", count)
 	}
 }
 

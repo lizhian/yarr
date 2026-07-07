@@ -487,6 +487,7 @@ var vm = new Vue({
       'feedNewChoiceSelected': '',
       'feedNewFolderId': null,
       'feedNewContentMode': 'normal',
+      'feedNewRankingMode': 'off',
       'feedDeleteSelectedIds': [],
       'items': [],
       'itemsHasMore': true,
@@ -565,6 +566,11 @@ var vm = new Vue({
       'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
       'fontOptions': FONT_OPTIONS,
       'contentModeOptions': CONTENT_MODE_OPTIONS,
+      'rankingModeOptions': [
+        { title: '停用', name: 'off' },
+        { title: '有图', name: 'with_image' },
+        { title: '无图', name: 'without_image' },
+      ],
       'authenticated': app.authenticated,
       'feed_errors': {},
       'navigationHistory': {
@@ -748,6 +754,7 @@ var vm = new Vue({
         this.loading.itemDetails = false
         this.itemSelectedContentMode = normalizeContentMode((this.feedsById[item.feed_id] || {}).content_mode)
         this.loadSelectedContentMode()
+        this.$nextTick(this.refreshRankingTimes)
         this.markItemRead(this.itemSelectedDetails)
       }.bind(this)).catch(function() {
         if (this.itemSelected === newVal) {
@@ -1284,6 +1291,15 @@ var vm = new Vue({
         }
       })
     },
+    updateFeedRankingMode: function(feed, mode) {
+      api.feeds.update(feed.id, {ranking_mode: mode}).then(function(res) {
+        if (res.ok) {
+          feed.ranking_mode = mode
+        } else {
+          vm.alertDialog('榜单模式设置不支持。')
+        }
+      })
+    },
     normalizeContentMode: normalizeContentMode,
     trimValue: function(value) {
       return (value || '').trim()
@@ -1386,6 +1402,7 @@ var vm = new Vue({
         folder_id: this.feedNewFolderId,
         content_selector: contentSelector,
         content_mode: this.feedNewContentMode,
+        ranking_mode: this.feedNewRankingMode,
       }
       if (this.feedNewChoiceSelected) {
         data.url = this.feedNewChoiceSelected
@@ -1571,7 +1588,17 @@ var vm = new Vue({
     loadSelectedContentMode: function() {
       if (this.itemSelectedContentMode == 'readability') {
         this.loadItemSelectedReadability()
+      } else {
+        this.$nextTick(this.refreshRankingTimes)
       }
+    },
+    refreshRankingTimes: function() {
+      if (!this.$refs.content) return
+      var nodes = this.$refs.content.querySelectorAll('.bilibili-ranking-meta time[datetime]')
+      Array.prototype.forEach.call(nodes, function(node) {
+        var date = new Date(node.getAttribute('datetime'))
+        if (!isNaN(date.getTime())) node.textContent = dateRepr(date)
+      })
     },
     loadItemSelectedReadability: function() {
       var item = this.itemSelectedDetails
@@ -1597,6 +1624,7 @@ var vm = new Vue({
       }).then(function() {
         if (vm.itemSelected !== itemId) return
         vm.loading.readability = false
+        vm.$nextTick(vm.refreshRankingTimes)
       })
     },
     showSettings: function(settings) {
@@ -1607,6 +1635,7 @@ var vm = new Vue({
         vm.feedNewChoiceSelected = ''
         vm.feedNewFolderId = vm.current.feed.folder_id || vm.current.folder.id || null
         vm.feedNewContentMode = 'normal'
+        vm.feedNewRankingMode = 'off'
       } else if (settings === 'deletefeeds') {
         vm.feedDeleteSelectedIds = []
       } else if (settings === 'auth') {

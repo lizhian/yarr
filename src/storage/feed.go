@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"strings"
 
@@ -12,11 +13,24 @@ const (
 	FeedContentModeNormal      = "normal"
 	FeedContentModeReadability = "readability"
 	FeedContentModeEmbed       = "embed"
+
+	FeedRankingModeOff          = "off"
+	FeedRankingModeWithImage    = "with_image"
+	FeedRankingModeWithoutImage = "without_image"
 )
 
 func ValidFeedContentMode(mode string) bool {
 	switch mode {
 	case FeedContentModeNormal, FeedContentModeReadability, FeedContentModeEmbed:
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidFeedRankingMode(mode string) bool {
+	switch mode {
+	case FeedRankingModeOff, FeedRankingModeWithImage, FeedRankingModeWithoutImage:
 		return true
 	default:
 		return false
@@ -32,6 +46,7 @@ type Feed struct {
 	FeedLink        string `json:"feed_link"`
 	ContentSelector string `json:"content_selector"`
 	ContentMode     string `json:"content_mode"`
+	RankingMode     string `json:"ranking_mode"`
 	IconURL         string `json:"icon_url"`
 }
 
@@ -44,6 +59,14 @@ func (s *Storage) CreateFeedWithContentSelector(title, description, link, feedLi
 }
 
 func (s *Storage) CreateFeedWithContentMode(title, description, link, feedLink, contentSelector, contentMode string, folderId *int64) *Feed {
+	return s.createFeed(title, description, link, feedLink, contentSelector, contentMode, FeedRankingModeOff, false, folderId)
+}
+
+func (s *Storage) CreateFeedWithRankingMode(title, description, link, feedLink, contentSelector, contentMode, rankingMode string, folderId *int64) *Feed {
+	return s.createFeed(title, description, link, feedLink, contentSelector, contentMode, rankingMode, true, folderId)
+}
+
+func (s *Storage) createFeed(title, description, link, feedLink, contentSelector, contentMode, rankingMode string, updateRankingMode bool, folderId *int64) *Feed {
 	title = feedmeta.CleanTitle(title)
 	if title == "" {
 		title = feedLink
@@ -51,9 +74,12 @@ func (s *Storage) CreateFeedWithContentMode(title, description, link, feedLink, 
 	if !ValidFeedContentMode(contentMode) {
 		contentMode = ""
 	}
+	if !ValidFeedRankingMode(rankingMode) {
+		rankingMode = FeedRankingModeOff
+	}
 	row := s.db.QueryRow(`
-		insert into feeds (title, description, link, feed_link, content_selector, content_mode, folder_id)
-		values (?, ?, ?, ?, ?, case when ? != '' then ? else 'normal' end, ?)
+		insert into feeds (title, description, link, feed_link, content_selector, content_mode, ranking_mode, folder_id)
+		values (?, ?, ?, ?, ?, case when ? != '' then ? else 'normal' end, case when ? != '' then ? else 'off' end, ?)
 		on conflict (feed_link) do update set
 			folder_id = ?,
 			content_selector = case
@@ -63,16 +89,21 @@ func (s *Storage) CreateFeedWithContentMode(title, description, link, feedLink, 
 			content_mode = case
 				when ? != '' then ?
 				else feeds.content_mode
+			end,
+			ranking_mode = case
+				when ? then ?
+				else feeds.ranking_mode
 			end
-		returning id, content_selector, content_mode, icon_url`,
-		title, description, link, feedLink, contentSelector, contentMode, contentMode, folderId,
+		returning id, content_selector, content_mode, ranking_mode, icon_url`,
+		title, description, link, feedLink, contentSelector, contentMode, contentMode, rankingMode, rankingMode, folderId,
 		folderId,
 		contentMode, contentMode,
+		updateRankingMode, rankingMode,
 	)
 
 	var id int64
 	var iconURL string
-	err := row.Scan(&id, &contentSelector, &contentMode, &iconURL)
+	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &iconURL)
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -85,6 +116,7 @@ func (s *Storage) CreateFeedWithContentMode(title, description, link, feedLink, 
 		FeedLink:        feedLink,
 		ContentSelector: contentSelector,
 		ContentMode:     contentMode,
+		RankingMode:     rankingMode,
 		IconURL:         iconURL,
 		FolderId:        folderId,
 	}
@@ -169,15 +201,46 @@ func (s *Storage) UpdateFeedContentMode(feedId int64, mode string) bool {
 	return err == nil
 }
 
+func (s *Storage) UpdateFeedRankingMode(feedId int64, mode string) bool {
+	if !ValidFeedRankingMode(mode) {
+		return false
+	}
+	_, err := s.db.Exec(`update feeds set ranking_mode = ? where id = ?`, mode, feedId)
+	return err == nil
+}
+
 func (s *Storage) UpdateFeedIconURL(feedId int64, iconURL string) bool {
 	_, err := s.db.Exec(`update feeds set icon_url = ? where id = ?`, iconURL, feedId)
 	return err == nil
 }
 
+const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, icon_url`
+
+type feedScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanFeed(scanner feedScanner) (Feed, error) {
+	var f Feed
+	err := scanner.Scan(
+		&f.Id,
+		&f.FolderId,
+		&f.Title,
+		&f.Description,
+		&f.Link,
+		&f.FeedLink,
+		&f.ContentSelector,
+		&f.ContentMode,
+		&f.RankingMode,
+		&f.IconURL,
+	)
+	return f, err
+}
+
 func (s *Storage) ListFeeds() []Feed {
 	result := make([]Feed, 0)
 	rows, err := s.db.Query(`
-		select id, folder_id, title, description, link, feed_link, content_selector, content_mode, icon_url
+		select ` + feedSelectColumns + `
 		from feeds
 		order by title collate nocase
 	`)
@@ -185,19 +248,10 @@ func (s *Storage) ListFeeds() []Feed {
 		log.Print(err)
 		return result
 	}
+	defer rows.Close()
+
 	for rows.Next() {
-		var f Feed
-		err = rows.Scan(
-			&f.Id,
-			&f.FolderId,
-			&f.Title,
-			&f.Description,
-			&f.Link,
-			&f.FeedLink,
-			&f.ContentSelector,
-			&f.ContentMode,
-			&f.IconURL,
-		)
+		f, err := scanFeed(rows)
 		if err != nil {
 			log.Print(err)
 			return result
@@ -210,7 +264,7 @@ func (s *Storage) ListFeeds() []Feed {
 func (s *Storage) ListFeedsMissingIconURLs() []Feed {
 	result := make([]Feed, 0)
 	rows, err := s.db.Query(`
-		select id, folder_id, title, description, link, feed_link, content_selector, content_mode, icon_url
+		select ` + feedSelectColumns + `
 		from feeds
 		where icon_url = ''
 	`)
@@ -218,19 +272,10 @@ func (s *Storage) ListFeedsMissingIconURLs() []Feed {
 		log.Print(err)
 		return result
 	}
+	defer rows.Close()
+
 	for rows.Next() {
-		var f Feed
-		err = rows.Scan(
-			&f.Id,
-			&f.FolderId,
-			&f.Title,
-			&f.Description,
-			&f.Link,
-			&f.FeedLink,
-			&f.ContentSelector,
-			&f.ContentMode,
-			&f.IconURL,
-		)
+		f, err := scanFeed(rows)
 		if err != nil {
 			log.Print(err)
 			return result
@@ -241,23 +286,42 @@ func (s *Storage) ListFeedsMissingIconURLs() []Feed {
 }
 
 func (s *Storage) GetFeed(id int64) *Feed {
-	var f Feed
-	err := s.db.QueryRow(`
-		select
-			id, folder_id, title, link, feed_link, content_selector, content_mode, icon_url
+	f, err := scanFeed(s.db.QueryRow(`
+		select `+feedSelectColumns+`
 		from feeds where id = ?
-	`, id).Scan(
-		&f.Id, &f.FolderId, &f.Title, &f.Link, &f.FeedLink, &f.ContentSelector,
-		&f.ContentMode,
-		&f.IconURL,
-	)
+	`, id))
 	if err != nil {
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			log.Print(err)
 		}
 		return nil
 	}
 	return &f
+}
+
+func (s *Storage) ListRankingModeFeeds() []Feed {
+	result := make([]Feed, 0)
+	rows, err := s.db.Query(`
+		select ` + feedSelectColumns + `
+		from feeds
+		where ranking_mode != 'off'
+		order by title collate nocase
+	`)
+	if err != nil {
+		log.Print(err)
+		return result
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		f, err := scanFeed(rows)
+		if err != nil {
+			log.Print(err)
+			return result
+		}
+		result = append(result, f)
+	}
+	return result
 }
 
 func (s *Storage) ResetFeedErrors() {

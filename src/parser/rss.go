@@ -37,8 +37,9 @@ type rssItem struct {
 	PubDate     string         `xml:"pubDate"`
 	Enclosures  []rssEnclosure `xml:"enclosure"`
 
-	DublinCoreDate string `xml:"http://purl.org/dc/elements/1.1/ date"`
-	ContentEncoded string `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
+	DublinCoreDate    string `xml:"http://purl.org/dc/elements/1.1/ date"`
+	DublinCoreCreator string `xml:"http://purl.org/dc/elements/1.1/ creator"`
+	ContentEncoded    string `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
 
 	OrigLink          string `xml:"http://rssnamespace.org/feedburner/ext/1.0 origLink"`
 	OrigEnclosureLink string `xml:"http://rssnamespace.org/feedburner/ext/1.0 origEnclosureLink"`
@@ -202,7 +203,7 @@ func ParseRSS(r io.Reader) (*Feed, error) {
 			Date:       dateParse(firstNonEmpty(srcitem.DublinCoreDate, srcitem.PubDate)),
 			URL:        firstNonEmpty(srcitem.OrigLink, srcitem.Link, permalink),
 			Title:      srcitem.Title,
-			Author:     strings.TrimSpace(srcitem.Author),
+			Author:     strings.TrimSpace(firstNonEmpty(srcitem.Author, srcitem.DublinCoreCreator)),
 			Content:    firstNonEmpty(srcitem.ContentEncoded, srcitem.Description.String(), srcitem.firstMediaDescription()),
 			MediaLinks: mediaLinks,
 		})

@@ -13,22 +13,22 @@ import (
 const NUM_WORKERS = 4
 
 type Worker struct {
-	db                  *storage.Storage
-	pending             *int32
-	refresh             *time.Ticker
-	reflock             sync.Mutex
-	stopper             chan bool
-	rsshubAvailability  map[string]rsshubAvailability
-	rsshubMu            sync.RWMutex
-	rsshubHits          map[int64]rsshubRefreshHit
-	rsshubLastSuccess   map[int64]string
-	rsshubRoundRobin    int
-	refreshDetails      map[int64]FeedRefreshDetail
-	refreshDetailsMu    sync.RWMutex
-	rsshubRefresh       *time.Ticker
-	rsshubStopper       chan bool
-	generatedRSS        *time.Ticker
-	generatedRSSStopper chan bool
+	db                 *storage.Storage
+	pending            *int32
+	refresh            *time.Ticker
+	reflock            sync.Mutex
+	stopper            chan bool
+	rsshubAvailability map[string]rsshubAvailability
+	rsshubMu           sync.RWMutex
+	rsshubHits         map[int64]rsshubRefreshHit
+	rsshubLastSuccess  map[int64]string
+	rsshubRoundRobin   int
+	refreshDetails     map[int64]FeedRefreshDetail
+	refreshDetailsMu   sync.RWMutex
+	rsshubRefresh      *time.Ticker
+	rsshubStopper      chan bool
+	rankingModeExists  map[string]time.Time
+	rankingModeMu      sync.Mutex
 }
 
 type feedRefreshJobResult struct {
@@ -46,6 +46,7 @@ func NewWorker(db *storage.Storage) *Worker {
 		rsshubHits:         make(map[int64]rsshubRefreshHit),
 		rsshubLastSuccess:  make(map[int64]string),
 		refreshDetails:     make(map[int64]FeedRefreshDetail),
+		rankingModeExists:  make(map[string]time.Time),
 	}
 }
 
@@ -62,32 +63,6 @@ func (w *Worker) StartFeedCleaner() {
 			w.db.DeleteOldItems()
 		}
 	}()
-}
-
-func (w *Worker) StartGeneratedRSS() {
-	if w.generatedRSSStopper != nil {
-		w.generatedRSS.Stop()
-		w.generatedRSS = nil
-		w.generatedRSSStopper <- true
-		w.generatedRSSStopper = nil
-	}
-
-	w.generatedRSSStopper = make(chan bool)
-	w.generatedRSS = time.NewTicker(time.Hour)
-	go w.RefreshBilibiliTopHubSources()
-
-	go func(fire <-chan time.Time, stop <-chan bool) {
-		log.Print("generated rss: starting")
-		for {
-			select {
-			case <-fire:
-				w.RefreshBilibiliTopHubSources()
-			case <-stop:
-				log.Print("generated rss: stopping")
-				return
-			}
-		}
-	}(w.generatedRSS.C, w.generatedRSSStopper)
 }
 
 func (w *Worker) FindFavicons() {
@@ -231,26 +206,32 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		job := <-dstqueue
 		result := job.result
 		newItems := 0
+		fetchedItems := 0
 		if job.err != nil {
 			w.db.SetFeedError(job.feed.Id, job.err)
 		}
 		if result != nil && result.Feed != nil {
+			fetchedItems = len(result.Items)
 			feedLink := result.FeedLink
 			if rsshub.IsLink(result.StoredFeedLink) {
 				feedLink = result.StoredFeedLink
 			}
 			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, feedLink)
 			w.updateRefreshedFeedIcon(result)
+			w.appendRankingModeItem(job.feed, result, time.Now())
 		}
 		if result != nil && len(result.Items) > 0 {
 			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
-			w.db.CreateItems(result.Items)
+			created := w.db.CreateItems(result.Items)
+			if created {
+				w.cacheInsertedRankingModeItems(result.FeedID, result.Items, time.Now())
+			}
 			after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
 			newItems = after - before
-			w.db.SetFeedSize(result.Items[0].FeedId, len(result.Items))
+			w.db.SetFeedSize(result.FeedID, fetchedItems)
 		}
 		w.recordRSSHubRefreshHit(result)
-		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, newItems)
+		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, fetchedItems, newItems)
 		atomic.AddInt32(w.pending, -1)
 		w.db.SyncSearch()
 	}

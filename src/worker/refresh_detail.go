@@ -13,7 +13,7 @@ type FeedRefreshDetail struct {
 	RSSHubLink      string    `json:"rsshub_link,omitempty"`
 }
 
-func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult, refreshErr error, newItems int) {
+func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult, refreshErr error, fetchedItems, newItems int) {
 	detail := FeedRefreshDetail{
 		LastRefreshedAt: time.Now().UTC(),
 		Success:         refreshErr == nil,
@@ -21,7 +21,7 @@ func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult
 	if refreshErr != nil {
 		detail.Error = refreshErr.Error()
 	} else if result != nil {
-		detail.FetchedItems = len(result.Items)
+		detail.FetchedItems = fetchedItems
 		if newItems > 0 {
 			detail.NewItems = newItems
 		}

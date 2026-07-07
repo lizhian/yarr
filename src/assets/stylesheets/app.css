@@ -1333,6 +1333,38 @@ select.form-control:not([multiple]):not([size]) {
   text-indent: 2em;
 }
 
+.content .bilibili-ranking-meta {
+  display: flex;
+  gap: .75rem;
+  justify-content: space-between;
+  text-indent: 0em;
+  padding: 5px 5px 0px 5px;
+}
+
+.content .bilibili-ranking-meta span {
+  min-width: 0;
+}
+
+.content .bilibili-ranking-meta time {
+  flex: 0 0 auto;
+}
+
+.content .bilibili-ranking-title {
+  cursor: pointer;
+  display: block;
+  list-style: none;
+  text-indent: 0em;
+  padding: 0px 5px 5px 5px;
+}
+
+.content .bilibili-ranking-title::-webkit-details-marker {
+  display: none;
+}
+
+.content .bilibili-ranking-content {
+  padding: 0 5px 5px 5px;
+}
+
 .content-embed {
   border: 1px solid #ced4da;
   border-radius: 3px;

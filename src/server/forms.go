@@ -20,4 +20,5 @@ type FeedCreateForm struct {
 	FolderID        *int64 `json:"folder_id,omitempty"`
 	ContentSelector string `json:"content_selector"`
 	ContentMode     string `json:"content_mode"`
+	RankingMode     string `json:"ranking_mode"`
 }

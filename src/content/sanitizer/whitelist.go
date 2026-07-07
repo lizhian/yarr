@@ -213,6 +213,7 @@ var allowedSvgFilters = sset([]string{
 var allowedAttrs = map[string]set{
 	"img":     sset([]string{"alt", "title", "src", "srcset", "sizes", "class"}),
 	"article": sset([]string{"class"}),
+	"details": sset([]string{"class"}),
 	"div":     sset([]string{"class"}),
 	"audio":   sset([]string{"src"}),
 	"video":   sset([]string{"poster", "height", "width", "src"}),
@@ -222,7 +223,8 @@ var allowedAttrs = map[string]set{
 	"q":       sset([]string{"cite"}),
 	"p":       sset([]string{"class"}),
 	"a":       sset([]string{"href", "title", "class"}),
-	"time":    sset([]string{"datetime"}),
+	"summary": sset([]string{"class"}),
+	"time":    sset([]string{"datetime", "class"}),
 	"abbr":    sset([]string{"title"}),
 	"acronym": sset([]string{"title"}),
 	"iframe":  sset([]string{"width", "height", "frameborder", "src", "allowfullscreen"}),
@@ -231,6 +233,8 @@ var allowedAttrs = map[string]set{
 var allowedClassNames = sset([]string{
 	"bilibili-ranking-body",
 	"bilibili-ranking-card",
+	"bilibili-ranking-content",
+	"bilibili-ranking-details",
 	"bilibili-ranking-image",
 	"bilibili-ranking-link",
 	"bilibili-ranking-meta",

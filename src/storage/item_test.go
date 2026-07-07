@@ -98,6 +98,28 @@ func getItemGuids(items []Item) []string {
 	return guids
 }
 
+func TestItemGUIDExists(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("feed", "", "", "http://test.com/feed.xml", nil)
+	if db.ItemGUIDExists(feed.Id, "guid") {
+		t.Fatal("unexpected existing item")
+	}
+
+	db.CreateItems([]Item{{
+		GUID:   "guid",
+		FeedId: feed.Id,
+		Title:  "title",
+		Link:   "http://test.com/item",
+		Date:   time.Now(),
+	}})
+	if !db.ItemGUIDExists(feed.Id, "guid") {
+		t.Fatal("expected existing item")
+	}
+	if db.ItemGUIDExists(feed.Id+1, "guid") {
+		t.Fatal("expected feed scoped lookup")
+	}
+}
+
 func TestListItems(t *testing.T) {
 	db := testDB()
 	scope := testItemsSetup(db)

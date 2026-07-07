@@ -17,8 +17,8 @@ func TestValidInput(t *testing.T) {
 }
 
 func TestBilibiliRankingClasses(t *testing.T) {
-	input := `<a class="bilibili-ranking-link external" href="https://example.org/video"><article class="bilibili-ranking-card unknown"><img class="bilibili-ranking-image ignored" src="https://example.org/cover.jpg"><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta x">01｜作者</p><p class="bilibili-ranking-title">标题</p></div></article></a>`
-	want := `<a class="bilibili-ranking-link" href="https://example.org/video" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer"><article class="bilibili-ranking-card"><img class="bilibili-ranking-image" src="https://example.org/cover.jpg" loading="lazy" referrerpolicy="no-referrer"><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta">01｜作者</p><p class="bilibili-ranking-title">标题</p></div></article></a>`
+	input := `<article class="bilibili-ranking-card unknown"><a class="bilibili-ranking-link external" href="https://example.org/video"><img class="bilibili-ranking-image ignored" src="https://example.org/cover.jpg"></a><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta x"><span>01｜作者</span><time class="x" datetime="2026-07-06T02:00:00Z">1h</time></p><details class="bilibili-ranking-details bad"><summary class="bilibili-ranking-title x">标题</summary><div class="bilibili-ranking-content x"><p>正文</p></div></details></div></article>`
+	want := `<article class="bilibili-ranking-card"><a class="bilibili-ranking-link" href="https://example.org/video" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer"><img class="bilibili-ranking-image" src="https://example.org/cover.jpg" loading="lazy" referrerpolicy="no-referrer"></a><div class="bilibili-ranking-body"><p class="bilibili-ranking-meta"><span>01｜作者</span><time datetime="2026-07-06T02:00:00Z">1h</time></p><details class="bilibili-ranking-details"><summary class="bilibili-ranking-title">标题</summary><div class="bilibili-ranking-content"><p>正文</p></div></details></div></article>`
 	have := Sanitize("https://example.org/", input)
 
 	if have != want {

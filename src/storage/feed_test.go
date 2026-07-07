@@ -89,6 +89,11 @@ func TestUpdateFeed(t *testing.T) {
 	if feed2.IconURL != "https://example.com/icon.png" {
 		t.Error("invalid icon url")
 	}
+	db.UpdateFeedRankingMode(feed1.Id, FeedRankingModeWithImage)
+	feed2 = db.GetFeed(feed1.Id)
+	if feed2.RankingMode != FeedRankingModeWithImage {
+		t.Error("invalid ranking mode")
+	}
 	if db.UpdateFeedContentMode(feed1.Id, "invalid") {
 		t.Error("invalid content mode accepted")
 	}
@@ -115,6 +120,36 @@ func TestCreateFeedContentMode(t *testing.T) {
 	feed = db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
 	if feed.ContentMode != FeedContentModeReadability {
 		t.Fatalf("expected existing content mode to be preserved, got %q", feed.ContentMode)
+	}
+}
+
+func TestCreateFeedRankingMode(t *testing.T) {
+	db := testDB()
+
+	feed := db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
+	if feed.RankingMode != FeedRankingModeOff {
+		t.Fatalf("expected ranking mode to default off, got %q", feed.RankingMode)
+	}
+
+	feed = db.CreateFeedWithRankingMode("feed", "", "http://example.com", "http://example.com/feed.xml", "", FeedContentModeNormal, FeedRankingModeWithoutImage, nil)
+	if feed.RankingMode != FeedRankingModeWithoutImage {
+		t.Fatalf("expected ranking mode to be without_image, got %q", feed.RankingMode)
+	}
+
+	feed = db.CreateFeed("feed", "", "http://example.com", "http://example.com/feed.xml", nil)
+	if feed.RankingMode != FeedRankingModeWithoutImage {
+		t.Fatal("expected existing ranking mode to be preserved")
+	}
+}
+
+func TestListRankingModeFeeds(t *testing.T) {
+	db := testDB()
+	feed1 := db.CreateFeedWithRankingMode("feed 1", "", "http://example1.com", "http://example1.com/feed.xml", "", "", FeedRankingModeWithImage, nil)
+	db.CreateFeed("feed 2", "", "http://example2.com", "http://example2.com/feed.xml", nil)
+
+	feeds := db.ListRankingModeFeeds()
+	if !reflect.DeepEqual(feeds, []Feed{*feed1}) {
+		t.Fatalf("invalid feed list: %#v", feeds)
 	}
 }
 

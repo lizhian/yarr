@@ -10,7 +10,7 @@
         <link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css">
     </noscript>
     <link rel="stylesheet" href="./static/stylesheets/bootstrap.min.css">
-    <link rel="stylesheet" href="./static/stylesheets/app.css">
+    <link rel="stylesheet" href="./static/stylesheets/app.css?v=ranking-mode">
     <link rel="icon" href="./static/graphicarts/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="./static/graphicarts/favicon.png" type="image/png">
     <link rel="manifest" href="./manifest.json" />
@@ -579,6 +579,18 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="settings-dialog-field settings-dialog-field-choice">
+                            <span class="settings-dialog-field-label">榜单模式</span>
+                            <div class="settings-segmented settings-segmented-compact content-mode-picker">
+                                <button class="btn btn-link"
+                                        :aria-pressed="settingsFeed.ranking_mode == option.name"
+                                        :class="{active: settingsFeed.ranking_mode == option.name}"
+                                        @click="updateFeedRankingMode(settingsFeed, option.name)"
+                                        v-for="option in rankingModeOptions">
+                                    {{ option.title }}
+                                </button>
+                            </div>
+                        </div>
                         <button class="settings-dialog-field settings-dialog-field-action" @click="updateFeedContentSelector(settingsFeed)" v-if="showFeedContentSelector">
                             <span class="settings-dialog-field-label">正文选择器</span>
                             <span class="settings-dialog-field-value">{{ settingsFeed.content_selector || '未设置' }}</span>
@@ -713,6 +725,15 @@
                         <label for="feed-content-selector" class="mt-3 d-block">正文选择器</label>
                         <input id="feed-content-selector" name="content_selector" type="text" class="form-control" autocomplete="off" placeholder=".content__default">
                     </template>
+                    <label class="mt-3 d-block">榜单模式</label>
+                    <div class="settings-segmented content-mode-picker">
+                        <label class="btn btn-link mb-0"
+                               :class="{active: feedNewRankingMode == option.name}"
+                               v-for="option in rankingModeOptions">
+                            <input type="radio" name="ranking_mode" :value="option.name" v-model="feedNewRankingMode">
+                            {{ option.title }}
+                        </label>
+                    </div>
                     <div class="mt-4" v-if="feedNewChoice.length">
                         <p class="mb-2">
                             找到多个订阅源，请选择一个：
@@ -858,8 +879,8 @@
     <!-- external -->
     <script src="./static/javascripts/vue.min.js"></script>
     <!-- internal -->
-    <script src="./static/javascripts/api.js"></script>
-    <script src="./static/javascripts/app.js"></script>
-    <script src="./static/javascripts/key.js"></script>
+    <script src="./static/javascripts/api.js?v=ranking-mode"></script>
+    <script src="./static/javascripts/app.js?v=ranking-mode"></script>
+    <script src="./static/javascripts/key.js?v=ranking-mode"></script>
 </body>
 </html>

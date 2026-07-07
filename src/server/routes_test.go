@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +11,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -109,158 +107,6 @@ func TestStatusIncludesRSSHubDetails(t *testing.T) {
 	}
 	if body.RSSHubDetails[0].BaseURL != "https://a.example" {
 		t.Fatalf("got base %q", body.RSSHubDetails[0].BaseURL)
-	}
-}
-
-func TestBilibiliTopRSS(t *testing.T) {
-	db := testServerDB(t)
-	source := db.UpsertGeneratedRSSSource("bilibili_top", "B站全站热榜", "rsshub://bilibili/ranking/0", "B站全站热榜小时快照")
-	if source == nil {
-		t.Fatal("failed to create source")
-	}
-	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
-	content := `<article><img src="https://example.com/cover.jpg"><p>content</p><img src="https://example.com/ignored.jpg"></article>`
-	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_top:2026070610", "2026 年 07 月 06 日 10 时 B站全站热榜", source.Link, content, publishedAt) {
-		t.Fatal("failed to create item")
-	}
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/rss/bilibili/top", nil)
-	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
-
-	if recorder.Result().StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
-	}
-	if ctype := recorder.Result().Header.Get("Content-Type"); ctype != "application/rss+xml; charset=utf-8" {
-		t.Fatalf("invalid content type: %q", ctype)
-	}
-
-	var doc generatedRSSFeed
-	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
-		t.Fatal(err)
-	}
-	if doc.Channel.Title != "B站全站热榜" {
-		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
-	}
-	if len(doc.Channel.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
-	}
-	item := doc.Channel.Items[0]
-	if item.GUID != "bilibili_top:2026070610" {
-		t.Fatalf("invalid guid: %q", item.GUID)
-	}
-	if item.PubDate != publishedAt.Format(time.RFC1123Z) {
-		t.Fatalf("invalid pubDate: %q", item.PubDate)
-	}
-	if !strings.Contains(item.Description, "cover.jpg") {
-		t.Fatalf("content missing html content: %#v", item.Description)
-	}
-	if item.Link != source.Link {
-		t.Fatalf("invalid item link: %q", item.Link)
-	}
-	if item.Enclosure == nil || item.Enclosure.URL != "https://example.com/cover.jpg" || item.Enclosure.Type != "image/jpeg" {
-		t.Fatalf("invalid enclosure: %#v", item.Enclosure)
-	}
-}
-
-func TestGeneratedRSSEnclosureWithoutImage(t *testing.T) {
-	item := storage.GeneratedRSSItem{
-		Link:    "rsshub://bilibili/ranking/0",
-		Content: `<article><p>content</p></article>`,
-	}
-	if enclosure := generatedRSSEnclosure(item); enclosure != nil {
-		t.Fatalf("expected no enclosure, got %#v", enclosure)
-	}
-}
-
-func TestBilibiliZhishiRSS(t *testing.T) {
-	db := testServerDB(t)
-	source := db.UpsertGeneratedRSSSource("bilibili_zhishi", "B站知识榜", "rsshub://bilibili/ranking/knowledge", "B站知识榜小时快照")
-	if source == nil {
-		t.Fatal("failed to create source")
-	}
-	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
-	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_zhishi:2026070610", "2026 年 07 月 06 日 10 时 B站知识榜", source.Link, `<article>content</article>`, publishedAt) {
-		t.Fatal("failed to create item")
-	}
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/rss/bilibili/zhishi", nil)
-	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
-
-	if recorder.Result().StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
-	}
-
-	var doc generatedRSSFeed
-	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
-		t.Fatal(err)
-	}
-	if doc.Channel.Title != "B站知识榜" {
-		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
-	}
-	if len(doc.Channel.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
-	}
-	item := doc.Channel.Items[0]
-	if item.Title != "2026 年 07 月 06 日 10 时 B站知识榜" {
-		t.Fatalf("invalid item title: %q", item.Title)
-	}
-	if item.GUID != "bilibili_zhishi:2026070610" {
-		t.Fatalf("invalid guid: %q", item.GUID)
-	}
-}
-
-func TestBilibiliHotRSS(t *testing.T) {
-	db := testServerDB(t)
-	source := db.UpsertGeneratedRSSSource("bilibili_hot", "B站热门榜", "rsshub://bilibili/popular/all", "B站热门榜小时快照")
-	if source == nil {
-		t.Fatal("failed to create source")
-	}
-	publishedAt := time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC)
-	if !db.UpsertGeneratedRSSItem(source.Key, "bilibili_hot:2026070610", "2026 年 07 月 06 日 10 时 B站热门榜", source.Link, `<article>content</article>`, publishedAt) {
-		t.Fatal("failed to create item")
-	}
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/rss/bilibili/hot", nil)
-	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
-
-	if recorder.Result().StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
-	}
-
-	var doc generatedRSSFeed
-	if err := xml.Unmarshal(recorder.Body.Bytes(), &doc); err != nil {
-		t.Fatal(err)
-	}
-	if doc.Channel.Title != "B站热门榜" {
-		t.Fatalf("invalid feed title: %q", doc.Channel.Title)
-	}
-	if len(doc.Channel.Items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(doc.Channel.Items))
-	}
-	item := doc.Channel.Items[0]
-	if item.Title != "2026 年 07 月 06 日 10 时 B站热门榜" {
-		t.Fatalf("invalid item title: %q", item.Title)
-	}
-	if item.GUID != "bilibili_hot:2026070610" {
-		t.Fatalf("invalid guid: %q", item.GUID)
-	}
-}
-
-func TestBilibiliTopRSSPublicWithAuth(t *testing.T) {
-	db := testServerDB(t)
-	if !db.SetAuthConfig(true, "username", "password") {
-		t.Fatal("failed to enable auth")
-	}
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/rss/bilibili/top", nil)
-	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
-
-	if recorder.Result().StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", recorder.Result().StatusCode)
 	}
 }
 
@@ -429,7 +275,7 @@ func TestMissingItemReturnsNotFound(t *testing.T) {
 func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	db := testServerDB(t)
 
-	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"readability"}`)
+	body := bytes.NewBufferString(`{"url":"rsshub://bilibili/weekly","content_mode":"readability","ranking_mode":"with_image"}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("POST", "/api/feeds", body)
 
@@ -459,6 +305,23 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	}
 	if feed.ContentMode != storage.FeedContentModeReadability {
 		t.Fatalf("got %q", feed.ContentMode)
+	}
+	if feed.RankingMode != storage.FeedRankingModeWithImage {
+		t.Fatalf("got %q", feed.RankingMode)
+	}
+}
+
+func TestOldBilibiliRSSRoutesRemoved(t *testing.T) {
+	db := testServerDB(t)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	for _, path := range []string{"/rss/bilibili/top", "/rss/bilibili/zhishi", "/rss/bilibili/hot"} {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", path, nil)
+		handler.ServeHTTP(recorder, request)
+		if recorder.Result().StatusCode == http.StatusOK {
+			t.Fatalf("%s returned 200", path)
+		}
 	}
 }
 
@@ -604,6 +467,50 @@ func TestUpdateFeedContentModeRejectsUnsupportedMode(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.ContentMode != storage.FeedContentModeNormal {
 		t.Fatalf("got %q", feed.ContentMode)
+	}
+}
+
+func TestUpdateFeedRankingMode(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"ranking_mode":"without_image"}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.RankingMode != storage.FeedRankingModeWithoutImage {
+		t.Fatalf("got %q", feed.RankingMode)
+	}
+}
+
+func TestUpdateFeedRankingModeRejectsUnsupportedValue(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"ranking_mode":true}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.RankingMode != storage.FeedRankingModeOff {
+		t.Fatal("ranking mode should not change")
 	}
 }
 
