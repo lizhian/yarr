@@ -1299,9 +1299,9 @@ select.form-control:not([multiple]):not([size]) {
 
 .content .bilibili-ranking-card {
   overflow: hidden;
-  margin: 0 0 10px;
+  margin: 0 0 1rem;
   border: 1px solid var(--generated-card-border);
-  border-radius: 5px;
+  border-radius: 12px;
   background: var(--generated-card-bg);
   box-shadow: var(--article-card-shadow);
 }
@@ -1323,6 +1323,11 @@ select.form-control:not([multiple]):not([size]) {
   color: var(--generated-card-meta-color);
   font-size: 0.875rem;
   line-height: 1.35;
+  display: flex;
+  gap: .75rem;
+  justify-content: space-between;
+  text-indent: 0;
+  padding: 7px 10px 0 10px;
 }
 
 .content .bilibili-ranking-title {
@@ -1330,16 +1335,14 @@ select.form-control:not([multiple]):not([size]) {
   color: var(--generated-card-title-color);
   font-size: 1.125rem;
   line-height: 1.35;
-  text-indent: 2em;
+  cursor: pointer;
+  display: block;
+  list-style: none;
+  text-indent: 0;
+  padding: 0 10px 7px 10px;
 }
 
-.content .bilibili-ranking-meta {
-  display: flex;
-  gap: .75rem;
-  justify-content: space-between;
-  text-indent: 0em;
-  padding: 5px 5px 0px 5px;
-}
+
 
 .content .bilibili-ranking-meta span {
   min-width: 0;
@@ -1349,20 +1352,13 @@ select.form-control:not([multiple]):not([size]) {
   flex: 0 0 auto;
 }
 
-.content .bilibili-ranking-title {
-  cursor: pointer;
-  display: block;
-  list-style: none;
-  text-indent: 0em;
-  padding: 0px 5px 5px 5px;
-}
-
 .content .bilibili-ranking-title::-webkit-details-marker {
   display: none;
 }
 
 .content .bilibili-ranking-content {
-  padding: 0 5px 5px 5px;
+  padding: 0 10px 7px 10px;
+  border-top: 1px solid var(--generated-card-border);
 }
 
 .content-embed {
@@ -1560,12 +1556,12 @@ a,
 
 body.theme-sepia {
   background-image:
-    radial-gradient(ellipse at 18% 22%, rgba(139, 95, 28, .14), transparent 34%),
-    radial-gradient(ellipse at 82% 14%, rgba(255, 255, 255, .20), transparent 30%),
-    radial-gradient(ellipse at 52% 88%, rgba(118, 79, 21, .10), transparent 38%),
-    repeating-linear-gradient(92deg, rgba(101, 70, 22, .026) 0 1px, transparent 1px 7px),
-    repeating-linear-gradient(2deg, rgba(255, 255, 255, .045) 0 1px, transparent 1px 11px),
-    linear-gradient(0deg, rgba(255, 255, 255, .08), rgba(145, 101, 32, .07));
+          radial-gradient(ellipse at 18% 22%, rgba(139, 95, 28, .14), transparent 34%),
+          radial-gradient(ellipse at 82% 14%, rgba(255, 255, 255, .20), transparent 30%),
+          radial-gradient(ellipse at 52% 88%, rgba(118, 79, 21, .10), transparent 38%),
+          repeating-linear-gradient(92deg, rgba(101, 70, 22, .026) 0 1px, transparent 1px 7px),
+          repeating-linear-gradient(2deg, rgba(255, 255, 255, .045) 0 1px, transparent 1px 11px),
+          linear-gradient(0deg, rgba(255, 255, 255, .08), rgba(145, 101, 32, .07));
   background-attachment: fixed;
   background-blend-mode: multiply, screen, multiply, multiply, screen, normal;
   background-size: 140% 120%, 130% 110%, 150% 120%, 17px 100%, 100% 19px, 100% 100%;

@@ -199,7 +199,7 @@ func RenderRankingContent(entries []RankingEntry, mode string, now time.Time) st
 		buffer.WriteString(title)
 		buffer.WriteString(`</summary>`)
 		if entry.Content != "" {
-			buffer.WriteString(`<br/><div class="bilibili-ranking-content">`)
+			buffer.WriteString(`<div class="bilibili-ranking-content">`)
 			buffer.WriteString(entry.Content)
 			buffer.WriteString(`</div>`)
 		}
