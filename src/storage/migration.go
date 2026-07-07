@@ -25,6 +25,7 @@ var migrations = []func(*sql.Tx) error{
 	m15_add_feed_ranking_mode,
 	m16_change_feed_ranking_mode_to_text,
 	m17_add_item_list_indexes,
+	m18_remove_feed_setting,
 }
 
 var maxVersion = int64(len(migrations))
@@ -451,5 +452,10 @@ func m17_add_item_list_indexes(tx *sql.Tx) error {
 		create index if not exists idx_item_feed_status_date_id on items(feed_id, status, date desc, id desc);
 	`
 	_, err := tx.Exec(sql)
+	return err
+}
+
+func m18_remove_feed_setting(tx *sql.Tx) error {
+	_, err := tx.Exec(`delete from settings where key = 'feed';`)
 	return err
 }

@@ -257,6 +257,24 @@ function parseURL(raw) {
 }
 
 var ARTICLE_LIST_LAYOUTS_KEY = 'yarr.articleListLayouts.v1'
+var FEED_SELECTED_KEY = 'yarr.feedSelected.v1'
+
+function readFeedSelected() {
+  try {
+    var raw = localStorage.getItem(FEED_SELECTED_KEY)
+    if (raw === null) return ''
+    var feedSelected = JSON.parse(raw)
+    return feedSelected === null || typeof feedSelected == 'string' ? feedSelected : ''
+  } catch (e) {
+    return ''
+  }
+}
+
+function writeFeedSelected(feedSelected) {
+  try {
+    localStorage.setItem(FEED_SELECTED_KEY, JSON.stringify(feedSelected === null ? null : (feedSelected || '')))
+  } catch (e) {}
+}
 
 function normalizeArticleListLayout(layout) {
   return layout == 'card' ? 'card' : 'list'
@@ -478,11 +496,12 @@ var vm = new Vue({
   },
   data: function() {
     var s = app.settings
+    var feedSelected = readFeedSelected()
     return {
       'filterSelected': s.filter,
       'folders': [],
       'feeds': [],
-      'feedSelected': s.feed,
+      'feedSelected': feedSelected,
       'feedListWidth': s.feed_list_width || 300,
       'feedIconErrors': {},
       'feedNewChoice': [],
@@ -505,7 +524,7 @@ var vm = new Vue({
       'itemSearch': '',
       'itemSortNewestFirst': s.sort_newest_first,
       'itemListWidth': s.item_list_width || 300,
-      'articleListLayout': getArticleListLayout(s.feed),
+      'articleListLayout': getArticleListLayout(feedSelected),
       'articleListLayoutApplying': false,
       'rsshubBaseUrl': s.rsshub_base_url || '',
       'rsshubDetails': [],
@@ -729,7 +748,8 @@ var vm = new Vue({
         this.articleListLayoutApplying = true
         this.articleListLayout = layout
       }
-      api.settings.update({feed: newVal}).then(this.refreshItems.bind(this, false))
+      writeFeedSelected(newVal)
+      this.refreshItems(false)
       this.itemSelected = null
       if (this.$refs.itemlist) this.$refs.itemlist.scrollTop = 0
       this.syncNavigationHistory()
@@ -993,12 +1013,29 @@ var vm = new Vue({
       }
       return query
     },
+    feedSelectionExists: function(feedSelected) {
+      if (feedSelected === null || feedSelected === '') return true
+
+      var parts = (feedSelected || '').split(':', 2)
+      var type = parts[0]
+      var guid = parts[1]
+
+      if (type == 'feed') return !!this.feedsById[guid]
+      if (type == 'folder') return !!this.foldersById[guid]
+      return false
+    },
+    ensureFeedSelectionExists: function() {
+      if (this.feedSelectionExists(this.feedSelected)) return
+      this.feedSelected = ''
+      writeFeedSelected('')
+    },
     refreshFeeds: function() {
       return Promise
         .all([api.folders.list(), api.feeds.list()])
         .then(function(values) {
           vm.folders = values[0]
           vm.feeds = values[1]
+          vm.ensureFeedSelectionExists()
         })
     },
     refreshItems: function(loadMore = false) {

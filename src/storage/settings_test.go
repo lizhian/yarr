@@ -111,6 +111,47 @@ func TestColumnWidthDefaultsUnset(t *testing.T) {
 	}
 }
 
+func TestFeedSettingIgnored(t *testing.T) {
+	db := testDB()
+	setRawSetting(t, db, "feed", `"feed:9"`)
+
+	if got := db.GetSettingsValue("feed"); got != nil {
+		t.Fatalf("feed setting should not have a value: %#v", got)
+	}
+
+	settings := db.GetSettings()
+	if _, ok := settings["feed"]; ok {
+		t.Fatal("feed setting should not be returned")
+	}
+
+	if !db.UpdateSettings(map[string]interface{}{"feed": "feed:10"}) {
+		t.Fatal("feed setting update should be ignored without failing")
+	}
+	if got := db.GetSettingsValue("feed"); got != nil {
+		t.Fatalf("feed setting should remain ignored after update: %#v", got)
+	}
+}
+
+func TestMigrationRemovesFeedSetting(t *testing.T) {
+	db := testDB()
+	setRawSetting(t, db, "feed", `"feed:9"`)
+	if _, err := db.db.Exec(`pragma user_version = 17`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := migrate(db.db); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	if err := db.db.QueryRow(`select count(*) from settings where key = 'feed'`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("feed setting was not removed: %d", count)
+	}
+}
+
 func TestUpdateToolbarDisplay(t *testing.T) {
 	db := testDB()
 

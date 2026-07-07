@@ -11,7 +11,6 @@ import (
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
 		"filter":            "",
-		"feed":              "",
 		"feed_list_width":   0,
 		"item_list_width":   0,
 		"sort_newest_first": true,
