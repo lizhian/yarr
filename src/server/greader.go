@@ -174,6 +174,8 @@ func (s *Server) handleGReader(c *router.Context) {
 		s.greaderTagList(c)
 	case path == "/reader/api/0/unread-count":
 		s.greaderUnreadCount(c)
+	case path == "/reader/api/0/stream/contents":
+		s.greaderStreamContents(c, c.Req.URL.Query().Get("s"))
 	case strings.HasPrefix(path, "/reader/api/0/stream/contents/"):
 		s.greaderStreamContents(c, strings.TrimPrefix(path, "/reader/api/0/stream/contents/"))
 	case path == "/reader/api/0/stream/items/ids":

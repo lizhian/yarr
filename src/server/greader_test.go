@@ -223,6 +223,19 @@ func TestGReaderStreamContentsFiltersAndContinuation(t *testing.T) {
 	}
 
 	recorder = httptest.NewRecorder()
+	request = greaderRequest("GET", "/api/greader.php/reader/api/0/stream/contents?s="+url.QueryEscape(greaderFeedID(feed1.Id))+"&n=1", token, nil)
+	handler.ServeHTTP(recorder, request)
+	var queryStream struct {
+		Items []greaderItem `json:"items"`
+	}
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&queryStream); err != nil {
+		t.Fatal(err)
+	}
+	if len(queryStream.Items) != 1 || queryStream.Items[0].ID != greaderItemID(unreadA.Id) {
+		t.Fatalf("got query stream %#v", queryStream.Items)
+	}
+
+	recorder = httptest.NewRecorder()
 	url := "/api/greader.php/reader/api/0/stream/contents/" + greaderFeedID(feed1.Id) + "?xt=" + url.QueryEscape(greaderRead)
 	request = greaderRequest("GET", url, token, nil)
 	handler.ServeHTTP(recorder, request)
