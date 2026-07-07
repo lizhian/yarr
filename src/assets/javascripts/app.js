@@ -468,8 +468,10 @@ Vue.component('relative-time', {
 var vm = new Vue({
   created: function() {
     this.refreshStats()
-      .then(this.refreshFeeds.bind(this))
-      .then(this.refreshItems.bind(this, false))
+    Promise.all([
+      this.refreshFeeds(),
+      this.refreshItems(false),
+    ])
 
     this.scheduleStatusPoll(STATUS_POLL_INTERVAL)
 
