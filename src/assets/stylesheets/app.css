@@ -1299,9 +1299,9 @@ select.form-control:not([multiple]):not([size]) {
 
 .content .bilibili-ranking-card {
   overflow: hidden;
-  margin: 0 0 1rem;
+  margin: 0 0 10px;
   border: 1px solid var(--generated-card-border);
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--generated-card-bg);
   box-shadow: var(--article-card-shadow);
 }
