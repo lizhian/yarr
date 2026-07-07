@@ -1600,6 +1600,13 @@ var vm = new Vue({
         if (!isNaN(date.getTime())) node.textContent = dateRepr(date)
       })
     },
+    onContentClick: function(e) {
+      var meta = e.target.closest('.bilibili-ranking-meta')
+      if (!meta || !this.$refs.content.contains(meta)) return
+      var details = meta.nextElementSibling
+      if (!details || !details.classList.contains('bilibili-ranking-details')) return
+      details.open = !details.open
+    },
     loadItemSelectedReadability: function() {
       var item = this.itemSelectedDetails
       if (!item) return

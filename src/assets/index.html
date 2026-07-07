@@ -319,6 +319,7 @@
             <div v-if="itemSelected"
                  ref="content"
                  class="content px-4 pt-3 pb-5 border-top overflow-auto scroll-touch"
+                 @click="onContentClick"
                  :style="{'font-size': theme.size + 'rem'}">
                 <div class="content-wrapper">
                     <h1 v-if="showItemDetailsMeta">
