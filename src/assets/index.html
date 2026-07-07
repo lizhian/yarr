@@ -132,10 +132,6 @@
                     </div>
                 </div>
             </div>
-            <div class="p-2 toolbar d-flex align-items-center border-top flex-shrink-0" v-if="loading.feeds">
-                <span class="icon loading mx-2"></span>
-                <span class="text-truncate cursor-default noselect">正在刷新（剩余 {{ loading.feeds }} 个）</span>
-            </div>
         </div>
         <!-- item list -->
         <div id="col-item-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: itemListWidth+'px'}">
@@ -858,6 +854,10 @@
                     <tr><td><kbd>f</kbd> <kbd>b</kbd></td>  <td>向前 / 向后滚动正文</td>
                     </tr>
                 </table>
+            </div>
+            <div class="settings-refresh-status" v-if="loading.feeds">
+                <span class="icon loading"></span>
+                <span class="text-truncate cursor-default noselect">正在刷新（剩余 {{ loading.feeds }} 个）</span>
             </div>
         </modal>
         <modal class="settings-modal" :open="dialog.open" @hide="cancelDialog()">

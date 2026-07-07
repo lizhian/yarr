@@ -1,14 +1,17 @@
 package storage
 
 import (
-	"reflect"
-	"sort"
+	"path/filepath"
 	"testing"
 	"time"
 )
 
-func TestBackupTablesExportsApplicationTables(t *testing.T) {
-	db := testDB()
+func TestBackupToWritesSQLiteSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	db, err := New(filepath.Join(dir, "storage.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	folder := db.CreateFolder("folder")
 	feed := db.CreateFeed("feed", "description", "https://example.com", "https://example.com/feed.xml", &folder.Id)
 	db.CreateItems([]Item{{
@@ -19,50 +22,22 @@ func TestBackupTablesExportsApplicationTables(t *testing.T) {
 		Content: "content",
 	}})
 	db.UpdateSettings(map[string]interface{}{"toolbar_display": "text"})
-	db.SetAuthConfig(true, "username", "password")
-	db.SetHTTPState(feed.Id, "modified", "etag")
-	db.SetFeedError(feed.Id, errString("failed"))
-	db.SetFeedSize(feed.Id, 10)
-	db.SyncSearch()
 
-	tables, err := db.BackupTables()
-	if err != nil {
+	backupPath := filepath.Join(dir, "backup.db")
+	if err := db.BackupTo(backupPath); err != nil {
 		t.Fatal(err)
 	}
 
-	names := make([]string, 0, len(tables))
-	for name := range tables {
-		names = append(names, name)
+	backup, err := New(backupPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-	sort.Strings(names)
-	wantNames := append([]string(nil), backupTables...)
-	sort.Strings(wantNames)
-	if len(names) != len(wantNames) {
-		t.Fatalf("got %d tables, want %d", len(names), len(wantNames))
+	feeds := backup.ListFeeds()
+	if len(feeds) != 1 || feeds[0].Title != "feed" {
+		t.Fatalf("invalid backed up feeds: %#v", feeds)
 	}
-	if !reflect.DeepEqual(names, wantNames) {
-		t.Fatalf("got tables %#v, want %#v", names, wantNames)
+	items := backup.ListItems(ItemFilter{FeedID: &feeds[0].Id}, 10, true, true)
+	if len(items) != 1 || items[0].Content != "content" {
+		t.Fatalf("invalid backed up items: %#v", items)
 	}
-	if _, ok := tables["search"]; ok {
-		t.Fatal("search table should not be exported")
-	}
-	if _, ok := tables["sqlite_sequence"]; ok {
-		t.Fatal("sqlite internal table should not be exported")
-	}
-
-	settings := tables["settings"]
-	if len(settings) == 0 {
-		t.Fatal("expected settings rows")
-	}
-	for _, row := range settings {
-		if row["key"] == authPasswordKey && row["val"] != "password" {
-			t.Fatalf("auth password setting should be decoded, got %#v", row["val"])
-		}
-	}
-}
-
-type errString string
-
-func (e errString) Error() string {
-	return string(e)
 }

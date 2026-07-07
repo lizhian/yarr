@@ -171,6 +171,8 @@ var CONTENT_MODE_OPTIONS = [
   {name: 'embed', title: '嵌入'},
 ]
 
+var STATUS_POLL_INTERVAL = 10000
+
 function normalizeThemeFont(font) {
   return FONT_OPTIONS.some(function(option) { return option.name == font }) ? font : 'lxgw-wenkai'
 }
@@ -451,7 +453,7 @@ var vm = new Vue({
       .then(this.refreshFeeds.bind(this))
       .then(this.refreshItems.bind(this, false))
 
-    this.scheduleStatusPoll(60000)
+    this.scheduleStatusPoll(STATUS_POLL_INTERVAL)
 
     api.feeds.list_errors().then(function(errors) {
       vm.feed_errors = errors
@@ -957,7 +959,7 @@ var vm = new Vue({
         vm.loading.feeds = data.running
         vm.rsshubDetails = data.rsshub_details || []
         vm.feedRefreshDetails = data.feed_refresh_details || {}
-        vm.scheduleStatusPoll(data.running ? 500 : 60000)
+        vm.scheduleStatusPoll(STATUS_POLL_INTERVAL)
         vm.feedStats = data.stats.reduce(function(acc, stat) {
           acc[stat.feed_id] = stat
           return acc
@@ -1565,16 +1567,15 @@ var vm = new Vue({
       })
     },
     backupSummaryMessage: function(result) {
-      var tableCounts = result.table_counts || {}
-      var tableNames = Object.keys(tableCounts).sort()
+      var files = result.files || []
       var lines = [
         '订阅源：' + (result.feed_count || 0) + ' 个',
         '备份目录：' + (result.path || ''),
         '',
-        '表数据：',
+        '文件：',
       ]
-      tableNames.forEach(function(name) {
-        lines.push(name + '：' + tableCounts[name] + ' 行')
+      files.forEach(function(name) {
+        lines.push(name)
       })
       return lines.join('\n')
     },

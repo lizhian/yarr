@@ -429,56 +429,50 @@ func (s *Storage) SyncSearch() {
 }
 
 var (
-	itemsKeepSize = 50
-	itemsKeepDays = 90
+	readItemsKeepSize = 500
 )
 
 // Delete old articles from the database to cleanup space.
 //
 // The rules:
-//   - Never delete starred entries.
-//   - Keep at least the same amount of articles the feed provides (default: 50).
-//     This prevents from deleting items for rarely updated and/or ever-growing
-//     feeds which might eventually reappear as unread.
-//   - Keep entries for a certain period (default: 90 days).
+//   - Never delete unread or starred entries.
+//   - Keep up to 500 read entries for each feed.
 func (s *Storage) DeleteOldItems() {
 	rows, err := s.db.Query(`
 		select
 			i.feed_id,
-			max(coalesce(s.size, 0), ?) as max_items,
 			count(*) as num_items
 		from items i
-		left outer join feed_sizes s on s.feed_id = i.feed_id
-		where status != ?
+		where status = ?
 		group by i.feed_id
-	`, itemsKeepSize, STARRED)
+		having num_items > ?
+	`, READ, readItemsKeepSize)
 	if err != nil {
 		log.Print(err)
 		return
 	}
 
-	feedLimits := make(map[int64]int64, 0)
+	feedIDs := make([]int64, 0)
 	for rows.Next() {
-		var feedId, limit int64
-		rows.Scan(&feedId, &limit, nil)
-		feedLimits[feedId] = limit
+		var feedId, numItems int64
+		rows.Scan(&feedId, &numItems)
+		feedIDs = append(feedIDs, feedId)
 	}
 
-	for feedId, limit := range feedLimits {
+	for _, feedId := range feedIDs {
 		result, err := s.db.Exec(`
 			delete from items
 			where id in (
 				select i.id
 				from items i
-				where i.feed_id = ? and status != ?
+				where i.feed_id = ? and status = ?
 				order by date desc
 				limit -1 offset ?
-			) and date_arrived < ?
+			)
 			`,
 			feedId,
-			STARRED,
-			limit,
-			time.Now().UTC().Add(-time.Hour*time.Duration(24*itemsKeepDays)),
+			READ,
+			readItemsKeepSize,
 		)
 		if err != nil {
 			log.Print(err)

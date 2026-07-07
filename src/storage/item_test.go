@@ -356,7 +356,7 @@ func TestDeleteOldItems(t *testing.T) {
 	feed := db.CreateFeed("feed", "", "", "http://test.com/feed11.xml", nil)
 
 	items := make([]Item, 0)
-	for i := 0; i < itemsKeepSize+extraItems; i++ {
+	for i := 0; i < readItemsKeepSize+extraItems; i++ {
 		istr := strconv.Itoa(i)
 		items = append(items, Item{
 			GUID:   istr,
@@ -365,41 +365,41 @@ func TestDeleteOldItems(t *testing.T) {
 			Date:   now.Add(time.Hour * time.Duration(i)),
 		})
 	}
+	items = append(items,
+		Item{GUID: "unread", FeedId: feed.Id, Title: "unread", Date: now.Add(time.Hour * time.Duration(readItemsKeepSize+extraItems+1))},
+		Item{GUID: "starred", FeedId: feed.Id, Title: "starred", Date: now.Add(time.Hour * time.Duration(readItemsKeepSize+extraItems+2))},
+	)
 	db.CreateItems(items)
-
-	db.SetFeedSize(feed.Id, itemsKeepSize)
-	var feedSize int
-	err := db.db.QueryRow(
-		`select size from feed_sizes where feed_id = ?`, feed.Id,
-	).Scan(&feedSize)
+	_, err := db.db.Exec(`update items set status = ? where guid = "starred"`, STARRED)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if feedSize != itemsKeepSize {
-		t.Fatalf(
-			"expected feed size to get updated\nwant: %d\nhave: %d",
-			itemsKeepSize+extraItems,
-			feedSize,
-		)
-	}
-
-	// expire only the first 3 articles
-	_, err = db.db.Exec(
-		`update items set date_arrived = ?
-		where id in (select id from items limit 3)`,
-		now.Add(-time.Hour*time.Duration(itemsKeepDays*24)),
-	)
+	_, err = db.db.Exec(`update items set status = ? where guid != "unread" and guid != "starred"`, READ)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	db.DeleteOldItems()
 	feedItems := db.ListItems(ItemFilter{FeedID: &feed.Id}, 1000, false, false)
-	if len(feedItems) != len(items)-3 {
+	if len(feedItems) != readItemsKeepSize+2 {
 		t.Fatalf(
 			"invalid number of old items kept\nwant: %d\nhave: %d",
-			len(items)-3,
+			readItemsKeepSize+2,
 			len(feedItems),
 		)
+	}
+	if getItem(db, "unread").Status != UNREAD {
+		t.Fatal("unread item was deleted")
+	}
+	if getItem(db, "starred").Status != STARRED {
+		t.Fatal("starred item was deleted")
+	}
+	var oldReadCount int
+	err = db.db.QueryRow(`select count(*) from items where guid = "0"`).Scan(&oldReadCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oldReadCount != 0 {
+		t.Fatal("oldest read item was kept")
 	}
 }

@@ -24,6 +24,7 @@ var migrations = []func(*sql.Tx) error{
 	m14_add_generated_rss,
 	m15_add_feed_ranking_mode,
 	m16_change_feed_ranking_mode_to_text,
+	m17_add_item_list_indexes,
 }
 
 var maxVersion = int64(len(migrations))
@@ -438,6 +439,16 @@ func m16_change_feed_ranking_mode_to_text(tx *sql.Tx) error {
 		create index if not exists idx_feed_folder_id on feeds(folder_id);
 		create unique index if not exists idx_feed_feed_link on feeds(feed_link);
 		pragma foreign_key_check;
+	`
+	_, err := tx.Exec(sql)
+	return err
+}
+
+func m17_add_item_list_indexes(tx *sql.Tx) error {
+	sql := `
+		create index if not exists idx_item_status_date_id on items(status, date desc, id desc);
+		create index if not exists idx_item_feed_date_id on items(feed_id, date desc, id desc);
+		create index if not exists idx_item_feed_status_date_id on items(feed_id, status, date desc, id desc);
 	`
 	_, err := tx.Exec(sql)
 	return err

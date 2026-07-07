@@ -1,87 +1,93 @@
 package storage
 
 import (
-	"encoding/json"
+	"context"
+	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
-	"unicode/utf8"
+
+	"github.com/mattn/go-sqlite3"
 )
 
-var backupTables = []string{
-	"folders",
-	"feeds",
-	"items",
-	"settings",
-	"http_states",
-	"feed_errors",
-	"feed_sizes",
-}
-
-func (s *Storage) BackupTables() (map[string][]map[string]interface{}, error) {
-	result := make(map[string][]map[string]interface{}, len(backupTables))
-	for _, table := range backupTables {
-		rows, err := s.backupTable(table)
-		if err != nil {
-			return nil, err
-		}
-		result[table] = rows
-	}
-	return result, nil
-}
-
-func (s *Storage) backupTable(table string) ([]map[string]interface{}, error) {
-	rows, err := s.db.Query(fmt.Sprintf("select * from %s order by rowid", table))
+func (s *Storage) BackupTo(path string) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer rows.Close()
+	tmpPath := tmp.Name()
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	defer os.Remove(tmpPath)
 
-	cols, err := rows.Columns()
+	srcConn, err := s.db.Conn(context.Background())
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer srcConn.Close()
+
+	dstDB, err := sql.Open("sqlite3", tmpPath)
+	if err != nil {
+		return err
 	}
 
-	result := make([]map[string]interface{}, 0)
-	for rows.Next() {
-		raw := make([]interface{}, len(cols))
-		dest := make([]interface{}, len(cols))
-		for i := range raw {
-			dest[i] = &raw[i]
-		}
-		if err := rows.Scan(dest...); err != nil {
-			return nil, err
-		}
+	dstConn, err := dstDB.Conn(context.Background())
+	if err != nil {
+		dstDB.Close()
+		return err
+	}
 
-		row := make(map[string]interface{}, len(cols))
-		for i, col := range cols {
-			row[col] = backupValue(table, col, raw[i])
-		}
-		result = append(result, row)
+	if err := sqliteBackup(srcConn, dstConn); err != nil {
+		dstConn.Close()
+		dstDB.Close()
+		return err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if err := dstConn.Close(); err != nil {
+		return err
 	}
-	return result, nil
+	if err := dstDB.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpPath, 0644); err != nil {
+		return err
+	}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return os.Rename(tmpPath, path)
 }
 
-func backupValue(table, col string, val interface{}) interface{} {
-	switch v := val.(type) {
-	case nil:
-		return nil
-	case []byte:
-		if table == "settings" && col == "val" {
-			var decoded interface{}
-			if err := json.Unmarshal(v, &decoded); err == nil {
-				return decoded
+func sqliteBackup(srcConn, dstConn *sql.Conn) error {
+	return dstConn.Raw(func(dstDriverConn interface{}) error {
+		dst, ok := dstDriverConn.(*sqlite3.SQLiteConn)
+		if !ok {
+			return fmt.Errorf("unexpected sqlite destination connection %T", dstDriverConn)
+		}
+		return srcConn.Raw(func(srcDriverConn interface{}) error {
+			src, ok := srcDriverConn.(*sqlite3.SQLiteConn)
+			if !ok {
+				return fmt.Errorf("unexpected sqlite source connection %T", srcDriverConn)
 			}
-		}
-		if utf8.Valid(v) {
-			return string(v)
-		}
-		return v
-	case time.Time:
-		return v.Format(time.RFC3339Nano)
-	default:
-		return v
-	}
+
+			backup, err := dst.Backup("main", src, "main")
+			if err != nil {
+				return err
+			}
+			defer backup.Finish()
+
+			for {
+				done, err := backup.Step(256)
+				if err != nil {
+					return err
+				}
+				if done {
+					return nil
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		})
+	})
 }

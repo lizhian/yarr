@@ -3,6 +3,7 @@ package storage
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestCreateFeed(t *testing.T) {
@@ -45,6 +46,27 @@ func TestCreateFeedSameLink(t *testing.T) {
 	feed2 := db.CreateFeed("title", "", "http://example.com", "http://example1.com/feed.xml", nil)
 	if feed1.Id != feed2.Id {
 		t.Fatalf("expected the same feed.\nwant: %#v\nhave: %#v", feed1, feed2)
+	}
+}
+
+func TestDeleteFeedDeletesItems(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("feed", "", "", "http://example.com/feed.xml", nil)
+	other := db.CreateFeed("other", "", "", "http://example.com/other.xml", nil)
+	db.CreateItems([]Item{
+		{GUID: "feed-item", FeedId: feed.Id, Title: "feed item", Date: time.Now()},
+		{GUID: "other-item", FeedId: other.Id, Title: "other item", Date: time.Now()},
+	})
+
+	if !db.DeleteFeed(feed.Id) {
+		t.Fatal("failed to delete feed")
+	}
+
+	if count := db.CountItems(ItemFilter{FeedID: &feed.Id}); count != 0 {
+		t.Fatalf("expected feed items to be deleted, got %d", count)
+	}
+	if count := db.CountItems(ItemFilter{FeedID: &other.Id}); count != 1 {
+		t.Fatalf("expected other feed item to remain, got %d", count)
 	}
 }
 

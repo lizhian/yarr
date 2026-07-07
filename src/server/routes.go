@@ -505,7 +505,7 @@ func (s *Server) handleItemList(c *router.Context) {
 		}
 		newestFirst := query.Get("oldest_first") != "true"
 
-		items := s.db.ListItems(filter, perPage+1, newestFirst, true)
+		items := s.db.ListItems(filter, perPage+1, newestFirst, false)
 		hasMore := false
 		if len(items) == perPage+1 {
 			hasMore = true

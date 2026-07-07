@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -16,8 +15,8 @@ import (
 )
 
 const (
-	backupOPMLFile = "subscriptions.opml"
-	backupJSONFile = "tables.json"
+	backupOPMLFile     = "subscriptions.opml"
+	backupDatabaseFile = "storage.db"
 )
 
 type BackupService struct {
@@ -28,15 +27,9 @@ type BackupService struct {
 }
 
 type BackupResult struct {
-	Path        string         `json:"path"`
-	FeedCount   int            `json:"feed_count"`
-	TableCounts map[string]int `json:"table_counts"`
-}
-
-type backupPayload struct {
-	Version   int                                 `json:"version"`
-	CreatedAt string                              `json:"created_at"`
-	Tables    map[string][]map[string]interface{} `json:"tables"`
+	Path      string   `json:"path"`
+	FeedCount int      `json:"feed_count"`
+	Files     []string `json:"files"`
 }
 
 func NewBackupService(db *storage.Storage, dbPath string) *BackupService {
@@ -63,37 +56,20 @@ func (b *BackupService) Run() (*BackupResult, error) {
 		return nil, err
 	}
 
-	tables, err := b.db.BackupTables()
-	if err != nil {
-		return nil, err
-	}
-	payload := backupPayload{
-		Version:   1,
-		CreatedAt: now.Format(time.RFC3339),
-		Tables:    tables,
-	}
-	body, err := json.MarshalIndent(payload, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	body = append(body, '\n')
+	dbPath := filepath.Join(backupDir, backupDatabaseFile)
 	opmlBody := []byte(BuildOPML(b.db).OPML())
 
+	if err := b.db.BackupTo(dbPath); err != nil {
+		return nil, err
+	}
 	if err := writeFileAtomic(filepath.Join(backupDir, backupOPMLFile), opmlBody, 0644); err != nil {
 		return nil, err
 	}
-	if err := writeFileAtomic(filepath.Join(backupDir, backupJSONFile), body, 0644); err != nil {
-		return nil, err
-	}
 
-	tableCounts := make(map[string]int, len(tables))
-	for table, rows := range tables {
-		tableCounts[table] = len(rows)
-	}
 	return &BackupResult{
-		Path:        backupDir,
-		FeedCount:   tableCounts["feeds"],
-		TableCounts: tableCounts,
+		Path:      backupDir,
+		FeedCount: len(b.db.ListFeeds()),
+		Files:     []string{backupDatabaseFile, backupOPMLFile},
 	}, nil
 }
 

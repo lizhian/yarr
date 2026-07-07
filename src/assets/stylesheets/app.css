@@ -833,6 +833,16 @@ select.form-control:not([multiple]):not([size]) {
   padding: .7rem .85rem;
 }
 
+.settings-refresh-status {
+  border-top: 1px solid rgba(127, 127, 127, .2);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .7rem -.85rem -.7rem;
+  min-height: 2.5rem;
+  padding: .5rem .85rem;
+}
+
 .dialog-message {
   white-space: pre-wrap;
 }

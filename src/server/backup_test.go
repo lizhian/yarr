@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 	"github.com/nkanaev/yarr/src/storage"
 )
 
-func TestBackupServiceWritesOPMLAndJSON(t *testing.T) {
+func TestBackupServiceWritesOPMLAndDatabase(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "storage.db")
 	db, err := storage.New(dbPath)
@@ -35,8 +36,8 @@ func TestBackupServiceWritesOPMLAndJSON(t *testing.T) {
 	if result.FeedCount != 2 {
 		t.Fatalf("got %d feeds", result.FeedCount)
 	}
-	if result.TableCounts["feeds"] != 2 {
-		t.Fatalf("got %d feed rows", result.TableCounts["feeds"])
+	if !reflect.DeepEqual(result.Files, []string{backupDatabaseFile, backupOPMLFile}) {
+		t.Fatalf("got files %#v", result.Files)
 	}
 
 	backupDir := filepath.Join(dir, "backups", "2026-05-15")
@@ -51,29 +52,12 @@ func TestBackupServiceWritesOPMLAndJSON(t *testing.T) {
 		t.Fatal("backup opml should match export opml")
 	}
 
-	jsonBody, err := os.ReadFile(filepath.Join(backupDir, backupJSONFile))
+	backupDB, err := storage.New(filepath.Join(backupDir, backupDatabaseFile))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var payload struct {
-		Version   int                                 `json:"version"`
-		CreatedAt string                              `json:"created_at"`
-		Tables    map[string][]map[string]interface{} `json:"tables"`
-	}
-	if err := json.Unmarshal(jsonBody, &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload.Version != 1 {
-		t.Fatalf("got version %d", payload.Version)
-	}
-	if payload.CreatedAt != "2026-05-15T01:02:03+08:00" {
-		t.Fatalf("got created_at %q", payload.CreatedAt)
-	}
-	if _, ok := payload.Tables["feeds"]; !ok {
-		t.Fatal("feeds table missing")
-	}
-	if _, ok := payload.Tables["search"]; ok {
-		t.Fatal("search table should not be exported")
+	if feeds := backupDB.ListFeeds(); len(feeds) != 2 {
+		t.Fatalf("got %d backed up feeds", len(feeds))
 	}
 }
 
@@ -107,10 +91,10 @@ func TestBackupEndpointTriggersBackup(t *testing.T) {
 	if result.FeedCount != 1 {
 		t.Fatalf("got %d feeds", result.FeedCount)
 	}
-	if result.TableCounts["feeds"] != 1 {
-		t.Fatalf("got %d feed rows", result.TableCounts["feeds"])
+	if !reflect.DeepEqual(result.Files, []string{backupDatabaseFile, backupOPMLFile}) {
+		t.Fatalf("got files %#v", result.Files)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupJSONFile)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupDatabaseFile)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -133,7 +117,7 @@ func TestScheduledBackupRequiresEnabledSetting(t *testing.T) {
 	if err := s.runScheduledBackup(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupJSONFile)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupDatabaseFile)); !os.IsNotExist(err) {
 		t.Fatalf("backup should not run while disabled: %v", err)
 	}
 
@@ -143,7 +127,7 @@ func TestScheduledBackupRequiresEnabledSetting(t *testing.T) {
 	if err := s.runScheduledBackup(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupJSONFile)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "backups", "2026-05-15", backupDatabaseFile)); err != nil {
 		t.Fatal(err)
 	}
 }
