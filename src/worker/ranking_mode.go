@@ -80,7 +80,7 @@ func (w *Worker) rankingModeItem(feed storage.Feed, feedData *parser.Feed, now t
 	item := storage.Item{
 		GUID:       guid,
 		FeedId:     feed.Id,
-		Title:      fmt.Sprintf("🔥️ %04d 年 %02d 月 %02d 日 %02d 时 实时榜单", localNow.Year(), localNow.Month(), localNow.Day(), localNow.Hour()),
+		Title:      fmt.Sprintf("🔥️%04d年%02d月%02d日%02d时", localNow.Year(), localNow.Month(), localNow.Day(), localNow.Hour()),
 		Link:       link,
 		Content:    RenderRankingContent(entries, feed.RankingMode, now),
 		Date:       localNow,
@@ -264,6 +264,15 @@ func RenderRankingContent(entries []RankingEntry, mode string, now time.Time) st
 		if entry.Content != "" {
 			buffer.WriteString(`<div class="bilibili-ranking-content">`)
 			buffer.WriteString(entry.Content)
+			buffer.WriteString(`<p><a href="`)
+			buffer.WriteString(entryURL)
+			buffer.WriteString(`" class="bilibili-ranking-open-original">打开原文</a></p>`)
+			buffer.WriteString(`</div>`)
+		} else {
+			buffer.WriteString(`<div class="bilibili-ranking-content">`)
+			buffer.WriteString(`<p><a href="`)
+			buffer.WriteString(entryURL)
+			buffer.WriteString(`" class="bilibili-ranking-open-original">打开原文</a></p>`)
 			buffer.WriteString(`</div>`)
 		}
 		buffer.WriteString(`</details>`)

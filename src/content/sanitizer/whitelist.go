@@ -238,6 +238,7 @@ var allowedClassNames = sset([]string{
 	"bilibili-ranking-image",
 	"bilibili-ranking-link",
 	"bilibili-ranking-meta",
+	"bilibili-ranking-open-original",
 	"bilibili-ranking-title",
 })
 

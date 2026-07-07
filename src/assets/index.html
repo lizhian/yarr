@@ -117,11 +117,6 @@
                                 <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
                                 <span class="counter text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
-                                <span class="icon flex-shrink-0 mx-2"
-                                      :title="feed_errors[feed.id]"
-                                      v-if="!filterSelected && feed_errors[feed.id]">
-                                    {% inline "alert-circle.svg" %}
-                                </span>
                                 <button class="selectgroup-action ml-1"
                                         title="订阅源设置"
                                         @click.prevent.stop="showFeedSettings(feed)">

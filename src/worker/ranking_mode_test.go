@@ -41,9 +41,10 @@ func TestRenderRankingContent(t *testing.T) {
 		`<img src="https://example.com/1.jpg" alt="标题一" class="bilibili-ranking-image">`,
 		`<p class="bilibili-ranking-meta"><span>01｜📈2｜作者一</span><time datetime="2026-07-06T02:00:00Z">1h</time></p>`,
 		`<details class="bilibili-ranking-details"><summary class="bilibili-ranking-title">标题一</summary>`,
-		`<div class="bilibili-ranking-content"><p>正文一</p></div>`,
+		`<div class="bilibili-ranking-content"><p>正文一</p><p><a href="https://example.com/1" class="bilibili-ranking-open-original">打开原文</a></p></div>`,
 		`<p class="bilibili-ranking-meta"><span>02｜➡️｜作者二</span><time datetime="2026-07-06T01:00:00Z">2h</time></p>`,
 		`<summary class="bilibili-ranking-title">标题二</summary>`,
+		`<div class="bilibili-ranking-content"><p><a href="https://example.com/2" class="bilibili-ranking-open-original">打开原文</a></p></div>`,
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("content missing %q: %s", want, content)
@@ -76,7 +77,7 @@ func TestRankingModeItem(t *testing.T) {
 	if item.Item.GUID != "ranking:2026070610" {
 		t.Fatalf("invalid guid: %q", item.Item.GUID)
 	}
-	if item.Item.Title != "🔥️ 2026 年 07 月 06 日 10 时 实时榜单" {
+	if item.Item.Title != "🔥️2026年07月06日10时" {
 		t.Fatalf("invalid title: %q", item.Item.Title)
 	}
 	if item.Item.Link != "https://example.com" {
