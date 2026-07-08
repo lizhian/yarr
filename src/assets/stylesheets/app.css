@@ -1382,6 +1382,7 @@ select.form-control:not([multiple]):not([size]) {
   border-radius: 3px;
   color: inherit;
   text-decoration: none;
+  text-indent: 0;
 }
 
 .content .bilibili-ranking-open-original:hover,
