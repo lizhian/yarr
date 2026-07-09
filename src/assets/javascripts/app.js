@@ -258,6 +258,14 @@ function parseURL(raw) {
 
 var ARTICLE_LIST_LAYOUTS_KEY = 'yarr.articleListLayouts.v1'
 var FEED_SELECTED_KEY = 'yarr.feedSelected.v1'
+var APP_FONT_SIZE_KEY = 'yarr.appFontSize.v1'
+var APP_FONT_SIZE_DEFAULT = 15
+var APP_FONT_SIZE_OPTIONS = [
+  {title: '小', value: 14},
+  {title: '标准', value: 15},
+  {title: '大', value: 16},
+  {title: '特大', value: 17},
+]
 
 function readFeedSelected() {
   try {
@@ -297,6 +305,29 @@ function writeArticleListLayouts(layouts) {
   try {
     localStorage.setItem(ARTICLE_LIST_LAYOUTS_KEY, JSON.stringify(layouts))
   } catch (e) {}
+}
+
+function normalizeAppFontSize(size) {
+  size = parseInt(size, 10)
+  return APP_FONT_SIZE_OPTIONS.some(function(option) { return option.value == size }) ? size : APP_FONT_SIZE_DEFAULT
+}
+
+function readAppFontSize() {
+  try {
+    return normalizeAppFontSize(localStorage.getItem(APP_FONT_SIZE_KEY))
+  } catch (e) {
+    return APP_FONT_SIZE_DEFAULT
+  }
+}
+
+function writeAppFontSize(size) {
+  try {
+    localStorage.setItem(APP_FONT_SIZE_KEY, JSON.stringify(normalizeAppFontSize(size)))
+  } catch (e) {}
+}
+
+function applyAppFontSize(size) {
+  document.documentElement.style.setProperty('font-size', normalizeAppFontSize(size) + 'px', 'important')
 }
 
 function getArticleListLayout(feedSelected) {
@@ -467,6 +498,7 @@ Vue.component('relative-time', {
 
 var vm = new Vue({
   created: function() {
+    applyAppFontSize(this.appFontSize)
     this.refreshStats()
     Promise.all([
       this.refreshFeeds(),
@@ -579,6 +611,8 @@ var vm = new Vue({
         'font': normalizeThemeFont(s.theme_font),
         'size': s.theme_size,
       },
+      'appFontSize': readAppFontSize(),
+      'appFontSizeOptions': APP_FONT_SIZE_OPTIONS,
       'themeColors': {
         'night': '#1f1f1f',
         'sepia': '#f2e6bd',
@@ -805,6 +839,11 @@ var vm = new Vue({
     'refreshRate': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({refresh_rate: newVal})
+    },
+    'appFontSize': function(newVal, oldVal) {
+      if (oldVal === undefined) return  // do nothing, initial setup
+      applyAppFontSize(newVal)
+      writeAppFontSize(newVal)
     },
     'backupEnabled': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup

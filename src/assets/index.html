@@ -429,6 +429,19 @@
                 </section>
 
                 <section class="settings-dialog-section">
+                    <header>字体大小</header>
+                    <div class="settings-segmented settings-segmented-compact settings-font-size-picker">
+                        <button class="btn btn-link"
+                                :aria-pressed="appFontSize == option.value"
+                                :class="{active: appFontSize == option.value}"
+                                @click="appFontSize = option.value"
+                                v-for="option in appFontSizeOptions">
+                            {{ option.title }}
+                        </button>
+                    </div>
+                </section>
+
+                <section class="settings-dialog-section">
                     <header>自动刷新</header>
                     <div class="settings-segmented settings-segmented-compact refresh-rate-picker">
                         <button class="btn btn-link"
