@@ -183,7 +183,7 @@ func applyRankingChanges(entries []RankingEntry, previous map[string]int) {
 		previousRank, ok := previous[entries[i].URL]
 		switch {
 		case !ok:
-			entries[i].RankChange = "🆕"
+			entries[i].RankChange = "🌟"
 		case previousRank == entries[i].Rank:
 			entries[i].RankChange = "➡️"
 		case previousRank > entries[i].Rank:

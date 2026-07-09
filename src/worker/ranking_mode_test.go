@@ -205,7 +205,7 @@ func TestRankingModeItemCreatesChangedRankingAcrossHours(t *testing.T) {
 	if !ok {
 		t.Fatal("expected changed ranking item")
 	}
-	for _, want := range []string{`01｜📈1｜作者一`, `02｜📉1｜作者二`, `03｜🆕｜作者三`} {
+	for _, want := range []string{`01｜📈1｜作者一`, `02｜📉1｜作者二`, `03｜🌟｜作者三`} {
 		if !strings.Contains(second.Item.Content, want) {
 			t.Fatalf("content missing %q: %s", want, second.Item.Content)
 		}
@@ -224,8 +224,8 @@ func TestRankingModeItemCreatesChangedRankingAcrossHours(t *testing.T) {
 
 func TestRankingPositionsFromContent(t *testing.T) {
 	content := RenderRankingContent([]RankingEntry{
-		{Rank: 1, RankChange: "🆕", Title: "一", URL: "https://example.com/1?a=1&b=2"},
-		{Rank: 2, RankChange: "🆕", Title: "二", URL: "https://example.com/2"},
+		{Rank: 1, RankChange: "🌟", Title: "一", URL: "https://example.com/1?a=1&b=2"},
+		{Rank: 2, RankChange: "🌟", Title: "二", URL: "https://example.com/2"},
 	}, storage.FeedRankingModeWithoutImage, time.Now())
 	positions := RankingPositionsFromContent(content)
 	if positions["https://example.com/1?a=1&b=2"] != 1 || positions["https://example.com/2"] != 2 {
