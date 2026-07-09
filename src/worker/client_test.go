@@ -63,6 +63,7 @@ func TestClientGetAttemptsHTTP2(t *testing.T) {
 	testClient.httpClient = &http.Client{
 		Transport: transport,
 	}
+	testClient.requestInterval = 0
 	res, err := testClient.get(server.URL)
 	if err != nil {
 		t.Fatal(err)
