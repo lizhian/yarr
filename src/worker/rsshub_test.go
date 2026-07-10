@@ -192,14 +192,38 @@ func TestRSSHubRefreshLinksRoundRobinAcrossRequests(t *testing.T) {
 		"https://e.example/bilibili/weekly",
 	}
 	wantSecond := []string{
-		"https://f.example/bilibili/weekly",
-		"https://g.example/bilibili/weekly",
-		"https://a.example/bilibili/weekly",
 		"https://b.example/bilibili/weekly",
 		"https://c.example/bilibili/weekly",
+		"https://d.example/bilibili/weekly",
+		"https://e.example/bilibili/weekly",
+		"https://f.example/bilibili/weekly",
 	}
 	assertStringSlicesEqual(t, first, wantFirst)
 	assertStringSlicesEqual(t, second, wantSecond)
+}
+
+func TestRSSHubRefreshLinksAlternateTwoBases(t *testing.T) {
+	db := testStorage(t)
+	worker := NewWorker(db)
+	feed := db.CreateFeed("A", "", "", "rsshub://bilibili/weekly", nil)
+	if !db.UpdateSettings(map[string]interface{}{"rsshub_base_url": "https://a.example\nhttps://b.example"}) {
+		t.Fatal("failed to set RSSHub base URL")
+	}
+
+	first, err := worker.refreshLinks(*feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := worker.refreshLinks(*feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first[0] != "https://a.example/bilibili/weekly" {
+		t.Fatalf("got first preferred link %q", first[0])
+	}
+	if second[0] != "https://b.example/bilibili/weekly" {
+		t.Fatalf("got second preferred link %q", second[0])
+	}
 }
 
 func TestRefresherRecordsFeedRefreshDetailSuccess(t *testing.T) {

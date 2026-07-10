@@ -61,11 +61,12 @@ func TestClientGetAttemptsHTTP2(t *testing.T) {
 	transport := client.httpClient.Transport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	testClient := *client
-	testClient.httpClient = &http.Client{
-		Transport: transport,
+	testClient := &Client{
+		httpClient: &http.Client{
+			Transport: transport,
+		},
+		userAgent: browserUserAgent,
 	}
-	testClient.requestInterval = 0
 	res, err := testClient.get(server.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -130,5 +131,85 @@ func TestClientReleasesRequestSlotWhenBodyCloses(t *testing.T) {
 	}
 	if len(testClient.requestSlots) != 0 {
 		t.Fatalf("request slot was not released")
+	}
+}
+
+func TestClientReleasesRequestSlotAtEndOfBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "body")
+	}))
+	defer server.Close()
+	testClient := &Client{
+		httpClient:   server.Client(),
+		userAgent:    browserUserAgent,
+		requestSlots: make(chan struct{}, 1),
+	}
+
+	res, err := testClient.get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.ReadAll(res.Body); err != nil {
+		t.Fatal(err)
+	}
+	if len(testClient.requestSlots) != 0 {
+		t.Fatal("request slot was not released at end of body")
+	}
+	defer res.Body.Close()
+
+	secondDone := make(chan error, 1)
+	go func() {
+		second, err := testClient.get(server.URL)
+		if err == nil {
+			err = second.Body.Close()
+		}
+		secondDone <- err
+	}()
+	select {
+	case err := <-secondDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("second request blocked after first body reached EOF")
+	}
+}
+
+func TestClientLimitsActualRequestStartsAfterSlotWait(t *testing.T) {
+	requestInterval := 50 * time.Millisecond
+	requestStarts := make(chan time.Time, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestStarts <- time.Now()
+	}))
+	defer server.Close()
+	testClient := &Client{
+		httpClient:      server.Client(),
+		userAgent:       browserUserAgent,
+		requestInterval: requestInterval,
+		limiters:        make(map[string]*requestLimiter),
+		requestSlots:    make(chan struct{}, 1),
+	}
+	testClient.requestSlots <- struct{}{}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			defer wg.Done()
+			res, err := testClient.get(server.URL)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			res.Body.Close()
+		}()
+	}
+	time.Sleep(requestInterval * 2)
+	<-testClient.requestSlots
+	wg.Wait()
+	first := <-requestStarts
+	second := <-requestStarts
+	if second.Sub(first) < requestInterval/2 {
+		t.Fatalf("actual request starts were too close: %s", second.Sub(first))
 	}
 }

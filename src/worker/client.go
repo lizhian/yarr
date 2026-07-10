@@ -30,10 +30,22 @@ type releaseBody struct {
 	once    sync.Once
 }
 
+func (b *releaseBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if errors.Is(err, io.EOF) {
+		b.releaseOnce()
+	}
+	return n, err
+}
+
 func (b *releaseBody) Close() error {
 	err := b.ReadCloser.Close()
-	b.once.Do(b.release)
+	b.releaseOnce()
 	return err
+}
+
+func (b *releaseBody) releaseOnce() {
+	b.once.Do(b.release)
 }
 
 const browserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -62,10 +74,10 @@ func (c *Client) doGetConditional(url, lastModified, etag string) (*http.Respons
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
-	c.waitForRequestInterval(req.URL)
 	if c.requestSlots != nil {
 		c.requestSlots <- struct{}{}
 	}
+	c.waitForRequestInterval(req.URL)
 	res, err := c.httpClient.Do(req)
 	if c.requestSlots == nil {
 		return res, err

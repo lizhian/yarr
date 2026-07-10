@@ -212,9 +212,7 @@ func (w *Worker) rsshubBasesForRefresh(feedID int64) ([]string, error) {
 	if len(bases) > 0 {
 		start = w.rsshubRoundRobin % len(bases)
 	}
-	consumed := 0
 	for offset := 0; offset < len(bases) && len(selected) < RSSHUB_MAX_ATTEMPTS; offset++ {
-		consumed = offset + 1
 		base := bases[(start+offset)%len(bases)]
 		if used[base] {
 			continue
@@ -223,7 +221,7 @@ func (w *Worker) rsshubBasesForRefresh(feedID int64) ([]string, error) {
 		used[base] = true
 	}
 	if len(bases) > 0 {
-		w.rsshubRoundRobin = (start + consumed) % len(bases)
+		w.rsshubRoundRobin = (start + 1) % len(bases)
 	}
 	return selected, nil
 }
