@@ -39,6 +39,8 @@ type FeedRefreshResult struct {
 	FeedLink       string
 	Items          []storage.Item
 	RankingItem    *RankingModeItem
+	LastModified   string
+	Etag           string
 }
 
 func DiscoverFeed(candidateUrl string) (*DiscoverResult, error) {
@@ -308,6 +310,8 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 			RSSHubBase:     rsshubBase,
 			RSSHubLink:     requestLink,
 			FeedLink:       requestLink,
+			LastModified:   lmod,
+			Etag:           etag,
 		}, nil
 	}
 
@@ -318,9 +322,6 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 
 	lmod = res.Header.Get("Last-Modified")
 	etag = res.Header.Get("Etag")
-	if lmod != "" || etag != "" {
-		db.SetHTTPState(f.Id, lmod, etag)
-	}
 	feedLink := requestLink
 	if res.Request != nil && res.Request.URL != nil {
 		feedLink = res.Request.URL.String()
@@ -333,6 +334,8 @@ func refreshFeedFromLink(f storage.Feed, requestLink, lmod, etag string, db *sto
 		Feed:           feed,
 		FeedLink:       feedLink,
 		Items:          ConvertItems(feed.Items, f),
+		LastModified:   lmod,
+		Etag:           etag,
 	}, nil
 }
 

@@ -132,7 +132,8 @@ func (s *Storage) CreateItems(items []Item) bool {
 	sort.Sort(itemsSorted)
 
 	for _, item := range itemsSorted {
-		err = createItemTx(tx, item, now)
+		var inserted bool
+		inserted, err = createItemTx(tx, item, now)
 		if err != nil {
 			log.Print(err)
 			if err = tx.Rollback(); err != nil {
@@ -140,6 +141,15 @@ func (s *Storage) CreateItems(items []Item) bool {
 				return false
 			}
 			return false
+		}
+		if inserted {
+			if err = syncSearchItemTx(tx, item); err != nil {
+				log.Print(err)
+				if err = tx.Rollback(); err != nil {
+					log.Print(err)
+				}
+				return false
+			}
 		}
 	}
 	if err = tx.Commit(); err != nil {
@@ -156,12 +166,22 @@ func (s *Storage) CreateRankingModeItem(item Item, rankingMD5 string) bool {
 		return false
 	}
 
-	if err = createItemTx(tx, item, time.Now().UTC()); err != nil {
+	inserted, err := createItemTx(tx, item, time.Now().UTC())
+	if err != nil {
 		log.Print(err)
 		if err = tx.Rollback(); err != nil {
 			log.Print(err)
 		}
 		return false
+	}
+	if inserted {
+		if err = syncSearchItemTx(tx, item); err != nil {
+			log.Print(err)
+			if err = tx.Rollback(); err != nil {
+				log.Print(err)
+			}
+			return false
+		}
 	}
 	_, err = tx.Exec(`
 		update feeds
@@ -183,8 +203,8 @@ func (s *Storage) CreateRankingModeItem(item Item, rankingMD5 string) bool {
 	return true
 }
 
-func createItemTx(tx *sql.Tx, item Item, arrivedAt time.Time) error {
-	_, err := tx.Exec(`
+func createItemTx(tx *sql.Tx, item Item, arrivedAt time.Time) (bool, error) {
+	result, err := tx.Exec(`
 		insert into items (
 			guid, feed_id, title, link, date,
 			content, media_links,
@@ -195,17 +215,46 @@ func createItemTx(tx *sql.Tx, item Item, arrivedAt time.Time) error {
 			?, ?,
 			?, ?
 		)
-		on conflict (feed_id, guid) do update set
-			media_links = case
-				when json_array_length(coalesce(items.media_links, '[]')) = 0
-				 and json_array_length(coalesce(excluded.media_links, '[]')) > 0
-				then excluded.media_links
-				else items.media_links
-			end`,
+		on conflict (feed_id, guid) do nothing`,
 		item.GUID, item.FeedId, item.Title, item.Link, item.Date,
 		item.Content, item.MediaLinks,
 		arrivedAt, UNREAD,
 	)
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	if rows == 1 {
+		return true, nil
+	}
+
+	_, err = tx.Exec(`
+		update items
+		set media_links = ?
+		where feed_id = ? and guid = ?
+		  and json_array_length(coalesce(media_links, '[]')) = 0
+		  and json_array_length(coalesce(?, '[]')) > 0`,
+		item.MediaLinks, item.FeedId, item.GUID, item.MediaLinks,
+	)
+	return false, err
+}
+
+func syncSearchItemTx(tx *sql.Tx, item Item) error {
+	result, err := tx.Exec(`
+		insert into search (title, description, content) values (?, "", ?)`,
+		item.Title, htmlutil.ExtractText(item.Content),
+	)
+	if err != nil {
+		return err
+	}
+	rowID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(`update items set search_rowid = ? where feed_id = ? and guid = ?`, rowID, item.FeedId, item.GUID)
 	return err
 }
 

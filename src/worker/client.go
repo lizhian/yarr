@@ -5,16 +5,35 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
 
 type Client struct {
-	httpClient       *http.Client
-	userAgent        string
-	requestInterval  time.Duration
-	requestMu        sync.Mutex
+	httpClient      *http.Client
+	userAgent       string
+	requestInterval time.Duration
+	limitersMu      sync.Mutex
+	limiters        map[string]*requestLimiter
+	requestSlots    chan struct{}
+}
+
+type requestLimiter struct {
+	mu               sync.Mutex
 	lastRequestStart time.Time
+}
+
+type releaseBody struct {
+	io.ReadCloser
+	release func()
+	once    sync.Once
+}
+
+func (b *releaseBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.once.Do(b.release)
+	return err
 }
 
 const browserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -43,26 +62,50 @@ func (c *Client) doGetConditional(url, lastModified, etag string) (*http.Respons
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
-	c.waitForRequestInterval()
-	return c.httpClient.Do(req)
+	c.waitForRequestInterval(req.URL)
+	if c.requestSlots != nil {
+		c.requestSlots <- struct{}{}
+	}
+	res, err := c.httpClient.Do(req)
+	if c.requestSlots == nil {
+		return res, err
+	}
+	release := func() { <-c.requestSlots }
+	if err != nil {
+		release()
+		return res, err
+	}
+	res.Body = &releaseBody{ReadCloser: res.Body, release: release}
+	return res, nil
 }
 
 func shouldRetryGet(err error) bool {
 	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
-func (c *Client) waitForRequestInterval() {
+func (c *Client) waitForRequestInterval(requestURL *url.URL) {
 	if c.requestInterval <= 0 {
 		return
 	}
-	c.requestMu.Lock()
-	defer c.requestMu.Unlock()
+	origin := requestURL.Scheme + "://" + requestURL.Host
+	c.limitersMu.Lock()
+	if c.limiters == nil {
+		c.limiters = make(map[string]*requestLimiter)
+	}
+	limiter := c.limiters[origin]
+	if limiter == nil {
+		limiter = &requestLimiter{}
+		c.limiters[origin] = limiter
+	}
+	c.limitersMu.Unlock()
 
-	wait := c.requestInterval - time.Since(c.lastRequestStart)
-	if !c.lastRequestStart.IsZero() && wait > 0 {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	wait := c.requestInterval - time.Since(limiter.lastRequestStart)
+	if !limiter.lastRequestStart.IsZero() && wait > 0 {
 		time.Sleep(wait)
 	}
-	c.lastRequestStart = time.Now()
+	limiter.lastRequestStart = time.Now()
 }
 
 var client *Client
@@ -74,7 +117,9 @@ func init() {
 			Timeout: 10 * time.Second,
 		}).DialContext,
 		ForceAttemptHTTP2:   true,
-		DisableKeepAlives:   true,
+		MaxIdleConns:        32,
+		MaxIdleConnsPerHost: 4,
+		IdleConnTimeout:     90 * time.Second,
 		TLSHandshakeTimeout: time.Second * 10,
 	}
 	httpClient := &http.Client{
@@ -85,5 +130,7 @@ func init() {
 		httpClient:      httpClient,
 		userAgent:       browserUserAgent,
 		requestInterval: time.Second,
+		limiters:        make(map[string]*requestLimiter),
+		requestSlots:    make(chan struct{}, NUM_WORKERS),
 	}
 }

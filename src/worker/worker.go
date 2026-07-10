@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -14,7 +15,7 @@ const NUM_WORKERS = 4
 
 type Worker struct {
 	db                 *storage.Storage
-	pending            *int32
+	pending            atomic.Int32
 	refresh            *time.Ticker
 	reflock            sync.Mutex
 	stopper            chan bool
@@ -38,10 +39,8 @@ type feedRefreshJobResult struct {
 }
 
 func NewWorker(db *storage.Storage) *Worker {
-	pending := int32(0)
 	return &Worker{
 		db:                 db,
-		pending:            &pending,
 		rsshubAvailability: make(map[string]rsshubAvailability),
 		rsshubHits:         make(map[int64]rsshubRefreshHit),
 		rsshubLastSuccess:  make(map[int64]string),
@@ -51,7 +50,7 @@ func NewWorker(db *storage.Storage) *Worker {
 }
 
 func (w *Worker) FeedsPending() int32 {
-	return *w.pending
+	return w.pending.Load()
 }
 
 func (w *Worker) StartFeedCleaner() {
@@ -174,7 +173,7 @@ func (w *Worker) refreshFeeds(feeds []storage.Feed) {
 	w.reflock.Lock()
 	defer w.reflock.Unlock()
 
-	if *w.pending > 0 {
+	if w.pending.Load() > 0 {
 		log.Print("Refreshing already in progress")
 		return
 	}
@@ -185,13 +184,11 @@ func (w *Worker) refreshFeeds(feeds []storage.Feed) {
 	}
 
 	log.Print("Refreshing feeds")
-	atomic.StoreInt32(w.pending, int32(len(feeds)))
+	w.pending.Store(int32(len(feeds)))
 	go w.refresher(feeds)
 }
 
 func (w *Worker) refresher(feeds []storage.Feed) {
-	w.db.ResetFeedErrors()
-
 	srcqueue := make(chan storage.Feed, len(feeds))
 	dstqueue := make(chan feedRefreshJobResult)
 
@@ -210,40 +207,58 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 		if job.err != nil {
 			w.db.SetFeedError(job.feed.Id, job.err)
 		}
+		refreshSucceeded := job.err == nil
 		if result != nil && result.Feed != nil {
 			fetchedItems = len(result.Items)
 			feedLink := result.FeedLink
 			if rsshub.IsLink(result.StoredFeedLink) {
 				feedLink = result.StoredFeedLink
 			}
-			w.db.UpdateFeedMetadata(result.FeedID, result.Feed.Title, result.Feed.SiteURL, feedLink)
-			w.updateRefreshedFeedIcon(result)
 			w.appendRankingModeItem(job.feed, result, time.Now())
-		}
-		if result != nil && len(result.Items) > 0 {
-			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
-			created := w.db.CreateItems(result.Items)
-			after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
-			newItems = after - before
-			w.db.SetFeedSize(result.FeedID, fetchedItems)
-			if !created {
-				log.Printf("failed to create items for feed %d", result.FeedID)
+			update := storage.FeedRefreshUpdate{
+				FeedID:         result.FeedID,
+				UpdateMetadata: true,
+				Title:          result.Feed.Title,
+				Link:           result.Feed.SiteURL,
+				FeedLink:       feedLink,
+				Items:          result.Items,
+				UpdateFeedSize: len(result.Items) > 0,
+				FeedSize:       fetchedItems,
+				LastModified:   result.LastModified,
+				Etag:           result.Etag,
 			}
-		}
-		if result != nil && result.RankingItem != nil {
-			before := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
-			if w.db.CreateRankingModeItem(result.RankingItem.Item, result.RankingItem.MD5) {
-				w.cacheRankingModeGUID(result.FeedID, result.RankingItem.Item.GUID, time.Now())
-				after := w.db.CountItems(storage.ItemFilter{FeedID: &result.FeedID})
-				newItems += after - before
+			if result.RankingItem != nil {
+				update.RankingItem = &result.RankingItem.Item
+				update.RankingMD5 = result.RankingItem.MD5
+			}
+			var stored bool
+			newItems, stored = w.db.ApplyFeedRefresh(update)
+			if !stored {
+				refreshSucceeded = false
+				job.err = fmt.Errorf("failed to store refresh result")
+				w.db.SetFeedError(job.feed.Id, job.err)
 			} else {
-				log.Printf("failed to create ranking mode item for feed %d", result.FeedID)
+				w.updateRefreshedFeedIcon(result)
+				if result.RankingItem != nil {
+					w.cacheRankingModeGUID(result.FeedID, result.RankingItem.Item.GUID, time.Now())
+				}
+			}
+		} else if result != nil {
+			_, refreshSucceeded = w.db.ApplyFeedRefresh(storage.FeedRefreshUpdate{
+				FeedID:       result.FeedID,
+				LastModified: result.LastModified,
+				Etag:         result.Etag,
+			})
+			if !refreshSucceeded {
+				job.err = fmt.Errorf("failed to store refresh result")
+				w.db.SetFeedError(job.feed.Id, job.err)
 			}
 		}
-		w.recordRSSHubRefreshHit(result)
+		if refreshSucceeded {
+			w.recordRSSHubRefreshHit(result)
+		}
 		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, fetchedItems, newItems)
-		atomic.AddInt32(w.pending, -1)
-		w.db.SyncSearch()
+		w.pending.Add(-1)
 	}
 	close(srcqueue)
 	close(dstqueue)

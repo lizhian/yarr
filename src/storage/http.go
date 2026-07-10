@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	"time"
 )
@@ -20,6 +22,7 @@ func (s *Storage) ListHTTPStates() map[int64]HTTPState {
 		log.Print(err)
 		return result
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var state HTTPState
 		err = rows.Scan(
@@ -43,17 +46,19 @@ func (s *Storage) GetHTTPState(feedID int64) *HTTPState {
 		from http_states where feed_id = ?
 	`, feedID)
 
-	if row == nil {
-		return nil
-	}
-
 	var state HTTPState
-	row.Scan(
+	err := row.Scan(
 		&state.FeedID,
 		&state.LastRefreshed,
 		&state.LastModified,
 		&state.Etag,
 	)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Print(err)
+		}
+		return nil
+	}
 	return &state
 }
 

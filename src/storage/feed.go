@@ -331,12 +331,6 @@ func (s *Storage) ListRankingModeFeeds() []Feed {
 	return result
 }
 
-func (s *Storage) ResetFeedErrors() {
-	if _, err := s.db.Exec(`delete from feed_errors`); err != nil {
-		log.Print(err)
-	}
-}
-
 func (s *Storage) SetFeedError(feedID int64, lastError error) {
 	_, err := s.db.Exec(`
 		insert into feed_errors (feed_id, error)

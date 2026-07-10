@@ -1,12 +1,14 @@
 package worker
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/nkanaev/yarr/src/storage"
 )
@@ -202,6 +204,51 @@ func TestRefreshPreservesSavedFeedMetadata(t *testing.T) {
 	}
 	if feed.FeedLink != server.URL+"/feed.xml" {
 		t.Fatalf("feed_link got %q", feed.FeedLink)
+	}
+}
+
+func TestRefreshOneFeedPreservesOtherFeedErrors(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBody("Test Feed"))
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	target := db.CreateFeed("Target", "", "", server.URL+"/feed.xml", nil)
+	other := db.CreateFeed("Other", "", "", "https://example.com/feed.xml", nil)
+	db.SetFeedError(target.Id, errors.New("old target error"))
+	db.SetFeedError(other.Id, errors.New("other error"))
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*target})
+
+	feedErrors := db.GetFeedErrors()
+	if _, ok := feedErrors[target.Id]; ok {
+		t.Fatalf("target error was not cleared: %#v", feedErrors)
+	}
+	if feedErrors[other.Id] != "other error" {
+		t.Fatalf("other error changed: %#v", feedErrors)
+	}
+}
+
+func TestRefreshWithoutValidatorsUpdatesLastRefreshed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBody("Test Feed"))
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", "", server.URL+"/feed.xml", nil)
+	worker := NewWorker(db)
+	before := time.Now().Add(-time.Second)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	state := db.GetHTTPState(feed.Id)
+	if state == nil || state.LastRefreshed.Before(before) {
+		t.Fatalf("last refreshed was not updated: %#v", state)
 	}
 }
 
