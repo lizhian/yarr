@@ -31,10 +31,12 @@ func TestRenderRankingContent(t *testing.T) {
 	now := time.Date(2026, 7, 6, 3, 0, 0, 0, time.UTC)
 	content := RenderRankingContent([]RankingEntry{
 		{Rank: 1, RankChange: "📈2", Title: "标题一", Author: "作者一", CoverURL: "https://example.com/1.jpg", URL: "https://example.com/1", Content: `<p>正文一</p>`, Date: now.Add(-time.Hour)},
-		{Rank: 2, RankChange: "➡️", Title: "标题二", Author: "作者二", URL: "https://example.com/2", Date: now.Add(-2 * time.Hour)},
+		{Rank: 2, RankChange: "🌟", Title: "标题二", Author: "作者二", URL: "https://example.com/2", Date: now.Add(-2 * time.Hour)},
 	}, storage.FeedRankingModeWithImage, now)
 
 	for _, want := range []string{
+		`<h2>新上榜</h2>`,
+		`<h2>完整榜单</h2>`,
 		`<!-- ranking-entry-url:https://example.com/1 -->`,
 		`<a href="https://example.com/1" class="bilibili-ranking-link">`,
 		`<article class="bilibili-ranking-card">`,
@@ -42,13 +44,34 @@ func TestRenderRankingContent(t *testing.T) {
 		`<p class="bilibili-ranking-meta"><span>01｜📈2｜作者一</span><time datetime="2026-07-06T02:00:00Z">1h</time></p>`,
 		`<details class="bilibili-ranking-details"><summary class="bilibili-ranking-title">标题一</summary>`,
 		`<div class="bilibili-ranking-content"><p>正文一</p><p><a href="https://example.com/1" class="bilibili-ranking-open-original">打开原文</a></p></div>`,
-		`<p class="bilibili-ranking-meta"><span>02｜➡️｜作者二</span><time datetime="2026-07-06T01:00:00Z">2h</time></p>`,
+		`<p class="bilibili-ranking-meta"><span>02｜🌟｜作者二</span><time datetime="2026-07-06T01:00:00Z">2h</time></p>`,
 		`<summary class="bilibili-ranking-title">标题二</summary>`,
 		`<div class="bilibili-ranking-content"><p><a href="https://example.com/2" class="bilibili-ranking-open-original">打开原文</a></p></div>`,
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("content missing %q: %s", want, content)
 		}
+	}
+	if strings.Index(content, `<h2>新上榜</h2>`) > strings.Index(content, `<h2>完整榜单</h2>`) {
+		t.Fatalf("new entries should appear before the full ranking: %s", content)
+	}
+	if strings.Count(content, `<summary class="bilibili-ranking-title">标题一</summary>`) != 1 {
+		t.Fatalf("existing entry should only appear in the full ranking: %s", content)
+	}
+	if strings.Count(content, `<summary class="bilibili-ranking-title">标题二</summary>`) != 2 {
+		t.Fatalf("new entry should appear in both sections: %s", content)
+	}
+}
+
+func TestRenderRankingContentWithoutNewEntries(t *testing.T) {
+	content := RenderRankingContent([]RankingEntry{
+		{Rank: 1, RankChange: "➡️", Title: "标题一", URL: "https://example.com/1"},
+	}, storage.FeedRankingModeWithoutImage, time.Now())
+	if strings.Contains(content, `<h2>新上榜</h2>`) {
+		t.Fatalf("content should not include an empty new ranking section: %s", content)
+	}
+	if !strings.Contains(content, `<h2>完整榜单</h2>`) {
+		t.Fatalf("content should include the full ranking section: %s", content)
 	}
 }
 
@@ -230,6 +253,9 @@ func TestRankingPositionsFromContent(t *testing.T) {
 	positions := RankingPositionsFromContent(content)
 	if positions["https://example.com/1?a=1&b=2"] != 1 || positions["https://example.com/2"] != 2 {
 		t.Fatalf("invalid positions: %#v", positions)
+	}
+	if len(positions) != 2 {
+		t.Fatalf("new-entry duplicates should not affect positions: %#v", positions)
 	}
 }
 

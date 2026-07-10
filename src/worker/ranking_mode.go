@@ -217,69 +217,82 @@ func RankingMediaLinks(entries []RankingEntry, mode string) storage.MediaLinks {
 
 func RenderRankingContent(entries []RankingEntry, mode string, now time.Time) string {
 	var buffer bytes.Buffer
+	newEntries := make([]RankingEntry, 0, len(entries))
 	for _, entry := range entries {
-		title := html.EscapeString(entry.Title)
-		entryURL := html.EscapeString(entry.URL)
-		coverURL := html.EscapeString(entry.CoverURL)
-		author := html.EscapeString(entry.Author)
-		dateTime := html.EscapeString(entry.Date.Format(time.RFC3339))
-		dateText := html.EscapeString(rankingDateRepr(entry.Date, now))
+		if entry.RankChange == "🌟" {
+			newEntries = append(newEntries, entry)
+		}
+	}
+	if len(newEntries) > 0 {
+		buffer.WriteString(`<h2>新上榜</h2>`)
+		for _, entry := range newEntries {
+			renderRankingEntry(&buffer, entry, mode, now, false)
+		}
+	}
+	buffer.WriteString(`<h2>完整榜单</h2>`)
+	for _, entry := range entries {
+		renderRankingEntry(&buffer, entry, mode, now, true)
+	}
+	return buffer.String()
+}
 
+func renderRankingEntry(buffer *bytes.Buffer, entry RankingEntry, mode string, now time.Time, includePosition bool) {
+	title := html.EscapeString(entry.Title)
+	entryURL := html.EscapeString(entry.URL)
+	coverURL := html.EscapeString(entry.CoverURL)
+	author := html.EscapeString(entry.Author)
+	dateTime := html.EscapeString(entry.Date.Format(time.RFC3339))
+	dateText := html.EscapeString(rankingDateRepr(entry.Date, now))
+
+	if includePosition {
 		buffer.WriteString(`<!-- ranking-entry-url:`)
 		buffer.WriteString(entryURL)
 		buffer.WriteString(` -->`)
-		buffer.WriteString(`<article class="bilibili-ranking-card">`)
-		if mode == storage.FeedRankingModeWithImage && coverURL != "" {
-			buffer.WriteString(`<a href="`)
-			buffer.WriteString(entryURL)
-			buffer.WriteString(`" class="bilibili-ranking-link">`)
-			buffer.WriteString(`<img src="`)
-			buffer.WriteString(coverURL)
-			buffer.WriteString(`" alt="`)
-			buffer.WriteString(title)
-			buffer.WriteString(`" class="bilibili-ranking-image">`)
-			buffer.WriteString(`</a>`)
-		}
-		buffer.WriteString(`<div class="bilibili-ranking-body">`)
-		buffer.WriteString(`<p class="bilibili-ranking-meta">`)
-		buffer.WriteString(`<span>`)
-		buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
-		buffer.WriteString(entry.RankChange)
-		buffer.WriteString(`｜`)
-		if author != "" {
-			buffer.WriteString(author)
-		}
-		buffer.WriteString(`</span>`)
-		if !entry.Date.IsZero() {
-			buffer.WriteString(`<time datetime="`)
-			buffer.WriteString(dateTime)
-			buffer.WriteString(`">`)
-			buffer.WriteString(dateText)
-			buffer.WriteString(`</time>`)
-		}
-		buffer.WriteString(`</p><details class="bilibili-ranking-details">`)
-		buffer.WriteString(`<summary class="bilibili-ranking-title">`)
-		buffer.WriteString(title)
-		buffer.WriteString(`</summary>`)
-		if entry.Content != "" {
-			buffer.WriteString(`<div class="bilibili-ranking-content">`)
-			buffer.WriteString(entry.Content)
-			buffer.WriteString(`<p><a href="`)
-			buffer.WriteString(entryURL)
-			buffer.WriteString(`" class="bilibili-ranking-open-original">打开原文</a></p>`)
-			buffer.WriteString(`</div>`)
-		} else {
-			buffer.WriteString(`<div class="bilibili-ranking-content">`)
-			buffer.WriteString(`<p><a href="`)
-			buffer.WriteString(entryURL)
-			buffer.WriteString(`" class="bilibili-ranking-open-original">打开原文</a></p>`)
-			buffer.WriteString(`</div>`)
-		}
-		buffer.WriteString(`</details>`)
-		buffer.WriteString(`</div>`)
-		buffer.WriteString(`</article>`)
 	}
-	return buffer.String()
+	buffer.WriteString(`<article class="bilibili-ranking-card">`)
+	if mode == storage.FeedRankingModeWithImage && coverURL != "" {
+		buffer.WriteString(`<a href="`)
+		buffer.WriteString(entryURL)
+		buffer.WriteString(`" class="bilibili-ranking-link">`)
+		buffer.WriteString(`<img src="`)
+		buffer.WriteString(coverURL)
+		buffer.WriteString(`" alt="`)
+		buffer.WriteString(title)
+		buffer.WriteString(`" class="bilibili-ranking-image">`)
+		buffer.WriteString(`</a>`)
+	}
+	buffer.WriteString(`<div class="bilibili-ranking-body">`)
+	buffer.WriteString(`<p class="bilibili-ranking-meta">`)
+	buffer.WriteString(`<span>`)
+	buffer.WriteString(fmt.Sprintf(`%02d｜`, entry.Rank))
+	buffer.WriteString(entry.RankChange)
+	buffer.WriteString(`｜`)
+	if author != "" {
+		buffer.WriteString(author)
+	}
+	buffer.WriteString(`</span>`)
+	if !entry.Date.IsZero() {
+		buffer.WriteString(`<time datetime="`)
+		buffer.WriteString(dateTime)
+		buffer.WriteString(`">`)
+		buffer.WriteString(dateText)
+		buffer.WriteString(`</time>`)
+	}
+	buffer.WriteString(`</p><details class="bilibili-ranking-details">`)
+	buffer.WriteString(`<summary class="bilibili-ranking-title">`)
+	buffer.WriteString(title)
+	buffer.WriteString(`</summary>`)
+	buffer.WriteString(`<div class="bilibili-ranking-content">`)
+	if entry.Content != "" {
+		buffer.WriteString(entry.Content)
+	}
+	buffer.WriteString(`<p><a href="`)
+	buffer.WriteString(entryURL)
+	buffer.WriteString(`" class="bilibili-ranking-open-original">打开原文</a></p>`)
+	buffer.WriteString(`</div>`)
+	buffer.WriteString(`</details>`)
+	buffer.WriteString(`</div>`)
+	buffer.WriteString(`</article>`)
 }
 
 func rankingDateRepr(date, now time.Time) string {
