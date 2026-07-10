@@ -16,7 +16,6 @@ func settingsDefaults() map[string]interface{} {
 		"sort_newest_first": true,
 		"theme_name":        "light",
 		"theme_font":        "lxgw-wenkai",
-		"theme_size":        1,
 		"refresh_rate":      0,
 		"rsshub_base_url":   "",
 		"toolbar_display":   "text",

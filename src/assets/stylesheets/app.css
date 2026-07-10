@@ -1135,7 +1135,15 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .settings-font-size-picker {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-font-size-value {
+  align-items: center;
+  display: flex;
+  font-size: .85rem;
+  justify-content: center;
 }
 
 .refresh-rate-picker {

@@ -239,3 +239,24 @@ func TestUnknownSettingsAreIgnored(t *testing.T) {
 		t.Fatalf("unknown setting should remain ignored after update: %#v", got)
 	}
 }
+
+func TestRemovedThemeSizeSettingIsIgnored(t *testing.T) {
+	db := testDB()
+	setRawSetting(t, db, "theme_size", `1.2`)
+
+	if got := db.GetSettingsValue("theme_size"); got != nil {
+		t.Fatalf("removed theme_size setting should not have a value: %#v", got)
+	}
+
+	settings := db.GetSettings()
+	if _, ok := settings["theme_size"]; ok {
+		t.Fatal("removed theme_size setting should not be returned")
+	}
+
+	if !db.UpdateSettings(map[string]interface{}{"theme_size": 1.3}) {
+		t.Fatal("removed theme_size update should be ignored without failing")
+	}
+	if got := db.GetSettingsValue("theme_size"); got != nil {
+		t.Fatalf("removed theme_size setting should remain ignored after update: %#v", got)
+	}
+}

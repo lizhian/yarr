@@ -260,12 +260,8 @@ var ARTICLE_LIST_LAYOUTS_KEY = 'yarr.articleListLayouts.v1'
 var FEED_SELECTED_KEY = 'yarr.feedSelected.v1'
 var APP_FONT_SIZE_KEY = 'yarr.appFontSize.v1'
 var APP_FONT_SIZE_DEFAULT = 15
-var APP_FONT_SIZE_OPTIONS = [
-  {title: '小', value: 14},
-  {title: '标准', value: 15},
-  {title: '大', value: 16},
-  {title: '特大', value: 17},
-]
+var APP_FONT_SIZE_MIN = 10
+var APP_FONT_SIZE_MAX = 30
 
 function readFeedSelected() {
   try {
@@ -308,8 +304,8 @@ function writeArticleListLayouts(layouts) {
 }
 
 function normalizeAppFontSize(size) {
-  size = parseInt(size, 10)
-  return APP_FONT_SIZE_OPTIONS.some(function(option) { return option.value == size }) ? size : APP_FONT_SIZE_DEFAULT
+  size = Number(size)
+  return isFinite(size) && Math.floor(size) == size && size >= APP_FONT_SIZE_MIN && size <= APP_FONT_SIZE_MAX ? size : APP_FONT_SIZE_DEFAULT
 }
 
 function readAppFontSize() {
@@ -609,10 +605,8 @@ var vm = new Vue({
       'theme': {
         'name': s.theme_name,
         'font': normalizeThemeFont(s.theme_font),
-        'size': s.theme_size,
       },
       'appFontSize': readAppFontSize(),
-      'appFontSizeOptions': APP_FONT_SIZE_OPTIONS,
       'themeColors': {
         'night': '#1f1f1f',
         'sepia': '#f2e6bd',
@@ -752,7 +746,6 @@ var vm = new Vue({
         api.settings.update({
           theme_name: theme.name,
           theme_font: theme.font,
-          theme_size: theme.size,
         })
       },
     },
@@ -1851,8 +1844,8 @@ var vm = new Vue({
       this.feedNewChoice = []
       this.feedNewChoiceSelected = ''
     },
-    incrFont: function(x) {
-      this.theme.size = +(this.theme.size + (0.1 * x)).toFixed(1)
+    adjustAppFontSize: function(delta) {
+      this.appFontSize = Math.min(APP_FONT_SIZE_MAX, Math.max(APP_FONT_SIZE_MIN, this.appFontSize + delta))
     },
     fetchAllFeeds: function() {
       this.resetColumnWidths()
