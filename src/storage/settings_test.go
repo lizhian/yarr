@@ -55,19 +55,6 @@ func TestUpdateSettingsRejectsInvalidDisabledRSSHubBaseURL(t *testing.T) {
 	}
 }
 
-func TestToolbarDisplayDefault(t *testing.T) {
-	db := testDB()
-
-	if got := db.GetSettingsValue("toolbar_display"); got != "text" {
-		t.Fatalf("invalid toolbar display default: %#v", got)
-	}
-
-	settings := db.GetSettings()
-	if got := settings["toolbar_display"]; got != "text" {
-		t.Fatalf("invalid toolbar display setting: %#v", got)
-	}
-}
-
 func TestBackupEnabledDefault(t *testing.T) {
 	db := testDB()
 
@@ -152,70 +139,45 @@ func TestMigrationRemovesFeedSetting(t *testing.T) {
 	}
 }
 
-func TestUpdateToolbarDisplay(t *testing.T) {
+func TestFrontendSettingsAreIgnored(t *testing.T) {
 	db := testDB()
-
-	if !db.UpdateSettings(map[string]interface{}{"toolbar_display": "text"}) {
-		t.Fatal("did not update toolbar display")
-	}
-	if got := db.GetSettingsValue("toolbar_display"); got != "text" {
-		t.Fatalf("invalid toolbar display: %#v", got)
+	keys := []string{"theme_name", "theme_font", "toolbar_display", "sort_newest_first"}
+	for _, key := range keys {
+		setRawSetting(t, db, key, `"legacy"`)
+		if got := db.GetSettingsValue(key); got != nil {
+			t.Fatalf("frontend setting %q should not have a database value: %#v", key, got)
+		}
+		if _, ok := db.GetSettings()[key]; ok {
+			t.Fatalf("frontend setting %q should not be returned", key)
+		}
+		if !db.UpdateSettings(map[string]interface{}{key: "updated"}) {
+			t.Fatalf("frontend setting %q update should be ignored", key)
+		}
 	}
 }
 
-func TestThemeFontDefault(t *testing.T) {
+func TestMigrationRemovesFrontendSettings(t *testing.T) {
 	db := testDB()
-
-	if got := db.GetSettingsValue("theme_font"); got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font default: %#v", got)
+	keys := []string{"theme_name", "theme_font", "toolbar_display", "sort_newest_first"}
+	for _, key := range keys {
+		setRawSetting(t, db, key, `"legacy"`)
+	}
+	if _, err := db.db.Exec(`pragma user_version = 19`); err != nil {
+		t.Fatal(err)
 	}
 
-	settings := db.GetSettings()
-	if got := settings["theme_font"]; got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font setting: %#v", got)
-	}
-}
-
-func TestUpdateThemeFont(t *testing.T) {
-	db := testDB()
-
-	if !db.UpdateSettings(map[string]interface{}{"theme_font": "maple-mono-nf-cn"}) {
-		t.Fatal("did not update theme font")
-	}
-	if got := db.GetSettingsValue("theme_font"); got != "maple-mono-nf-cn" {
-		t.Fatalf("invalid theme font: %#v", got)
-	}
-}
-
-func TestThemeFontFallsBackToDefault(t *testing.T) {
-	db := testDB()
-
-	if !db.UpdateSettings(map[string]interface{}{"theme_font": ""}) {
-		t.Fatal("did not update theme font")
-	}
-	if got := db.GetSettingsValue("theme_font"); got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font fallback: %#v", got)
+	if err := migrate(db.db); err != nil {
+		t.Fatal(err)
 	}
 
-	if !db.UpdateSettings(map[string]interface{}{"theme_font": "unknown"}) {
-		t.Fatal("did not update theme font")
-	}
-	if got := db.GetSettingsValue("theme_font"); got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font fallback: %#v", got)
-	}
-}
-
-func TestStoredInvalidThemeFontFallsBackToDefault(t *testing.T) {
-	db := testDB()
-	setRawSetting(t, db, "theme_font", `""`)
-
-	if got := db.GetSettingsValue("theme_font"); got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font fallback: %#v", got)
-	}
-
-	settings := db.GetSettings()
-	if got := settings["theme_font"]; got != "lxgw-wenkai" {
-		t.Fatalf("invalid theme font setting fallback: %#v", got)
+	for _, key := range keys {
+		var count int
+		if err := db.db.QueryRow(`select count(*) from settings where key = ?`, key).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("frontend setting %q was not removed", key)
+		}
 	}
 }
 

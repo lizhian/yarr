@@ -27,6 +27,7 @@ var migrations = []func(*sql.Tx) error{
 	m17_add_item_list_indexes,
 	m18_remove_feed_setting,
 	m19_add_feed_last_ranking_state,
+	m20_remove_frontend_settings,
 }
 
 var maxVersion = int64(len(migrations))
@@ -466,6 +467,14 @@ func m19_add_feed_last_ranking_state(tx *sql.Tx) error {
 		return err
 	}
 	return addColumnIfMissing(tx, "feeds", "last_ranking_md5", "last_ranking_md5 text not null default ''")
+}
+
+func m20_remove_frontend_settings(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+		delete from settings
+		where key in ('theme_name', 'theme_font', 'toolbar_display', 'sort_newest_first');
+	`)
+	return err
 }
 
 func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {

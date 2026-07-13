@@ -22,7 +22,7 @@
         window.app.authenticated = {% .authenticated %}
     </script>
 </head>
-<body class="theme-{% .settings.theme_name %} font-{% .settings.theme_font %}">
+<body class="theme-light font-lxgw-wenkai">
     <div id="app" class="d-flex" :class="['toolbar-display-' + toolbarDisplay, 'article-list-layout-' + articleListLayout, {'feed-selected': feedSelected !== null, 'item-selected': itemSelected !== null, 'toolbar-narrow': toolbarNarrow}]" v-cloak>
         <!-- feed list -->
         <div id="col-feed-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: feedListWidth+'px'}">

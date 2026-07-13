@@ -259,6 +259,10 @@ function parseURL(raw) {
 var ARTICLE_LIST_LAYOUTS_KEY = 'yarr.articleListLayouts.v1'
 var FEED_SELECTED_KEY = 'yarr.feedSelected.v1'
 var APP_FONT_SIZE_KEY = 'yarr.appFontSize.v1'
+var THEME_NAME_KEY = 'yarr.themeName.v1'
+var THEME_FONT_KEY = 'yarr.themeFont.v1'
+var TOOLBAR_DISPLAY_KEY = 'yarr.toolbarDisplay.v1'
+var SORT_NEWEST_FIRST_KEY = 'yarr.sortNewestFirst.v1'
 var APP_FONT_SIZE_DEFAULT = 15
 var APP_FONT_SIZE_MIN = 10
 var APP_FONT_SIZE_MAX = 30
@@ -278,6 +282,33 @@ function writeFeedSelected(feedSelected) {
   try {
     localStorage.setItem(FEED_SELECTED_KEY, JSON.stringify(feedSelected === null ? null : (feedSelected || '')))
   } catch (e) {}
+}
+
+function readLocalSetting(key, fallback, normalize) {
+  try {
+    var raw = localStorage.getItem(key)
+    return raw === null ? normalize(fallback) : normalize(JSON.parse(raw))
+  } catch (e) {
+    return normalize(fallback)
+  }
+}
+
+function writeLocalSetting(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (e) {}
+}
+
+function normalizeThemeName(theme) {
+  return ['light', 'sepia', 'night'].indexOf(theme) >= 0 ? theme : 'light'
+}
+
+function normalizeToolbarDisplay(display) {
+  return display == 'icon' ? 'icon' : 'text'
+}
+
+function normalizeSortNewestFirst(value) {
+  return typeof value == 'boolean' ? value : true
 }
 
 function normalizeArticleListLayout(layout) {
@@ -552,7 +583,7 @@ var vm = new Vue({
       'itemSelectedReadabilityError': '',
       'itemSelectedContentMode': 'normal',
       'itemSearch': '',
-      'itemSortNewestFirst': s.sort_newest_first,
+      'itemSortNewestFirst': readLocalSetting(SORT_NEWEST_FIRST_KEY, s.sort_newest_first, normalizeSortNewestFirst),
       'itemListWidth': s.item_list_width || 300,
       'articleListLayout': getArticleListLayout(feedSelected),
       'articleListLayoutApplying': false,
@@ -603,8 +634,8 @@ var vm = new Vue({
       },
       'feedStats': {},
       'theme': {
-        'name': s.theme_name,
-        'font': normalizeThemeFont(s.theme_font),
+        'name': readLocalSetting(THEME_NAME_KEY, s.theme_name, normalizeThemeName),
+        'font': readLocalSetting(THEME_FONT_KEY, s.theme_font, normalizeThemeFont),
       },
       'appFontSize': readAppFontSize(),
       'themeColors': {
@@ -614,7 +645,7 @@ var vm = new Vue({
       },
       'refreshRate': s.refresh_rate,
       'backupEnabled': !!s.backup_enabled,
-      'toolbarDisplay': s.toolbar_display == 'icon' ? 'icon' : 'text',
+      'toolbarDisplay': readLocalSetting(TOOLBAR_DISPLAY_KEY, s.toolbar_display, normalizeToolbarDisplay),
       'fontOptions': FONT_OPTIONS,
       'contentModeOptions': CONTENT_MODE_OPTIONS,
       'rankingModeOptions': [
@@ -743,10 +774,8 @@ var vm = new Vue({
       handler: function(theme) {
         this.updateMetaTheme(theme.name)
         this.updateBodyClass()
-        api.settings.update({
-          theme_name: theme.name,
-          theme_font: theme.font,
-        })
+        writeLocalSetting(THEME_NAME_KEY, theme.name)
+        writeLocalSetting(THEME_FONT_KEY, theme.font)
       },
     },
     'feedStats': {
@@ -819,7 +848,8 @@ var vm = new Vue({
     }, 500),
     'itemSortNewestFirst': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({sort_newest_first: newVal}).then(vm.refreshItems.bind(this, false))
+      writeLocalSetting(SORT_NEWEST_FIRST_KEY, newVal)
+      this.refreshItems(false)
     },
     'feedListWidth': debounce(function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
@@ -844,7 +874,7 @@ var vm = new Vue({
     },
     'toolbarDisplay': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({toolbar_display: newVal})
+      writeLocalSetting(TOOLBAR_DISPLAY_KEY, newVal)
     },
     'articleListLayout': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup

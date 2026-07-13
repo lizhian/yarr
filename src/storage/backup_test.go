@@ -21,8 +21,6 @@ func TestBackupToWritesSQLiteSnapshot(t *testing.T) {
 		Date:    time.Date(2026, 5, 15, 8, 0, 0, 0, time.UTC),
 		Content: "content",
 	}})
-	db.UpdateSettings(map[string]interface{}{"toolbar_display": "text"})
-
 	backupPath := filepath.Join(dir, "backup.db")
 	if err := db.BackupTo(backupPath); err != nil {
 		t.Fatal(err)

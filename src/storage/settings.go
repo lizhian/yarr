@@ -10,27 +10,13 @@ import (
 
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
-		"filter":            "",
-		"feed_list_width":   0,
-		"item_list_width":   0,
-		"sort_newest_first": true,
-		"theme_name":        "light",
-		"theme_font":        "lxgw-wenkai",
-		"refresh_rate":      0,
-		"rsshub_base_url":   "",
-		"toolbar_display":   "text",
-		"backup_enabled":    false,
+		"filter":          "",
+		"feed_list_width": 0,
+		"item_list_width": 0,
+		"refresh_rate":    0,
+		"rsshub_base_url": "",
+		"backup_enabled":  false,
 	}
-}
-
-func normalizeSetting(key string, val interface{}) interface{} {
-	if key != "theme_font" {
-		return val
-	}
-	if val, ok := val.(string); ok && val == "maple-mono-nf-cn" {
-		return val
-	}
-	return "lxgw-wenkai"
 }
 
 func (s *Storage) GetSettingsValue(key string) interface{} {
@@ -53,7 +39,7 @@ func (s *Storage) GetSettingsValue(key string) interface{} {
 		log.Print(err)
 		return nil
 	}
-	return normalizeSetting(key, valDecoded)
+	return valDecoded
 }
 
 func (s *Storage) GetSettingsValueInt64(key string) int64 {
@@ -106,7 +92,7 @@ func (s *Storage) GetSettings() map[string]interface{} {
 			log.Print(err)
 			continue
 		}
-		result[key] = normalizeSetting(key, valDecoded)
+		result[key] = valDecoded
 	}
 	return result
 }
@@ -117,7 +103,6 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 		if defaults[key] == nil {
 			continue
 		}
-		val = normalizeSetting(key, val)
 		if key == "rsshub_base_url" {
 			sval, ok := val.(string)
 			if !ok {
