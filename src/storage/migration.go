@@ -28,6 +28,7 @@ var migrations = []func(*sql.Tx) error{
 	m18_remove_feed_setting,
 	m19_add_feed_last_ranking_state,
 	m20_remove_frontend_settings,
+	m21_add_auto_read_scroll,
 }
 
 var maxVersion = int64(len(migrations))
@@ -475,6 +476,13 @@ func m20_remove_frontend_settings(tx *sql.Tx) error {
 		where key in ('theme_name', 'theme_font', 'toolbar_display', 'sort_newest_first');
 	`)
 	return err
+}
+
+func m21_add_auto_read_scroll(tx *sql.Tx) error {
+	if err := addColumnIfMissing(tx, "feeds", "auto_read_scroll", "auto_read_scroll boolean not null default true"); err != nil {
+		return err
+	}
+	return addColumnIfMissing(tx, "folders", "auto_read_scroll", "auto_read_scroll boolean not null default true")
 }
 
 func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {

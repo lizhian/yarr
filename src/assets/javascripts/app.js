@@ -590,6 +590,7 @@ var vm = new Vue({
       'rsshubBaseUrl': s.rsshub_base_url || '',
       'rsshubDetails': [],
       'feedRefreshDetails': {},
+      'autoReadScrollAll': !!s.auto_read_scroll,
       'authConfig': {
         enabled: app.authenticated,
         username: '',
@@ -721,6 +722,19 @@ var vm = new Vue({
         folder = this.foldersById[guid] || {}
 
       return {type: type, feed: feed, folder: folder}
+    },
+    autoReadScroll: function() {
+      var current = this.current
+      if (current.type == 'feed') {
+        // 订阅源列表尚未加载时沿用默认开启，避免短暂关闭滚动标已读
+        if (!current.feed.id) return true
+        return !!current.feed.auto_read_scroll
+      }
+      if (current.type == 'folder') {
+        if (!current.folder.id) return true
+        return !!current.folder.auto_read_scroll
+      }
+      return !!this.autoReadScrollAll
     },
     itemSelectedContent: function() {
       if (!this.itemSelectedDetails) return ''
@@ -1189,6 +1203,7 @@ var vm = new Vue({
       this.itemListLastScrollTop = this.$refs.itemlist ? this.$refs.itemlist.scrollTop : 0
     },
     canAutoReadItemList: function(el) {
+      if (!this.autoReadScroll) return false
       if (!el || el.scrollHeight === 0) return false
       if (isMobileLayout()) return this.currentNavigationLayer() === 'items'
       return isDesktopLayout()
@@ -1248,6 +1263,28 @@ var vm = new Vue({
     },
     toggleArticleListLayout: function() {
       this.articleListLayout = this.articleListLayout == 'card' ? 'list' : 'card'
+    },
+    toggleAutoReadScroll: function() {
+      var enabled = !this.autoReadScroll
+      var current = this.current
+      if (current.type == 'feed' && current.feed.id) {
+        var feed = current.feed
+        api.feeds.update(feed.id, {auto_read_scroll: enabled}).then(function() {
+          feed.auto_read_scroll = enabled
+        })
+        return
+      }
+      if (current.type == 'folder' && current.folder.id) {
+        var folder = current.folder
+        api.folders.update(folder.id, {auto_read_scroll: enabled}).then(function() {
+          folder.auto_read_scroll = enabled
+        })
+        return
+      }
+      // "全部" 文章列表：绑定全局设置
+      api.settings.update({auto_read_scroll: enabled}).then(function() {
+        vm.autoReadScrollAll = enabled
+      })
     },
     feedIconErrored: function(feed) {
       return !!this.feedIconErrors[feed.id + ':' + (feed.icon_url || '')]

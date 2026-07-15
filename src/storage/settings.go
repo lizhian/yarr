@@ -10,12 +10,13 @@ import (
 
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
-		"filter":          "",
-		"feed_list_width": 0,
-		"item_list_width": 0,
-		"refresh_rate":    0,
-		"rsshub_base_url": "",
-		"backup_enabled":  false,
+		"filter":           "",
+		"feed_list_width":  0,
+		"item_list_width":  0,
+		"refresh_rate":     0,
+		"rsshub_base_url":  "",
+		"backup_enabled":   false,
+		"auto_read_scroll": true,
 	}
 }
 

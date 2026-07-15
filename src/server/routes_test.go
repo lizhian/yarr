@@ -448,6 +448,54 @@ func TestUpdateFeedContentMode(t *testing.T) {
 	}
 }
 
+func TestUpdateFeedAutoReadScroll(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
+	log.SetOutput(os.Stderr)
+
+	if !feed.AutoReadScroll {
+		t.Fatal("auto_read_scroll should default to true")
+	}
+
+	body := bytes.NewBufferString(`{"auto_read_scroll":false}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.AutoReadScroll {
+		t.Fatal("auto_read_scroll should be disabled")
+	}
+}
+
+func TestUpdateFolderAutoReadScroll(t *testing.T) {
+	log.SetOutput(io.Discard)
+	db, _ := storage.New(":memory:")
+	folder := db.CreateFolder("news")
+	log.SetOutput(os.Stderr)
+
+	body := bytes.NewBufferString(`{"auto_read_scroll":false}`)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/folders/%d", folder.Id), body)
+
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	folders := db.ListFolders()
+	if len(folders) != 1 || folders[0].AutoReadScroll {
+		t.Fatalf("got %#v", folders)
+	}
+}
+
 func TestUpdateFeedContentModeRejectsUnsupportedMode(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")

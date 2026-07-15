@@ -160,6 +160,14 @@
                     <input id="searchbar" type="" class="d-block toolbar-search" v-model="itemSearch" @keydown.enter="$event.target.blur()" placeholder="搜索">
                 </div>
                 <button class="toolbar-item toolbar-item-icon-only ml-2"
+                        @click="toggleAutoReadScroll()"
+                        :class="{'toolbar-status-active': autoReadScroll}"
+                        :aria-pressed="autoReadScroll"
+                        :title="autoReadScroll ? '关闭滚动自动标为已读' : '开启滚动自动标为已读'">
+                    <span class="icon toolbar-icon" v-if="autoReadScroll">{% inline "scroll-check.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "scroll-x.svg" %}</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only ml-2"
                         @click="toggleArticleListLayout()"
                         :aria-pressed="articleListLayout == 'card'"
                         :title="articleListLayout == 'card' ? '切换到列表模式' : '切换到卡片模式'">

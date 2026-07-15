@@ -11,8 +11,9 @@ type FolderCreateForm struct {
 }
 
 type FolderUpdateForm struct {
-	Title      *string `json:"title,omitempty"`
-	IsExpanded *bool   `json:"is_expanded,omitempty"`
+	Title          *string `json:"title,omitempty"`
+	IsExpanded     *bool   `json:"is_expanded,omitempty"`
+	AutoReadScroll *bool   `json:"auto_read_scroll,omitempty"`
 }
 
 type FeedCreateForm struct {

@@ -186,6 +186,9 @@ func (s *Server) handleFolder(c *router.Context) {
 		if body.IsExpanded != nil {
 			s.db.ToggleFolderExpanded(id, *body.IsExpanded)
 		}
+		if body.AutoReadScroll != nil {
+			s.db.UpdateFolderAutoReadScroll(id, *body.AutoReadScroll)
+		}
 		c.Out.WriteHeader(http.StatusOK)
 	} else if c.Req.Method == "DELETE" {
 		s.db.DeleteFolder(id)
@@ -428,6 +431,13 @@ func (s *Server) handleFeed(c *router.Context) {
 				}
 				s.db.UpdateFeedIconURL(id, iconURL)
 			}
+		}
+		if autoReadScroll, ok := body["auto_read_scroll"]; ok {
+			if autoReadScroll == nil || reflect.TypeOf(autoReadScroll).Kind() != reflect.Bool {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "滚动自动标为已读设置不支持。"})
+				return
+			}
+			s.db.UpdateFeedAutoReadScroll(id, autoReadScroll.(bool))
 		}
 		c.Out.WriteHeader(http.StatusOK)
 	} else if c.Req.Method == "DELETE" {

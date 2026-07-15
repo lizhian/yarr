@@ -50,6 +50,7 @@ type Feed struct {
 	LastRankingItem string `json:"last_ranking_item"`
 	LastRankingMD5  string `json:"last_ranking_md5"`
 	IconURL         string `json:"icon_url"`
+	AutoReadScroll  bool   `json:"auto_read_scroll"`
 }
 
 func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId *int64) *Feed {
@@ -96,7 +97,7 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 				when ? then ?
 				else feeds.ranking_mode
 			end
-		returning id, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url`,
+		returning id, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll`,
 		title, description, link, feedLink, contentSelector, contentMode, contentMode, rankingMode, rankingMode, folderId,
 		folderId,
 		contentMode, contentMode,
@@ -106,7 +107,8 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 	var id int64
 	var iconURL string
 	var lastRankingItem, lastRankingMD5 string
-	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &lastRankingItem, &lastRankingMD5, &iconURL)
+	var autoReadScroll bool
+	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &lastRankingItem, &lastRankingMD5, &iconURL, &autoReadScroll)
 	if err != nil {
 		log.Print(err)
 		return nil
@@ -123,6 +125,7 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 		LastRankingItem: lastRankingItem,
 		LastRankingMD5:  lastRankingMD5,
 		IconURL:         iconURL,
+		AutoReadScroll:  autoReadScroll,
 		FolderId:        folderId,
 	}
 }
@@ -219,7 +222,12 @@ func (s *Storage) UpdateFeedIconURL(feedId int64, iconURL string) bool {
 	return err == nil
 }
 
-const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url`
+func (s *Storage) UpdateFeedAutoReadScroll(feedId int64, enabled bool) bool {
+	_, err := s.db.Exec(`update feeds set auto_read_scroll = ? where id = ?`, enabled, feedId)
+	return err == nil
+}
+
+const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll`
 
 type feedScanner interface {
 	Scan(dest ...interface{}) error
@@ -240,6 +248,7 @@ func scanFeed(scanner feedScanner) (Feed, error) {
 		&f.LastRankingItem,
 		&f.LastRankingMD5,
 		&f.IconURL,
+		&f.AutoReadScroll,
 	)
 	return f, err
 }
