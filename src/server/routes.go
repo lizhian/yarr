@@ -104,6 +104,7 @@ func (s *Server) handleStatus(c *router.Context) {
 		"running":              s.worker.FeedsPending(),
 		"stats":                s.db.FeedStats(),
 		"rsshub_details":       s.worker.RSSHubRefreshDetails(),
+		"rsshub_failures":      s.worker.RSSHubRefreshFailures(),
 		"feed_refresh_details": s.worker.FeedRefreshDetails(),
 	})
 }

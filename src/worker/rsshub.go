@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -322,4 +323,62 @@ func (w *Worker) RSSHubRefreshDetails() []RSSHubRefreshDetail {
 		})
 	}
 	return details
+}
+
+type RSSHubFailureStat struct {
+	Error string `json:"error"`
+	Feeds int    `json:"feeds"`
+}
+
+type RSSHubFailedFeedDetail struct {
+	Title string `json:"title"`
+	Link  string `json:"link"`
+	Error string `json:"error"`
+}
+
+type RSSHubFailures struct {
+	Stats []RSSHubFailureStat      `json:"stats"`
+	Feeds []RSSHubFailedFeedDetail `json:"feeds"`
+}
+
+func (w *Worker) RSSHubRefreshFailures() RSSHubFailures {
+	result := RSSHubFailures{
+		Stats: make([]RSSHubFailureStat, 0),
+		Feeds: make([]RSSHubFailedFeedDetail, 0),
+	}
+	errors := w.db.GetFeedErrors()
+	if len(errors) == 0 {
+		return result
+	}
+
+	counts := make(map[string]int)
+	for _, feed := range w.db.ListFeeds() {
+		if !rsshub.IsLink(feed.FeedLink) {
+			continue
+		}
+		errMsg, ok := errors[feed.Id]
+		if !ok || errMsg == "" {
+			continue
+		}
+		counts[errMsg]++
+		result.Feeds = append(result.Feeds, RSSHubFailedFeedDetail{
+			Title: feed.Title,
+			Link:  feed.FeedLink,
+			Error: errMsg,
+		})
+	}
+
+	for errMsg, n := range counts {
+		result.Stats = append(result.Stats, RSSHubFailureStat{
+			Error: errMsg,
+			Feeds: n,
+		})
+	}
+	sort.Slice(result.Stats, func(i, j int) bool {
+		if result.Stats[i].Feeds != result.Stats[j].Feeds {
+			return result.Stats[i].Feeds > result.Stats[j].Feeds
+		}
+		return result.Stats[i].Error < result.Stats[j].Error
+	})
+	return result
 }

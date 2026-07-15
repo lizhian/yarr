@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -64,6 +65,60 @@ func TestRSSHubRefreshDetailsCountLatestSuccessfulBasePerFeed(t *testing.T) {
 	}
 	if details[1].Details[0].Link != "https://b.example/bilibili/user/video/a" {
 		t.Fatalf("got link %q", details[1].Details[0].Link)
+	}
+}
+
+func TestRSSHubRefreshFailuresGroupByError(t *testing.T) {
+	db := testStorage(t)
+	worker := NewWorker(db)
+	feedA := db.CreateFeed("A", "", "", "rsshub://bilibili/user/video/a", nil)
+	feedB := db.CreateFeed("B", "", "", "rsshub://bilibili/user/video/b", nil)
+	feedC := db.CreateFeed("C", "", "", "rsshub://telegram/channel/c", nil)
+	normal := db.CreateFeed("Normal", "", "", "https://example.com/feed.xml", nil)
+
+	db.SetFeedError(feedA.Id, fmt.Errorf("status code 500"))
+	db.SetFeedError(feedB.Id, fmt.Errorf("status code 500"))
+	db.SetFeedError(feedC.Id, fmt.Errorf("feed not found"))
+	db.SetFeedError(normal.Id, fmt.Errorf("status code 500"))
+
+	failures := worker.RSSHubRefreshFailures()
+	if len(failures.Stats) != 2 {
+		t.Fatalf("got %d stats: %#v", len(failures.Stats), failures.Stats)
+	}
+	if failures.Stats[0].Error != "status code 500" || failures.Stats[0].Feeds != 2 {
+		t.Fatalf("got first stat %#v", failures.Stats[0])
+	}
+	if failures.Stats[1].Error != "feed not found" || failures.Stats[1].Feeds != 1 {
+		t.Fatalf("got second stat %#v", failures.Stats[1])
+	}
+	if len(failures.Feeds) != 3 {
+		t.Fatalf("got %d failed feeds", len(failures.Feeds))
+	}
+	if failures.Feeds[0].Title != "A" || failures.Feeds[0].Error != "status code 500" {
+		t.Fatalf("got first failed feed %#v", failures.Feeds[0])
+	}
+	if failures.Feeds[0].Link != "rsshub://bilibili/user/video/a" {
+		t.Fatalf("got first failed feed link %q", failures.Feeds[0].Link)
+	}
+	if failures.Feeds[1].Title != "B" {
+		t.Fatalf("got second failed feed %#v", failures.Feeds[1])
+	}
+	if failures.Feeds[2].Title != "C" || failures.Feeds[2].Error != "feed not found" {
+		t.Fatalf("got third failed feed %#v", failures.Feeds[2])
+	}
+}
+
+func TestRSSHubRefreshFailuresEmpty(t *testing.T) {
+	db := testStorage(t)
+	worker := NewWorker(db)
+	db.CreateFeed("A", "", "", "rsshub://bilibili/user/video/a", nil)
+
+	failures := worker.RSSHubRefreshFailures()
+	if len(failures.Stats) != 0 {
+		t.Fatalf("got %d stats", len(failures.Stats))
+	}
+	if len(failures.Feeds) != 0 {
+		t.Fatalf("got %d feeds", len(failures.Feeds))
 	}
 }
 

@@ -589,6 +589,7 @@ var vm = new Vue({
       'articleListLayoutApplying': false,
       'rsshubBaseUrl': s.rsshub_base_url || '',
       'rsshubDetails': [],
+      'rsshubFailures': {stats: [], feeds: []},
       'feedRefreshDetails': {},
       'autoReadScrollAll': !!s.auto_read_scroll,
       'authConfig': {
@@ -1044,6 +1045,15 @@ var vm = new Vue({
         return detail.details && detail.details.length
       })
     },
+    hasRSSHubFailureStats: function() {
+      return this.rsshubFailures && this.rsshubFailures.stats && this.rsshubFailures.stats.length > 0
+    },
+    hasRSSHubFailedFeeds: function() {
+      return this.rsshubFailures && this.rsshubFailures.feeds && this.rsshubFailures.feeds.length > 0
+    },
+    hasRSSHubFailures: function() {
+      return this.hasRSSHubFailureStats() || this.hasRSSHubFailedFeeds()
+    },
     scheduleStatusPoll: function(delay) {
       clearTimeout(this.statusPollTimeout)
       this.statusPollTimeout = setTimeout(function() {
@@ -1056,6 +1066,7 @@ var vm = new Vue({
 
         vm.loading.feeds = data.running
         vm.rsshubDetails = data.rsshub_details || []
+        vm.rsshubFailures = data.rsshub_failures || {stats: [], feeds: []}
         vm.feedRefreshDetails = data.feed_refresh_details || {}
         vm.scheduleStatusPoll(STATUS_POLL_INTERVAL)
         vm.feedStats = data.stats.reduce(function(acc, stat) {

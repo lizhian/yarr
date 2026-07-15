@@ -972,6 +972,10 @@ select.form-control:not([multiple]):not([size]) {
   text-decoration: none;
 }
 
+.rsshub-detail-feed-row-static {
+  cursor: default;
+}
+
 .rsshub-detail-feed-title {
   font-size: .9rem;
   font-weight: 700;
