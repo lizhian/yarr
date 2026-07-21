@@ -224,6 +224,8 @@ func (s *Server) handleFeedIconRefresh(c *router.Context) {
 				c.Out.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			s.db.ResetFeedCustomIcon(id)
+			feed.CustomIcon = false
 			s.worker.RefreshFeedIconURL(*feed)
 			c.JSON(http.StatusOK, s.db.GetFeed(id))
 			return
@@ -423,14 +425,14 @@ func (s *Server) handleFeed(c *router.Context) {
 		}
 		if iconURL, ok := body["icon_url"]; ok {
 			if iconURL == nil {
-				s.db.UpdateFeedIconURL(id, "")
+				s.db.UpdateFeedCustomIconURL(id, "")
 			} else if reflect.TypeOf(iconURL).Kind() == reflect.String {
 				iconURL := strings.TrimSpace(iconURL.(string))
 				if !validFeedIconURL(iconURL) {
 					c.JSON(http.StatusBadRequest, map[string]string{"error": "订阅源图标链接必须是 HTTP(S) URL。"})
 					return
 				}
-				s.db.UpdateFeedIconURL(id, iconURL)
+				s.db.UpdateFeedCustomIconURL(id, iconURL)
 			}
 		}
 		if autoReadScroll, ok := body["auto_read_scroll"]; ok {

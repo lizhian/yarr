@@ -580,8 +580,8 @@
                             <button class="settings-dialog-field-value settings-dialog-field-value-action" @click="updateFeedLink(settingsFeed)" :title="settingsFeed.feed_link || '未设置'">{{ settingsFeed.feed_link || '未设置' }}</button>
                         </div>
                         <div class="settings-dialog-field settings-dialog-field-split">
-                            <a class="settings-dialog-field-label settings-dialog-field-link" :href="trimValue(settingsFeed.icon_url)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="isHTTPURL(settingsFeed.icon_url)">图标链接</a>
-                            <span class="settings-dialog-field-label" v-else>图标链接</span>
+                            <a class="settings-dialog-field-label settings-dialog-field-link" :href="trimValue(settingsFeed.icon_url)" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="isHTTPURL(settingsFeed.icon_url)">{{ settingsFeed.custom_icon ? '*图标链接' : '图标链接' }}</a>
+                            <span class="settings-dialog-field-label" v-else>{{ settingsFeed.custom_icon ? '*图标链接' : '图标链接' }}</span>
                             <button class="settings-dialog-field-value settings-dialog-field-value-action" @click="updateFeedIconURL(settingsFeed)" :title="settingsFeed.icon_url || '未设置'">{{ settingsFeed.icon_url || '未设置' }}</button>
                         </div>
                         <div class="settings-dialog-field settings-dialog-field-choice">

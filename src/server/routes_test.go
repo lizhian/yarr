@@ -622,6 +622,9 @@ func TestUpdateFeedIconURL(t *testing.T) {
 	if feed.IconURL != "https://example.com/icon.png" {
 		t.Fatalf("got %q", feed.IconURL)
 	}
+	if !feed.CustomIcon {
+		t.Fatal("configured icon should be custom")
+	}
 
 	body = bytes.NewBufferString(`{"icon_url":""}`)
 	recorder = httptest.NewRecorder()
@@ -632,8 +635,8 @@ func TestUpdateFeedIconURL(t *testing.T) {
 		t.Fatal("got", recorder.Result().StatusCode)
 	}
 	feed = db.GetFeed(feed.Id)
-	if feed.IconURL != "" {
-		t.Fatalf("got %q", feed.IconURL)
+	if feed.IconURL != "" || feed.CustomIcon {
+		t.Fatalf("cleared icon got %#v", feed)
 	}
 }
 
@@ -686,7 +689,9 @@ func TestRefreshFeedIconURLs(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")
 	feed := db.CreateFeed("feed", "", iconServer.URL, iconServer.URL+"/feed.xml", nil)
+	customFeed := db.CreateFeed("custom feed", "", iconServer.URL, iconServer.URL+"/feed.xml?custom=1", nil)
 	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	db.UpdateFeedCustomIconURL(customFeed.Id, "https://example.com/custom-icon.png")
 	log.SetOutput(os.Stderr)
 
 	recorder := httptest.NewRecorder()
@@ -701,6 +706,10 @@ func TestRefreshFeedIconURLs(t *testing.T) {
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != iconServer.URL+"/icon.png" {
 		t.Fatalf("got %q", feed.IconURL)
+	}
+	customFeed = db.GetFeed(customFeed.Id)
+	if customFeed.IconURL != "https://example.com/custom-icon.png" || !customFeed.CustomIcon {
+		t.Fatalf("custom icon changed: %#v", customFeed)
 	}
 }
 
@@ -731,7 +740,7 @@ func TestRefreshFeedIconURL(t *testing.T) {
 	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")
 	feed := db.CreateFeed("feed", "", iconServer.URL, iconServer.URL+"/feed.xml", nil)
-	db.UpdateFeedIconURL(feed.Id, "https://example.com/old-icon.png")
+	db.UpdateFeedCustomIconURL(feed.Id, "https://example.com/old-icon.png")
 	log.SetOutput(os.Stderr)
 
 	recorder := httptest.NewRecorder()
@@ -750,9 +759,15 @@ func TestRefreshFeedIconURL(t *testing.T) {
 	if result.IconURL != iconServer.URL+"/icon.png" {
 		t.Fatalf("response got %q", result.IconURL)
 	}
+	if result.CustomIcon {
+		t.Fatal("response should clear custom_icon")
+	}
 	feed = db.GetFeed(feed.Id)
 	if feed.IconURL != iconServer.URL+"/icon.png" {
 		t.Fatalf("got %q", feed.IconURL)
+	}
+	if feed.CustomIcon {
+		t.Fatal("manual icon refresh should clear custom_icon")
 	}
 }
 

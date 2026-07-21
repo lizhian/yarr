@@ -30,6 +30,7 @@ var migrations = []func(*sql.Tx) error{
 	m20_remove_frontend_settings,
 	m21_add_auto_read_scroll,
 	m22_add_feed_latest_item_arrived_at,
+	m23_add_feed_custom_icon,
 }
 
 var maxVersion = int64(len(migrations))
@@ -515,6 +516,10 @@ func m22_add_feed_latest_item_arrived_at(tx *sql.Tx) error {
 		end;
 	`)
 	return err
+}
+
+func m23_add_feed_custom_icon(tx *sql.Tx) error {
+	return addColumnIfMissing(tx, "feeds", "custom_icon", "custom_icon boolean not null default false")
 }
 
 func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {

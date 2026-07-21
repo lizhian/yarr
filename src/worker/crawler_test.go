@@ -393,6 +393,39 @@ func TestRefreshOverwritesExistingIconURLFromImageURL(t *testing.T) {
 	}
 }
 
+func TestRefreshPreservesCustomIconURLFromImageURL(t *testing.T) {
+	iconRequests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, rssBodyWithImage("Test Feed", serverURL(r)+"/new-icon.png"))
+		case "/new-icon.png":
+			iconRequests++
+			w.Header().Set("Content-Type", "image/png")
+			w.Write([]byte("new-icon"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
+	db.UpdateFeedCustomIconURL(feed.Id, "https://example.com/custom-icon.png")
+	worker := NewWorker(db)
+
+	worker.refresher([]storage.Feed{*feed})
+
+	feed = db.GetFeed(feed.Id)
+	if feed.IconURL != "https://example.com/custom-icon.png" || !feed.CustomIcon {
+		t.Fatalf("custom icon changed: %#v", feed)
+	}
+	if iconRequests != 0 {
+		t.Fatalf("custom icon fetched %d times", iconRequests)
+	}
+}
+
 func TestRefreshAddsFeedIconURLAfterUserClearsIt(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -410,8 +443,8 @@ func TestRefreshAddsFeedIconURLAfterUserClearsIt(t *testing.T) {
 
 	db := testStorage(t)
 	feed := db.CreateFeed("Test Feed", "", server.URL, server.URL+"/feed.xml", nil)
-	db.UpdateFeedIconURL(feed.Id, "https://example.com/custom-icon.png")
-	db.UpdateFeedIconURL(feed.Id, "")
+	db.UpdateFeedCustomIconURL(feed.Id, "https://example.com/custom-icon.png")
+	db.UpdateFeedCustomIconURL(feed.Id, "")
 	worker := NewWorker(db)
 
 	worker.refresher([]storage.Feed{*feed})

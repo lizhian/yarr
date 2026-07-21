@@ -159,6 +159,29 @@ func TestUpdateFeed(t *testing.T) {
 	if feed2.IconURL != "https://example.com/icon.png" {
 		t.Error("invalid icon url")
 	}
+	if feed2.CustomIcon {
+		t.Error("automatically updated icon should not be custom")
+	}
+	if !db.UpdateFeedCustomIconURL(feed1.Id, "https://example.com/custom-icon.png") {
+		t.Fatal("failed to set custom icon")
+	}
+	if !db.UpdateFeedIconURL(feed1.Id, "https://example.com/automatic-icon.png") {
+		t.Fatal("failed automatic icon update")
+	}
+	feed2 = db.GetFeed(feed1.Id)
+	if feed2.IconURL != "https://example.com/custom-icon.png" || !feed2.CustomIcon {
+		t.Fatalf("custom icon was overwritten: %#v", feed2)
+	}
+	if !db.ResetFeedCustomIcon(feed1.Id) {
+		t.Fatal("failed to reset custom icon")
+	}
+	if !db.UpdateFeedIconURL(feed1.Id, "https://example.com/automatic-icon.png") {
+		t.Fatal("failed automatic icon update")
+	}
+	feed2 = db.GetFeed(feed1.Id)
+	if feed2.IconURL != "https://example.com/automatic-icon.png" || feed2.CustomIcon {
+		t.Fatalf("automatic icon was not restored: %#v", feed2)
+	}
 	db.UpdateFeedRankingMode(feed1.Id, FeedRankingModeWithImage)
 	feed2 = db.GetFeed(feed1.Id)
 	if feed2.RankingMode != FeedRankingModeWithImage {
@@ -167,10 +190,10 @@ func TestUpdateFeed(t *testing.T) {
 	if db.UpdateFeedContentMode(feed1.Id, "invalid") {
 		t.Error("invalid content mode accepted")
 	}
-	db.UpdateFeedIconURL(feed1.Id, "")
+	db.UpdateFeedCustomIconURL(feed1.Id, "")
 	feed2 = db.GetFeed(feed1.Id)
-	if feed2.IconURL != "" {
-		t.Error("invalid cleared icon url")
+	if feed2.IconURL != "" || feed2.CustomIcon {
+		t.Error("cleared icon should not be custom")
 	}
 	if feed2.AutoReadScroll {
 		t.Error("auto_read_scroll should default to false")

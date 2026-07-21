@@ -62,6 +62,39 @@ func TestMigrationAddsLatestItemArrivedAt(t *testing.T) {
 	assertFeedLatestItemArrivedAt(t, db, feedID, latestAt)
 }
 
+func TestMigrationAddsFeedCustomIcon(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	for version := int64(1); version <= 22; version++ {
+		if err := migrateVersion(version, db); err != nil {
+			t.Fatalf("migrate to version %d: %v", version, err)
+		}
+	}
+	result, err := db.Exec(`insert into feeds (title, feed_link) values ('feed', 'https://example.com/feed.xml')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := migrate(db); err != nil {
+		t.Fatal(err)
+	}
+	var customIcon bool
+	if err := db.QueryRow(`select custom_icon from feeds where id = ?`, feedID).Scan(&customIcon); err != nil {
+		t.Fatal(err)
+	}
+	if customIcon {
+		t.Fatal("custom_icon should default to false")
+	}
+}
+
 func assertFeedLatestItemArrivedAt(t *testing.T, db *sql.DB, feedID int64, want time.Time) {
 	t.Helper()
 	var got time.Time

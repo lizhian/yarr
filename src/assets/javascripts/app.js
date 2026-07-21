@@ -1488,6 +1488,7 @@ var vm = new Vue({
         api.feeds.update(feed.id, {icon_url: iconURL}).then(function(res) {
           if (res.ok) {
             feed.icon_url = iconURL.trim()
+            feed.custom_icon = !!feed.icon_url
           } else {
             vm.alertDialog('订阅源图标链接必须是 HTTP(S) URL。')
           }
@@ -1500,6 +1501,7 @@ var vm = new Vue({
       api.feeds.refresh_icon(feed.id).then(function(updatedFeed) {
         if (updatedFeed && updatedFeed.id) {
           feed.icon_url = updatedFeed.icon_url
+          feed.custom_icon = !!updatedFeed.custom_icon
         }
         vm.feedIconErrors = {}
       }).then(function() {

@@ -83,6 +83,9 @@ func (w *Worker) RefreshFeedIconURL(feed storage.Feed) {
 }
 
 func (w *Worker) FindFeedFavicon(feed storage.Feed) {
+	if feed.CustomIcon {
+		return
+	}
 	feedImageUrl := ""
 	feedLink := feed.FeedLink
 	if result, err := w.DiscoverFeed(feed.FeedLink); err == nil && result.Feed != nil {
@@ -95,6 +98,9 @@ func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 }
 
 func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
+	if feed.CustomIcon {
+		return
+	}
 	feedLink, err := w.resolveLink(feed.FeedLink)
 	if err != nil {
 		log.Printf("Failed to resolve icon feed link for %s: %s", feed.FeedLink, err)
@@ -123,7 +129,7 @@ func (w *Worker) updateRefreshedFeedIcon(result *FeedRefreshResult) {
 	}
 
 	feed := w.db.GetFeed(result.FeedID)
-	if feed == nil {
+	if feed == nil || feed.CustomIcon {
 		return
 	}
 	w.findFeedIcon(*feed, result.Feed.ImageURL, result.FeedLink)
