@@ -308,6 +308,7 @@ select.form-control:not([multiple]):not([size]) {
 .feed-settings-action {
   align-self: center;
   margin-left: .4rem;
+  transition: opacity .15s ease;
 }
 
 .feed-settings-icon {
@@ -337,6 +338,10 @@ select.form-control:not([multiple]):not([size]) {
 .feed-selectgroup:hover .feed-settings-time,
 .feed-settings-action:focus .feed-settings-time {
   display: none;
+}
+
+.feed-selectgroup input:checked + .selectgroup-label .feed-settings-action:hover {
+  background-color: transparent;
 }
 
 #item-list-scroll .item-status-read {

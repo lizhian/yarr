@@ -108,6 +108,7 @@ func TestSelectedFeedKeepsActivityTimeVisible(t *testing.T) {
 		".feed-selectgroup:hover .feed-settings-time",
 		".feed-settings-action:focus .feed-settings-icon",
 		".feed-settings-action:focus .feed-settings-time",
+		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-action:hover {\n  background-color: transparent;\n}",
 	} {
 		if !strings.Contains(css, want) {
 			t.Errorf("missing %q", want)
