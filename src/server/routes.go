@@ -242,7 +242,7 @@ func (s *Server) handleFeedErrors(c *router.Context) {
 
 func (s *Server) handleFeedList(c *router.Context) {
 	if c.Req.Method == "GET" {
-		list := s.db.ListFeeds()
+		list := s.db.ListFeedsByLatestItemArrivedAt()
 		c.JSON(http.StatusOK, list)
 	} else if c.Req.Method == "POST" {
 		var form FeedCreateForm

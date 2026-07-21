@@ -29,6 +29,7 @@ var migrations = []func(*sql.Tx) error{
 	m19_add_feed_last_ranking_state,
 	m20_remove_frontend_settings,
 	m21_add_auto_read_scroll,
+	m22_add_feed_latest_item_arrived_at,
 }
 
 var maxVersion = int64(len(migrations))
@@ -483,6 +484,37 @@ func m21_add_auto_read_scroll(tx *sql.Tx) error {
 		return err
 	}
 	return addColumnIfMissing(tx, "folders", "auto_read_scroll", "auto_read_scroll boolean not null default true")
+}
+
+func m22_add_feed_latest_item_arrived_at(tx *sql.Tx) error {
+	if err := addColumnIfMissing(tx, "feeds", "latest_item_arrived_at", "latest_item_arrived_at datetime"); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`
+		update feeds
+		set latest_item_arrived_at = (
+			select max(date_arrived)
+			from items
+			where items.feed_id = feeds.id
+		);
+
+		create index if not exists idx_feed_latest_item_arrived_at
+		on feeds(latest_item_arrived_at desc);
+
+		create trigger if not exists update_feed_latest_item_arrived_at
+		after insert on items
+		when new.date_arrived is not null
+		begin
+			update feeds
+			set latest_item_arrived_at = case
+				when latest_item_arrived_at is null or new.date_arrived > latest_item_arrived_at
+				then new.date_arrived
+				else latest_item_arrived_at
+			end
+			where id = new.feed_id;
+		end;
+	`)
+	return err
 }
 
 func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {

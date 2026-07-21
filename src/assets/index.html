@@ -108,20 +108,31 @@
                         </div>
                     </label>
                     <div v-show="!folder.id || folder.is_expanded" class="mt-1" :class="{'pl-3': folder.id}">
-                        <label class="selectgroup"
+                        <label class="selectgroup feed-selectgroup"
                               :class="{'d-none': mustHideFeed(feed)}"
-                               v-for="feed in folder.feeds">
+                               v-for="feed in folder.feeds"
+                               :key="feed.id">
                             <input type="radio" name="feed" :value="'feed:'+feed.id" v-model="feedSelected">
                             <div class="selectgroup-label d-flex align-items-center w-100">
                                 <span class="icon mr-2" v-if="!feed.icon_url || feedIconErrored(feed)">{% inline "rss.svg" %}</span>
                                 <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
                                 <span class="counter text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
-                                <button class="selectgroup-action ml-1"
-                                        title="订阅源设置"
-                                        @click.prevent.stop="showFeedSettings(feed)">
-                                    <span class="icon">{% inline "more-horizontal.svg" %}</span>
-                                </button>
+                                <span class="feed-row-controls ml-1">
+                                    <small class="feed-latest-arrival text-right"
+                                           v-if="feed.latest_item_arrived_at"
+                                           :title="formatDate(feed.latest_item_arrived_at)">
+                                        <relative-time :key="feed.latest_item_arrived_at"
+                                                       :val="feed.latest_item_arrived_at"></relative-time>
+                                    </small>
+                                    <small class="feed-latest-arrival text-right" v-else>--</small>
+                                    <button class="selectgroup-action feed-settings-action"
+                                            title="订阅源设置"
+                                            aria-label="订阅源设置"
+                                            @click.prevent.stop="showFeedSettings(feed)">
+                                        <span class="icon">{% inline "more-horizontal.svg" %}</span>
+                                    </button>
+                                </span>
                             </div>
                         </label>
                     </div>

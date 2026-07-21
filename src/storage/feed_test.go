@@ -84,6 +84,54 @@ func TestReadFeed(t *testing.T) {
 	}
 }
 
+func TestListFeedsByLatestItemArrivedAt(t *testing.T) {
+	db := testDB()
+	alpha := db.CreateFeed("Alpha", "", "", "http://example.com/alpha.xml", nil)
+	older := db.CreateFeed("Older", "", "", "http://example.com/older.xml", nil)
+	zulu := db.CreateFeed("Zulu", "", "", "http://example.com/zulu.xml", nil)
+	empty := db.CreateFeed("Empty", "", "", "http://example.com/empty.xml", nil)
+
+	olderAt := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	latestAt := olderAt.Add(time.Hour)
+	if _, err := db.db.Exec(`
+		update feeds
+		set latest_item_arrived_at = case id
+			when ? then ?
+			when ? then ?
+			when ? then ?
+		end
+		where id in (?, ?, ?)`,
+		alpha.Id, latestAt,
+		older.Id, olderAt,
+		zulu.Id, latestAt,
+		alpha.Id, older.Id, zulu.Id,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	feeds := db.ListFeedsByLatestItemArrivedAt()
+	wantIDs := []int64{alpha.Id, zulu.Id, older.Id, empty.Id}
+	if len(feeds) != len(wantIDs) {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	for i, wantID := range wantIDs {
+		if feeds[i].Id != wantID {
+			t.Fatalf("feed %d got id %d, want %d", i, feeds[i].Id, wantID)
+		}
+	}
+	if feeds[0].LatestItemArrivedAt == nil || !feeds[0].LatestItemArrivedAt.Equal(latestAt) {
+		t.Fatalf("invalid latest timestamp: %#v", feeds[0].LatestItemArrivedAt)
+	}
+	if feeds[len(feeds)-1].LatestItemArrivedAt != nil {
+		t.Fatalf("empty feed timestamp got %#v", feeds[len(feeds)-1].LatestItemArrivedAt)
+	}
+
+	nameSorted := db.ListFeeds()
+	if got := []int64{nameSorted[0].Id, nameSorted[1].Id, nameSorted[2].Id, nameSorted[3].Id}; !reflect.DeepEqual(got, []int64{alpha.Id, empty.Id, older.Id, zulu.Id}) {
+		t.Fatalf("ListFeeds order changed: %v", got)
+	}
+}
+
 func TestUpdateFeed(t *testing.T) {
 	db := testDB()
 	feed1 := db.CreateFeedWithContentSelector("feed 1", "", "http://example1.com", "http://example1.com/feed.xml", ".article", nil)

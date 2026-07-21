@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/nkanaev/yarr/src/feedmeta"
 )
@@ -38,19 +39,20 @@ func ValidFeedRankingMode(mode string) bool {
 }
 
 type Feed struct {
-	Id              int64  `json:"id"`
-	FolderId        *int64 `json:"folder_id"`
-	Title           string `json:"title"`
-	Description     string `json:"description"`
-	Link            string `json:"link"`
-	FeedLink        string `json:"feed_link"`
-	ContentSelector string `json:"content_selector"`
-	ContentMode     string `json:"content_mode"`
-	RankingMode     string `json:"ranking_mode"`
-	LastRankingItem string `json:"last_ranking_item"`
-	LastRankingMD5  string `json:"last_ranking_md5"`
-	IconURL         string `json:"icon_url"`
-	AutoReadScroll  bool   `json:"auto_read_scroll"`
+	Id                  int64      `json:"id"`
+	FolderId            *int64     `json:"folder_id"`
+	Title               string     `json:"title"`
+	Description         string     `json:"description"`
+	Link                string     `json:"link"`
+	FeedLink            string     `json:"feed_link"`
+	ContentSelector     string     `json:"content_selector"`
+	ContentMode         string     `json:"content_mode"`
+	RankingMode         string     `json:"ranking_mode"`
+	LastRankingItem     string     `json:"last_ranking_item"`
+	LastRankingMD5      string     `json:"last_ranking_md5"`
+	IconURL             string     `json:"icon_url"`
+	AutoReadScroll      bool       `json:"auto_read_scroll"`
+	LatestItemArrivedAt *time.Time `json:"latest_item_arrived_at"`
 }
 
 func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId *int64) *Feed {
@@ -97,7 +99,7 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 				when ? then ?
 				else feeds.ranking_mode
 			end
-		returning id, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll`,
+		returning id, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll, latest_item_arrived_at`,
 		title, description, link, feedLink, contentSelector, contentMode, contentMode, rankingMode, rankingMode, folderId,
 		folderId,
 		contentMode, contentMode,
@@ -108,25 +110,27 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 	var iconURL string
 	var lastRankingItem, lastRankingMD5 string
 	var autoReadScroll bool
-	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &lastRankingItem, &lastRankingMD5, &iconURL, &autoReadScroll)
+	var latestItemArrivedAt *time.Time
+	err := row.Scan(&id, &contentSelector, &contentMode, &rankingMode, &lastRankingItem, &lastRankingMD5, &iconURL, &autoReadScroll, &latestItemArrivedAt)
 	if err != nil {
 		log.Print(err)
 		return nil
 	}
 	return &Feed{
-		Id:              id,
-		Title:           title,
-		Description:     description,
-		Link:            link,
-		FeedLink:        feedLink,
-		ContentSelector: contentSelector,
-		ContentMode:     contentMode,
-		RankingMode:     rankingMode,
-		LastRankingItem: lastRankingItem,
-		LastRankingMD5:  lastRankingMD5,
-		IconURL:         iconURL,
-		AutoReadScroll:  autoReadScroll,
-		FolderId:        folderId,
+		Id:                  id,
+		Title:               title,
+		Description:         description,
+		Link:                link,
+		FeedLink:            feedLink,
+		ContentSelector:     contentSelector,
+		ContentMode:         contentMode,
+		RankingMode:         rankingMode,
+		LastRankingItem:     lastRankingItem,
+		LastRankingMD5:      lastRankingMD5,
+		IconURL:             iconURL,
+		AutoReadScroll:      autoReadScroll,
+		LatestItemArrivedAt: latestItemArrivedAt,
+		FolderId:            folderId,
 	}
 }
 
@@ -227,7 +231,7 @@ func (s *Storage) UpdateFeedAutoReadScroll(feedId int64, enabled bool) bool {
 	return err == nil
 }
 
-const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll`
+const feedSelectColumns = `id, folder_id, title, description, link, feed_link, content_selector, content_mode, ranking_mode, last_ranking_item, last_ranking_md5, icon_url, auto_read_scroll, latest_item_arrived_at`
 
 type feedScanner interface {
 	Scan(dest ...interface{}) error
@@ -249,6 +253,7 @@ func scanFeed(scanner feedScanner) (Feed, error) {
 		&f.LastRankingMD5,
 		&f.IconURL,
 		&f.AutoReadScroll,
+		&f.LatestItemArrivedAt,
 	)
 	return f, err
 }
@@ -259,6 +264,30 @@ func (s *Storage) ListFeeds() []Feed {
 		select ` + feedSelectColumns + `
 		from feeds
 		order by title collate nocase
+	`)
+	if err != nil {
+		log.Print(err)
+		return result
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		f, err := scanFeed(rows)
+		if err != nil {
+			log.Print(err)
+			return result
+		}
+		result = append(result, f)
+	}
+	return result
+}
+
+func (s *Storage) ListFeedsByLatestItemArrivedAt() []Feed {
+	result := make([]Feed, 0)
+	rows, err := s.db.Query(`
+		select ` + feedSelectColumns + `
+		from feeds
+		order by latest_item_arrived_at desc, title collate nocase, id
 	`)
 	if err != nil {
 		log.Print(err)

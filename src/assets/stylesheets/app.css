@@ -286,6 +286,57 @@ select.form-control:not([multiple]):not([size]) {
   outline: none;
 }
 
+.feed-row-controls {
+  align-items: center;
+  display: flex;
+  flex: 0 0 6rem;
+  height: 1.75rem;
+  justify-content: flex-end;
+  min-width: 0;
+  position: relative;
+}
+
+.feed-latest-arrival {
+  opacity: .7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-settings-action {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+.feed-selectgroup:hover .feed-latest-arrival,
+.feed-selectgroup:focus-within .feed-latest-arrival {
+  visibility: hidden;
+}
+
+.feed-selectgroup:hover .feed-settings-action,
+.feed-selectgroup:focus-within .feed-settings-action {
+  opacity: .7;
+  pointer-events: auto;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .feed-row-controls {
+    flex-basis: 1.75rem;
+  }
+
+  .feed-latest-arrival {
+    display: none;
+  }
+
+  .feed-settings-action {
+    opacity: .7;
+    pointer-events: auto;
+    position: static;
+  }
+}
+
 #item-list-scroll .item-status-read {
   color: #8a8a86;
 }

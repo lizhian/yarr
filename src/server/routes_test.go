@@ -110,6 +110,45 @@ func TestStatusIncludesRSSHubDetails(t *testing.T) {
 	}
 }
 
+func TestFeedListSortsByLatestItemArrival(t *testing.T) {
+	db := testServerDB(t)
+	older := db.CreateFeed("Alpha", "", "", "https://example.com/alpha.xml", nil)
+	newer := db.CreateFeed("Zulu", "", "", "https://example.com/zulu.xml", nil)
+	empty := db.CreateFeed("Middle", "", "", "https://example.com/middle.xml", nil)
+
+	if !db.CreateItems([]storage.Item{{GUID: "older", FeedId: older.Id, Date: time.Now()}}) {
+		t.Fatal("failed to create older item")
+	}
+	time.Sleep(10 * time.Millisecond)
+	if !db.CreateItems([]storage.Item{{GUID: "newer", FeedId: newer.Id, Date: time.Now()}}) {
+		t.Fatal("failed to create newer item")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/api/feeds", nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+
+	var feeds []storage.Feed
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&feeds); err != nil {
+		t.Fatal(err)
+	}
+	if len(feeds) != 3 {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	if feeds[0].Id != newer.Id || feeds[1].Id != older.Id || feeds[2].Id != empty.Id {
+		t.Fatalf("unexpected order: %d, %d, %d", feeds[0].Id, feeds[1].Id, feeds[2].Id)
+	}
+	if feeds[0].LatestItemArrivedAt == nil || feeds[1].LatestItemArrivedAt == nil {
+		t.Fatal("expected arrival timestamps")
+	}
+	if feeds[2].LatestItemArrivedAt != nil {
+		t.Fatalf("empty feed timestamp got %#v", feeds[2].LatestItemArrivedAt)
+	}
+}
+
 func TestAuthConfigEndpoint(t *testing.T) {
 	db := testServerDB(t)
 	handler := NewServer(db, "127.0.0.1:8000").handler()

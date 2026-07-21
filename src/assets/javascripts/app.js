@@ -591,6 +591,7 @@ var vm = new Vue({
       'rsshubDetails': [],
       'rsshubFailures': {stats: [], feeds: []},
       'feedRefreshDetails': {},
+      'feedRefreshDetailsInitialized': false,
       'autoReadScrollAll': !!s.auto_read_scroll,
       'authConfig': {
         enabled: app.authenticated,
@@ -1067,7 +1068,15 @@ var vm = new Vue({
         vm.loading.feeds = data.running
         vm.rsshubDetails = data.rsshub_details || []
         vm.rsshubFailures = data.rsshub_failures || {stats: [], feeds: []}
-        vm.feedRefreshDetails = data.feed_refresh_details || {}
+        var nextFeedRefreshDetails = data.feed_refresh_details || {}
+        var shouldRefreshFeeds = vm.feedRefreshDetailsInitialized && Object.keys(nextFeedRefreshDetails).some(function(feedID) {
+          var detail = nextFeedRefreshDetails[feedID]
+          var previous = vm.feedRefreshDetails[feedID]
+          return detail.new_items > 0 && (!previous || detail.last_refreshed_at != previous.last_refreshed_at)
+        })
+        vm.feedRefreshDetails = nextFeedRefreshDetails
+        vm.feedRefreshDetailsInitialized = true
+        if (shouldRefreshFeeds) vm.refreshFeeds()
         vm.scheduleStatusPoll(STATUS_POLL_INTERVAL)
         vm.feedStats = data.stats.reduce(function(acc, stat) {
           acc[stat.feed_id] = stat
