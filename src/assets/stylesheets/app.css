@@ -295,18 +295,6 @@ select.form-control:not([multiple]):not([size]) {
   min-width: 0;
 }
 
-.feed-latest-arrival {
-  flex: 0 0 auto;
-  font-size: .7rem;
-  line-height: 1;
-  margin-left: auto;
-  margin-right: .4rem;
-  opacity: .7;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .feed-unread-count {
   flex: 0 1 auto;
   line-height: 1;
@@ -319,7 +307,38 @@ select.form-control:not([multiple]):not([size]) {
 
 .feed-settings-action {
   align-self: center;
-  margin-left: .25rem;
+  margin-left: .4rem;
+}
+
+.feed-settings-icon {
+  display: inline-block;
+}
+
+.feed-settings-time {
+  display: none;
+  font-size: .7rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.feed-settings-has-time .feed-settings-icon {
+  display: none;
+}
+
+.feed-settings-has-time .feed-settings-time {
+  display: block;
+}
+
+.feed-selectgroup:hover .feed-settings-icon,
+.feed-selectgroup:focus-within .feed-settings-icon,
+.feed-selectgroup input:checked + .selectgroup-label .feed-settings-icon {
+  display: inline-block;
+}
+
+.feed-selectgroup:hover .feed-settings-time,
+.feed-selectgroup:focus-within .feed-settings-time,
+.feed-selectgroup input:checked + .selectgroup-label .feed-settings-time {
+  display: none;
 }
 
 #item-list-scroll .item-status-read {
