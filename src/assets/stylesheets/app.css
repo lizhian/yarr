@@ -330,14 +330,12 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .feed-selectgroup:hover .feed-settings-icon,
-.feed-selectgroup:focus-within .feed-settings-icon,
-.feed-selectgroup input:checked + .selectgroup-label .feed-settings-icon {
+.feed-settings-action:focus .feed-settings-icon {
   display: inline-block;
 }
 
 .feed-selectgroup:hover .feed-settings-time,
-.feed-selectgroup:focus-within .feed-settings-time,
-.feed-selectgroup input:checked + .selectgroup-label .feed-settings-time {
+.feed-settings-action:focus .feed-settings-time {
   display: none;
 }
 

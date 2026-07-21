@@ -2,6 +2,7 @@ package assets
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 )
@@ -76,5 +77,40 @@ func TestFeedTimeDoesNotDependOnUnreadCount(t *testing.T) {
 	}
 	if strings.Contains(html, `filteredFeedStats[feed.id] &amp;&amp; feed.latest_item_arrived_at`) {
 		t.Error("feed time visibility should not depend on unread count")
+	}
+}
+
+func TestSelectedFeedKeepsActivityTimeVisible(t *testing.T) {
+	file, err := FS.Open("stylesheets/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	css := string(content)
+	for _, unwanted := range []string{
+		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-icon",
+		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-time",
+		".feed-selectgroup:focus-within .feed-settings-icon",
+		".feed-selectgroup:focus-within .feed-settings-time",
+	} {
+		if strings.Contains(css, unwanted) {
+			t.Errorf("selected or focused feed should not switch activity time: found %q", unwanted)
+		}
+	}
+	for _, want := range []string{
+		".feed-selectgroup:hover .feed-settings-icon",
+		".feed-selectgroup:hover .feed-settings-time",
+		".feed-settings-action:focus .feed-settings-icon",
+		".feed-settings-action:focus .feed-settings-time",
+	} {
+		if !strings.Contains(css, want) {
+			t.Errorf("missing %q", want)
+		}
 	}
 }
