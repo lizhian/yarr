@@ -117,15 +117,16 @@
                                 <span class="icon mr-2" v-if="!feed.icon_url || feedIconErrored(feed)">{% inline "rss.svg" %}</span>
                                 <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
-                                <span class="counter text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                 <span class="feed-row-controls ml-1">
                                     <small class="feed-latest-arrival text-right"
                                            v-if="feed.latest_item_arrived_at"
                                            :title="formatDate(feed.latest_item_arrived_at)">
                                         <relative-time :key="feed.latest_item_arrived_at"
-                                                       :val="feed.latest_item_arrived_at"></relative-time>
+                                                       :val="feed.latest_item_arrived_at"
+                                                       :max-days="99"></relative-time>
                                     </small>
                                     <small class="feed-latest-arrival text-right" v-else>--</small>
+                                    <span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                     <button class="selectgroup-action feed-settings-action"
                                             title="订阅源设置"
                                             aria-label="订阅源设置"

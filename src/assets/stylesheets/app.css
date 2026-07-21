@@ -287,54 +287,38 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .feed-row-controls {
-  align-items: center;
+  align-items: baseline;
   display: flex;
-  flex: 0 0 6rem;
+  flex: 0 0 6.75rem;
   height: 1.75rem;
   justify-content: flex-end;
   min-width: 0;
-  position: relative;
 }
 
 .feed-latest-arrival {
+  flex: 0 0 auto;
+  font-size: .7rem;
+  line-height: 1;
+  margin-left: auto;
+  margin-right: .4rem;
   opacity: .7;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.feed-unread-count {
+  flex: 0 1 auto;
+  max-width: 3rem;
+  overflow: hidden;
+  padding-left: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .feed-settings-action {
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  right: 0;
-}
-
-.feed-selectgroup:hover .feed-latest-arrival,
-.feed-selectgroup:focus-within .feed-latest-arrival {
-  visibility: hidden;
-}
-
-.feed-selectgroup:hover .feed-settings-action,
-.feed-selectgroup:focus-within .feed-settings-action {
-  opacity: .7;
-  pointer-events: auto;
-}
-
-@media (hover: none), (pointer: coarse) {
-  .feed-row-controls {
-    flex-basis: 1.75rem;
-  }
-
-  .feed-latest-arrival {
-    display: none;
-  }
-
-  .feed-settings-action {
-    opacity: .7;
-    pointer-events: auto;
-    position: static;
-  }
+  align-self: center;
+  margin-left: .25rem;
 }
 
 #item-list-scroll .item-status-read {

@@ -483,7 +483,7 @@ Vue.component('modal', {
   },
 })
 
-function dateRepr(d) {
+function dateRepr(d, maxDays) {
   var sec = (new Date().getTime() - d.getTime()) / 1000
   var neg = sec < 0
   var out = ''
@@ -493,6 +493,8 @@ function dateRepr(d) {
     out = Math.round(sec / 60) + 'm'
   else if (sec < 86400)  // less than 24 hours
     out = Math.round(sec / 3600) + 'h'
+  else if (maxDays)
+    out = Math.min(Math.round(sec / 86400), maxDays) + 'd'
   else if (sec < 604800)  // less than a week
     out = Math.round(sec / 86400) + 'd'
   else
@@ -503,19 +505,19 @@ function dateRepr(d) {
 }
 
 Vue.component('relative-time', {
-  props: ['val'],
+  props: ['val', 'maxDays'],
   data: function() {
     var d = new Date(this.val)
     return {
       'date': d,
-      'formatted': dateRepr(d),
+      'formatted': dateRepr(d, this.maxDays),
       'interval': null,
     }
   },
   template: '<time :datetime="val">{{ formatted }}</time>',
   mounted: function() {
     this.interval = setInterval(function() {
-      this.formatted = dateRepr(this.date)
+      this.formatted = dateRepr(this.date, this.maxDays)
     }.bind(this), 600000)  // every 10 minutes
   },
   destroyed: function() {
