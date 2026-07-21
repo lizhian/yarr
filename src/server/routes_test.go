@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -347,6 +348,84 @@ func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	}
 	if feed.RankingMode != storage.FeedRankingModeWithImage {
 		t.Fatalf("got %q", feed.RankingMode)
+	}
+}
+
+func TestRadarCreatesFeedWithoutAuth(t *testing.T) {
+	db := testServerDB(t)
+	feedURL := "https://rsshub.app/tophub/list/4MdALOlvxD"
+	requestURL := "/radar/?add_feed=" + url.QueryEscape(feedURL)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", requestURL, nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feeds := db.ListFeeds()
+	if len(feeds) != 1 {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	if feeds[0].FeedLink != "rsshub://tophub/list/4MdALOlvxD" {
+		t.Fatalf("got %q", feeds[0].FeedLink)
+	}
+}
+
+func TestRadarUsesConfiguredAuth(t *testing.T) {
+	db := testServerDB(t)
+	if !db.SetAuthConfig(true, "admin", "admin") {
+		t.Fatal("did not enable auth")
+	}
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	feedURL := url.QueryEscape("https://rsshub.app/tophub/list/4MdALOlvxD")
+
+	for _, path := range []string{
+		"/radar/?add_feed=" + feedURL,
+		"/radar/admin/wrong/?add_feed=" + feedURL,
+	} {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", path, nil)
+		handler.ServeHTTP(recorder, request)
+		if recorder.Result().StatusCode != http.StatusUnauthorized {
+			t.Fatalf("%s got %d", path, recorder.Result().StatusCode)
+		}
+	}
+	if feeds := db.ListFeeds(); len(feeds) != 0 {
+		t.Fatalf("unauthorized requests created %d feeds", len(feeds))
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/radar/admin/admin/?add_feed="+feedURL, nil)
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	if feeds := db.ListFeeds(); len(feeds) != 1 {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+}
+
+func TestRadarRejectsInvalidRequests(t *testing.T) {
+	db := testServerDB(t)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	tests := []struct {
+		method string
+		path   string
+		want   int
+	}{
+		{method: "GET", path: "/radar/", want: http.StatusBadRequest},
+		{method: "POST", path: "/radar/?add_feed=https%3A%2F%2Frsshub.app%2Ftest", want: http.StatusMethodNotAllowed},
+		{method: "GET", path: "/radar/admin/admin/?add_feed=https%3A%2F%2Frsshub.app%2Ftest", want: http.StatusUnauthorized},
+	}
+	for _, test := range tests {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(test.method, test.path, nil)
+		handler.ServeHTTP(recorder, request)
+		if recorder.Result().StatusCode != test.want {
+			t.Fatalf("%s %s got %d, want %d", test.method, test.path, recorder.Result().StatusCode, test.want)
+		}
 	}
 }
 

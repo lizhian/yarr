@@ -31,7 +31,7 @@ func (s *Server) handler() http.Handler {
 	if s.db != nil {
 		r.Use((&auth.Middleware{
 			BasePath: s.BasePath,
-			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json"},
+			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json", "/radar/"},
 			DB:       s.db,
 		}).Handler)
 	}
@@ -60,6 +60,8 @@ func (s *Server) handler() http.Handler {
 	r.For("/logout", s.handleLogout)
 	r.For("/fever/", s.handleFever)
 	r.For("/api/greader.php/*path", s.handleGReader)
+	r.For("/radar/", s.handleRadar)
+	r.For("/radar/:username/:password/", s.handleRadar)
 	return r
 }
 
@@ -242,6 +244,36 @@ func (s *Server) handleFeedErrors(c *router.Context) {
 	c.JSON(http.StatusOK, errors)
 }
 
+func (s *Server) handleRadar(c *router.Context) {
+	if c.Req.Method != "GET" {
+		c.Out.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	authConfig := s.db.GetAuthConfig()
+	username, hasUsername := c.Vars["username"]
+	password, hasPassword := c.Vars["password"]
+	if authConfig.Enabled {
+		if !hasUsername || !hasPassword ||
+			!auth.StringsEqual(username, authConfig.Username) ||
+			!auth.StringsEqual(password, authConfig.Password) {
+			c.Out.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	} else if hasUsername || hasPassword {
+		c.Out.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	feedURL := strings.TrimSpace(c.Req.URL.Query().Get("add_feed"))
+	if feedURL == "" {
+		c.JSON(http.StatusBadRequest, map[string]string{"error": "add_feed 不能为空。"})
+		return
+	}
+
+	s.createFeed(c, FeedCreateForm{Url: feedURL})
+}
+
 func (s *Server) handleFeedList(c *router.Context) {
 	if c.Req.Method == "GET" {
 		list := s.db.ListFeedsByLatestItemArrivedAt()
@@ -253,83 +285,87 @@ func (s *Server) handleFeedList(c *router.Context) {
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		form.Url = strings.TrimSpace(form.Url)
-		if link, ok := rsshub.NormalizeSubscriptionInput(form.Url); ok {
-			form.Url = link
-		}
-		form.ContentSelector = strings.TrimSpace(form.ContentSelector)
-		form.ContentMode = strings.TrimSpace(form.ContentMode)
-		if form.ContentMode == "" {
-			form.ContentMode = storage.FeedContentModeNormal
-		}
-		if !storage.ValidFeedContentMode(form.ContentMode) {
-			c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
-			return
-		}
-		form.RankingMode = strings.TrimSpace(form.RankingMode)
-		if form.RankingMode == "" {
-			form.RankingMode = storage.FeedRankingModeOff
-		}
-		if !storage.ValidFeedRankingMode(form.RankingMode) {
-			c.JSON(http.StatusBadRequest, map[string]string{"error": "榜单模式设置不支持。"})
-			return
-		}
-		if form.ContentSelector != "" {
-			if _, err := htmlutil.CompileSelector(form.ContentSelector); err != nil {
-				c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
-				return
-			}
-		}
+		s.createFeed(c, form)
+	}
+}
 
+func (s *Server) createFeed(c *router.Context, form FeedCreateForm) {
+	form.Url = strings.TrimSpace(form.Url)
+	if link, ok := rsshub.NormalizeSubscriptionInput(form.Url); ok {
+		form.Url = link
+	}
+	form.ContentSelector = strings.TrimSpace(form.ContentSelector)
+	form.ContentMode = strings.TrimSpace(form.ContentMode)
+	if form.ContentMode == "" {
+		form.ContentMode = storage.FeedContentModeNormal
+	}
+	if !storage.ValidFeedContentMode(form.ContentMode) {
+		c.JSON(http.StatusBadRequest, map[string]string{"error": "内容方式不支持。"})
+		return
+	}
+	form.RankingMode = strings.TrimSpace(form.RankingMode)
+	if form.RankingMode == "" {
+		form.RankingMode = storage.FeedRankingModeOff
+	}
+	if !storage.ValidFeedRankingMode(form.RankingMode) {
+		c.JSON(http.StatusBadRequest, map[string]string{"error": "榜单模式设置不支持。"})
+		return
+	}
+	if form.ContentSelector != "" {
+		if _, err := htmlutil.CompileSelector(form.ContentSelector); err != nil {
+			c.JSON(http.StatusBadRequest, map[string]string{"error": "正文选择器格式不支持。"})
+			return
+		}
+	}
+
+	if rsshub.IsLink(form.Url) {
+		if err := rsshub.ValidateLink(form.Url); err != nil {
+			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		feed := s.db.CreateFeedWithRankingMode("", "", "", form.Url, form.ContentSelector, form.ContentMode, form.RankingMode, form.FolderID)
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"status": "success",
+			"feed":   feed,
+		})
+		return
+	}
+
+	result, err := s.worker.DiscoverFeed(form.Url)
+	switch {
+	case err != nil:
+		log.Printf("Faild to discover feed for %s: %s", form.Url, err)
 		if rsshub.IsLink(form.Url) {
-			if err := rsshub.ValidateLink(form.Url); err != nil {
-				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
-				return
-			}
-			feed := s.db.CreateFeedWithRankingMode("", "", "", form.Url, form.ContentSelector, form.ContentMode, form.RankingMode, form.FolderID)
-			c.JSON(http.StatusOK, map[string]interface{}{
-				"status": "success",
-				"feed":   feed,
-			})
+			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
 			return
 		}
-
-		result, err := s.worker.DiscoverFeed(form.Url)
-		switch {
-		case err != nil:
-			log.Printf("Faild to discover feed for %s: %s", form.Url, err)
-			if rsshub.IsLink(form.Url) {
-				c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
-		case len(result.Sources) > 0:
-			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
-		case result.Feed != nil:
-			feed := s.db.CreateFeedWithRankingMode(
-				result.Feed.Title,
-				"",
-				result.Feed.SiteURL,
-				result.FeedLink,
-				form.ContentSelector,
-				form.ContentMode,
-				form.RankingMode,
-				form.FolderID,
-			)
-			items := worker.ConvertItems(result.Feed.Items, *feed)
-			if len(items) > 0 {
-				s.db.CreateItems(items)
-				s.db.SetFeedSize(feed.Id, len(items))
-			}
-			s.worker.FindFeedIcon(*feed, result.Feed.ImageURL)
-
-			c.JSON(http.StatusOK, map[string]interface{}{
-				"status": "success",
-				"feed":   feed,
-			})
-		default:
-			c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
+		c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
+	case len(result.Sources) > 0:
+		c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
+	case result.Feed != nil:
+		feed := s.db.CreateFeedWithRankingMode(
+			result.Feed.Title,
+			"",
+			result.Feed.SiteURL,
+			result.FeedLink,
+			form.ContentSelector,
+			form.ContentMode,
+			form.RankingMode,
+			form.FolderID,
+		)
+		items := worker.ConvertItems(result.Feed.Items, *feed)
+		if len(items) > 0 {
+			s.db.CreateItems(items)
+			s.db.SetFeedSize(feed.Id, len(items))
 		}
+		s.worker.FindFeedIcon(*feed, result.Feed.ImageURL)
+
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"status": "success",
+			"feed":   feed,
+		})
+	default:
+		c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
 	}
 }
 
