@@ -119,13 +119,13 @@
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
                                 <span class="feed-row-controls ml-1">
                                     <small class="feed-latest-arrival text-right"
-                                           v-if="feed.latest_item_arrived_at"
+                                           v-if="filteredFeedStats[feed.id] && feed.latest_item_arrived_at"
                                            :title="formatDate(feed.latest_item_arrived_at)">
                                         <relative-time :key="feed.latest_item_arrived_at"
                                                        :val="feed.latest_item_arrived_at"
                                                        :max-days="99"></relative-time>
                                     </small>
-                                    <small class="feed-latest-arrival text-right" v-else>--</small>
+                                    <small class="feed-latest-arrival text-right" v-else-if="filteredFeedStats[feed.id]">--</small>
                                     <span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                     <button class="selectgroup-action feed-settings-action"
                                             title="订阅源设置"

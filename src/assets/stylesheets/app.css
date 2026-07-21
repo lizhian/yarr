@@ -287,9 +287,9 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .feed-row-controls {
-  align-items: baseline;
+  align-items: center;
   display: flex;
-  flex: 0 0 6.75rem;
+  flex: 0 0 auto;
   height: 1.75rem;
   justify-content: flex-end;
   min-width: 0;
@@ -309,6 +309,7 @@ select.form-control:not([multiple]):not([size]) {
 
 .feed-unread-count {
   flex: 0 1 auto;
+  line-height: 1;
   max-width: 3rem;
   overflow: hidden;
   padding-left: 0;

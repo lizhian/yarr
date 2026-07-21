@@ -680,6 +680,7 @@ var vm = new Vue({
   },
   computed: {
     foldersWithFeeds: function() {
+      var feedStats = this.feedStats
       var feedsByFolders = this.feeds.reduce(function(folders, feed) {
         if (!folders[feed.folder_id])
           folders[feed.folder_id] = [feed]
@@ -687,6 +688,18 @@ var vm = new Vue({
           folders[feed.folder_id].push(feed)
         return folders
       }, {})
+      Object.keys(feedsByFolders).forEach(function(folderID) {
+        var unread = []
+        var read = []
+        feedsByFolders[folderID].forEach(function(feed) {
+          var stats = feedStats[feed.id]
+          if (stats && stats.unread > 0)
+            unread.push(feed)
+          else
+            read.push(feed)
+        })
+        feedsByFolders[folderID] = unread.concat(read)
+      })
       var folders = this.folders.slice().map(function(folder) {
         folder.feeds = feedsByFolders[folder.id]
         return folder
