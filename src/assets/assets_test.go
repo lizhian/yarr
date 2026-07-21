@@ -57,3 +57,24 @@ func TestStaticAssetVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestFeedTimeDoesNotDependOnUnreadCount(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	html := output.String()
+	for _, want := range []string{
+		`:class="{'feed-settings-has-time': feed.latest_item_arrived_at}"`,
+		`v-if="feed.latest_item_arrived_at"`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, `filteredFeedStats[feed.id] &amp;&amp; feed.latest_item_arrived_at`) {
+		t.Error("feed time visibility should not depend on unread count")
+	}
+}

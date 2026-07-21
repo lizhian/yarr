@@ -120,13 +120,13 @@
                                 <span class="feed-row-controls ml-1">
                                     <span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                                     <button class="selectgroup-action feed-settings-action"
-                                            :class="{'feed-settings-has-time': filteredFeedStats[feed.id] && feed.latest_item_arrived_at}"
+                                            :class="{'feed-settings-has-time': feed.latest_item_arrived_at}"
                                             title="订阅源设置"
                                             aria-label="订阅源设置"
                                             @click.prevent.stop="showFeedSettings(feed)">
                                         <span class="icon feed-settings-icon">{% inline "more-horizontal.svg" %}</span>
                                         <small class="feed-settings-time"
-                                               v-if="filteredFeedStats[feed.id] && feed.latest_item_arrived_at"
+                                               v-if="feed.latest_item_arrived_at"
                                                :title="formatDate(feed.latest_item_arrived_at)">
                                             <relative-time :key="feed.latest_item_arrived_at"
                                                            :val="feed.latest_item_arrived_at"
