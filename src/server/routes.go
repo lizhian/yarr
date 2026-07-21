@@ -270,8 +270,7 @@ func (s *Server) handleRadar(c *router.Context) {
 		c.JSON(http.StatusBadRequest, map[string]string{"error": "add_feed 不能为空。"})
 		return
 	}
-
-	s.createFeed(c, FeedCreateForm{Url: feedURL})
+	s.createFeed(c, FeedCreateForm{Url: feedURL}, true)
 }
 
 func (s *Server) handleFeedList(c *router.Context) {
@@ -285,14 +284,23 @@ func (s *Server) handleFeedList(c *router.Context) {
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		s.createFeed(c, form)
+		s.createFeed(c, form, false)
 	}
 }
 
-func (s *Server) createFeed(c *router.Context, form FeedCreateForm) {
+func (s *Server) createFeed(c *router.Context, form FeedCreateForm, skipExisting bool) {
 	form.Url = strings.TrimSpace(form.Url)
 	if link, ok := rsshub.NormalizeSubscriptionInput(form.Url); ok {
 		form.Url = link
+	}
+	if skipExisting {
+		if feed := s.db.GetFeedByFeedLink(form.Url); feed != nil {
+			c.JSON(http.StatusOK, map[string]interface{}{
+				"status": "success",
+				"feed":   feed,
+			})
+			return
+		}
 	}
 	form.ContentSelector = strings.TrimSpace(form.ContentSelector)
 	form.ContentMode = strings.TrimSpace(form.ContentMode)
@@ -343,6 +351,15 @@ func (s *Server) createFeed(c *router.Context, form FeedCreateForm) {
 	case len(result.Sources) > 0:
 		c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
 	case result.Feed != nil:
+		if skipExisting {
+			if feed := s.db.GetFeedByFeedLink(result.FeedLink); feed != nil {
+				c.JSON(http.StatusOK, map[string]interface{}{
+					"status": "success",
+					"feed":   feed,
+				})
+				return
+			}
+		}
 		feed := s.db.CreateFeedWithRankingMode(
 			result.Feed.Title,
 			"",

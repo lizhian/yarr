@@ -372,6 +372,104 @@ func TestRadarCreatesFeedWithoutAuth(t *testing.T) {
 	}
 }
 
+func TestRadarSkipsExistingNormalizedFeed(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		auth     bool
+		pathBase string
+	}{
+		{name: "without auth", pathBase: "/radar/"},
+		{name: "with auth", auth: true, pathBase: "/radar/admin/admin/"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			db := testServerDB(t)
+			if test.auth && !db.SetAuthConfig(true, "admin", "admin") {
+				t.Fatal("did not enable auth")
+			}
+			existing := db.CreateFeedWithRankingMode(
+				"existing",
+				"",
+				"",
+				"rsshub://tophub/4MdALOlvxD",
+				"",
+				storage.FeedContentModeReadability,
+				storage.FeedRankingModeWithImage,
+				nil,
+			)
+
+			requestURL := test.pathBase + "?add_feed=" + url.QueryEscape("https://rsshub.app/tophub/4MdALOlvxD")
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest("GET", requestURL, nil)
+			NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+			if recorder.Result().StatusCode != http.StatusOK {
+				t.Fatal("got", recorder.Result().StatusCode)
+			}
+			var result struct {
+				Status string       `json:"status"`
+				Feed   storage.Feed `json:"feed"`
+			}
+			if err := json.NewDecoder(recorder.Result().Body).Decode(&result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Status != "success" || result.Feed.Id != existing.Id {
+				t.Fatalf("unexpected result: %#v", result)
+			}
+
+			feeds := db.ListFeeds()
+			if len(feeds) != 1 {
+				t.Fatalf("got %d feeds", len(feeds))
+			}
+			if feeds[0].ContentMode != storage.FeedContentModeReadability || feeds[0].RankingMode != storage.FeedRankingModeWithImage {
+				t.Fatalf("existing feed was modified: %#v", feeds[0])
+			}
+		})
+	}
+}
+
+func TestRadarSkipsExistingDiscoveredFeed(t *testing.T) {
+	feedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			w.Header().Set("Content-Type", "text/html")
+			io.WriteString(w, `<link rel="alternate" type="application/rss+xml" href="/feed.xml">`)
+		case "/feed.xml":
+			w.Header().Set("Content-Type", "application/rss+xml")
+			io.WriteString(w, `<?xml version="1.0"?><rss version="2.0"><channel><title>feed</title><link>`+serverURL(r)+`</link></channel></rss>`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer feedServer.Close()
+
+	db := testServerDB(t)
+	existing := db.CreateFeedWithRankingMode(
+		"existing",
+		"",
+		feedServer.URL,
+		feedServer.URL+"/feed.xml",
+		"",
+		storage.FeedContentModeReadability,
+		storage.FeedRankingModeWithImage,
+		nil,
+	)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/radar/?add_feed="+url.QueryEscape(feedServer.URL), nil)
+	NewServer(db, "127.0.0.1:8000").handler().ServeHTTP(recorder, request)
+
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	feeds := db.ListFeeds()
+	if len(feeds) != 1 || feeds[0].Id != existing.Id {
+		t.Fatalf("unexpected feeds: %#v", feeds)
+	}
+	if feeds[0].ContentMode != storage.FeedContentModeReadability || feeds[0].RankingMode != storage.FeedRankingModeWithImage {
+		t.Fatalf("existing feed was modified: %#v", feeds[0])
+	}
+}
+
 func TestRadarUsesConfiguredAuth(t *testing.T) {
 	db := testServerDB(t)
 	if !db.SetAuthConfig(true, "admin", "admin") {

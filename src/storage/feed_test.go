@@ -18,6 +18,19 @@ func TestCreateFeed(t *testing.T) {
 	}
 }
 
+func TestGetFeedByFeedLink(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("title", "", "http://example.com", "http://example.com/feed.xml", nil)
+
+	got := db.GetFeedByFeedLink(feed.FeedLink)
+	if got == nil || !reflect.DeepEqual(feed, got) {
+		t.Fatalf("got %#v, want %#v", got, feed)
+	}
+	if got := db.GetFeedByFeedLink("http://example.com/missing.xml"); got != nil {
+		t.Fatalf("got unexpected feed %#v", got)
+	}
+}
+
 func TestCreateFeedCleansTitleSuffix(t *testing.T) {
 	db := testDB()
 	feed := db.CreateFeed("Alice - Telegram Channel", "", "http://example.com", "http://example.com/feed.xml", nil)

@@ -358,6 +358,20 @@ func (s *Storage) GetFeed(id int64) *Feed {
 	return &f
 }
 
+func (s *Storage) GetFeedByFeedLink(feedLink string) *Feed {
+	f, err := scanFeed(s.db.QueryRow(`
+		select `+feedSelectColumns+`
+		from feeds where feed_link = ?
+	`, feedLink))
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Print(err)
+		}
+		return nil
+	}
+	return &f
+}
+
 func (s *Storage) ListRankingModeFeeds() []Feed {
 	result := make([]Feed, 0)
 	rows, err := s.db.Query(`
