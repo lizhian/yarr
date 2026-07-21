@@ -81,8 +81,8 @@ func (s *Storage) createFeed(title, description, link, feedLink, contentSelector
 		rankingMode = FeedRankingModeOff
 	}
 	row := s.db.QueryRow(`
-		insert into feeds (title, description, link, feed_link, content_selector, content_mode, ranking_mode, folder_id)
-		values (?, ?, ?, ?, ?, case when ? != '' then ? else 'normal' end, case when ? != '' then ? else 'off' end, ?)
+		insert into feeds (title, description, link, feed_link, content_selector, content_mode, ranking_mode, folder_id, auto_read_scroll)
+		values (?, ?, ?, ?, ?, case when ? != '' then ? else 'normal' end, case when ? != '' then ? else 'off' end, ?, false)
 		on conflict (feed_link) do update set
 			folder_id = ?,
 			content_selector = case

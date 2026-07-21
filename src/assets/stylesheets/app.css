@@ -1302,6 +1302,32 @@ select.form-control:not([multiple]):not([size]) {
   padding: 0.5rem;
 }
 
+.content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.content th,
+.content td {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--content-table-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.content th {
+  background-color: var(--content-table-header-bg);
+  font-weight: 600;
+}
+
+.content tbody tr:nth-child(even) {
+  background-color: var(--content-table-stripe-bg);
+}
+
 .content a {
   color: inherit;
   text-decoration: underline;
@@ -1495,6 +1521,9 @@ button.theme-light {
   --accent-color: #2f684b;
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+  --content-table-border: #d9d9d2;
+  --content-table-header-bg: #ecece8;
+  --content-table-stripe-bg: rgba(49, 57, 50, .035);
   --feed-folder-sticky-bg: #f7f7f5;
   --generated-card-bg: #fffffc;
   --generated-card-border: #d9d9d2;
@@ -1578,6 +1607,9 @@ a,
   --accent-color: #7a4a14;
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(83, 67, 35, .12);
+  --content-table-border: #d2bd84;
+  --content-table-header-bg: #e6d7a8;
+  --content-table-stripe-bg: rgba(122, 93, 42, .055);
   --action-button-border-color: #d2bd84;
   --action-button-hover-bg: #e6d7a8;
   --action-button-shadow: 0 2px 6px rgba(83, 67, 35, .24), 0 1px 1px rgba(83, 67, 35, .12);
@@ -1664,6 +1696,9 @@ body.theme-sepia {
   --action-button-shadow: 0 2px 7px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .06);
   --action-button-shadow-active: inset 0 1px 3px rgba(0, 0, 0, .62), 0 1px 0 rgba(255, 255, 255, .04);
   --article-card-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  --content-table-border: #3a3a3a;
+  --content-table-header-bg: #2b2b2b;
+  --content-table-stripe-bg: rgba(255, 255, 255, .025);
   --feed-folder-sticky-bg: #1f1f1f;
   --generated-card-bg: #262626;
   --generated-card-border: #3a3a3a;

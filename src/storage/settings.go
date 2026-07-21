@@ -16,7 +16,7 @@ func settingsDefaults() map[string]interface{} {
 		"refresh_rate":     0,
 		"rsshub_base_url":  "",
 		"backup_enabled":   false,
-		"auto_read_scroll": true,
+		"auto_read_scroll": false,
 	}
 }
 

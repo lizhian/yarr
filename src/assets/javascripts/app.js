@@ -727,12 +727,12 @@ var vm = new Vue({
     autoReadScroll: function() {
       var current = this.current
       if (current.type == 'feed') {
-        // 订阅源列表尚未加载时沿用默认开启，避免短暂关闭滚动标已读
-        if (!current.feed.id) return true
+        // 订阅源列表尚未加载时沿用默认关闭，避免短暂触发滚动标已读
+        if (!current.feed.id) return false
         return !!current.feed.auto_read_scroll
       }
       if (current.type == 'folder') {
-        if (!current.folder.id) return true
+        if (!current.folder.id) return false
         return !!current.folder.auto_read_scroll
       }
       return !!this.autoReadScrollAll

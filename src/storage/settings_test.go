@@ -184,19 +184,19 @@ func TestMigrationRemovesFrontendSettings(t *testing.T) {
 func TestAutoReadScrollSetting(t *testing.T) {
 	db := testDB()
 
-	if !db.GetSettingsValueBool("auto_read_scroll") {
-		t.Fatal("auto_read_scroll should default to true")
+	if db.GetSettingsValueBool("auto_read_scroll") {
+		t.Fatal("auto_read_scroll should default to false")
 	}
 	settings := db.GetSettings()
-	if got, ok := settings["auto_read_scroll"].(bool); !ok || !got {
+	if got, ok := settings["auto_read_scroll"].(bool); !ok || got {
 		t.Fatalf("invalid auto_read_scroll default: %#v", settings["auto_read_scroll"])
 	}
 
-	if !db.UpdateSettings(map[string]interface{}{"auto_read_scroll": false}) {
+	if !db.UpdateSettings(map[string]interface{}{"auto_read_scroll": true}) {
 		t.Fatal("update failed")
 	}
-	if db.GetSettingsValueBool("auto_read_scroll") {
-		t.Fatal("auto_read_scroll should be disabled")
+	if !db.GetSettingsValueBool("auto_read_scroll") {
+		t.Fatal("auto_read_scroll should be enabled")
 	}
 }
 

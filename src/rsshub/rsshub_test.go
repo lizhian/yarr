@@ -87,6 +87,11 @@ func TestNormalizeSubscriptionInput(t *testing.T) {
 	}{
 		{name: "regular URL", raw: "https://example.com/feed.xml", want: "https://example.com/feed.xml", ok: false},
 		{name: "rsshub link", raw: "rsshub://bilibili/weekly", want: "rsshub://bilibili/weekly", ok: false},
+		{name: "RSSHub official URL", raw: "https://rsshub.app/ithome/ranking/24h", want: "rsshub://ithome/ranking/24h", ok: true},
+		{name: "RSSHub official URL with query", raw: "https://rsshub.app/ithome/ranking/24h?limit=10", want: "rsshub://ithome/ranking/24h?limit=10", ok: true},
+		{name: "RSSHub official root", raw: "https://rsshub.app/", want: "https://rsshub.app/", ok: false},
+		{name: "RSSHub official HTTP URL", raw: "http://rsshub.app/ithome/ranking/24h", want: "http://rsshub.app/ithome/ranking/24h", ok: false},
+		{name: "RSSHub lookalike URL", raw: "https://rsshub.app.example.com/ithome/ranking/24h", want: "https://rsshub.app.example.com/ithome/ranking/24h", ok: false},
 		{name: "Bilibili UID", raw: " 703186600 ", want: "703186600", ok: false},
 		{name: "Bilibili UID prefix", raw: "UID:703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},
 		{name: "Bilibili UID prefix with spaces", raw: "uid : 703186600", want: "rsshub://bilibili/user/video/703186600", ok: true},

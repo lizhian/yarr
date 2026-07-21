@@ -124,15 +124,15 @@ func TestUpdateFeed(t *testing.T) {
 	if feed2.IconURL != "" {
 		t.Error("invalid cleared icon url")
 	}
-	if !feed2.AutoReadScroll {
-		t.Error("auto_read_scroll should default to true")
+	if feed2.AutoReadScroll {
+		t.Error("auto_read_scroll should default to false")
 	}
-	if !db.UpdateFeedAutoReadScroll(feed1.Id, false) {
-		t.Fatal("failed to disable auto_read_scroll")
+	if !db.UpdateFeedAutoReadScroll(feed1.Id, true) {
+		t.Fatal("failed to enable auto_read_scroll")
 	}
 	feed2 = db.GetFeed(feed1.Id)
-	if feed2.AutoReadScroll {
-		t.Error("auto_read_scroll should be disabled")
+	if !feed2.AutoReadScroll {
+		t.Error("auto_read_scroll should be enabled")
 	}
 }
 

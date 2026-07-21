@@ -45,6 +45,9 @@ func NormalizeSubscriptionInput(raw string) (string, bool) {
 		return raw, false
 	}
 
+	if link, ok := normalizeRSSHubSubscriptionInput(raw); ok {
+		return link, true
+	}
 	if uid := parseBilibiliUIDPrefix(raw); uid != "" {
 		return bilibiliUserVideoLink(uid), true
 	}
@@ -56,6 +59,22 @@ func NormalizeSubscriptionInput(raw string) (string, bool) {
 	}
 
 	return raw, false
+}
+
+func normalizeRSSHubSubscriptionInput(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || !strings.EqualFold(u.Host, "rsshub.app") {
+		return raw, false
+	}
+	route := strings.TrimLeft(u.EscapedPath(), "/")
+	if route == "" {
+		return raw, false
+	}
+	link := Scheme + "://" + route
+	if u.RawQuery != "" {
+		link += "?" + u.RawQuery
+	}
+	return link, true
 }
 
 func NormalizeBilibiliInput(raw string) (string, bool) {

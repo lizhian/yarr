@@ -335,6 +335,7 @@ func TestCreateFeedNormalizesSupportedRSSHubInputs(t *testing.T) {
 		{name: "Bilibili dynamic", url: "https://space.bilibili.com/703186600/dynamic", want: "rsshub://bilibili/user/video/703186600"},
 		{name: "Bilibili upload video", url: "https://space.bilibili.com/703186600/upload/video", want: "rsshub://bilibili/user/video/703186600"},
 		{name: "Telegram channel", url: "https://t.me/me888888888888", want: "rsshub://telegram/channel/me888888888888"},
+		{name: "RSSHub official URL", url: "https://rsshub.app/ithome/ranking/24h", want: "rsshub://ithome/ranking/24h"},
 	}
 
 	for _, test := range tests {
@@ -454,11 +455,11 @@ func TestUpdateFeedAutoReadScroll(t *testing.T) {
 	feed := db.CreateFeed("feed", "", "https://example.com", "https://example.com/feed.xml", nil)
 	log.SetOutput(os.Stderr)
 
-	if !feed.AutoReadScroll {
-		t.Fatal("auto_read_scroll should default to true")
+	if feed.AutoReadScroll {
+		t.Fatal("auto_read_scroll should default to false")
 	}
 
-	body := bytes.NewBufferString(`{"auto_read_scroll":false}`)
+	body := bytes.NewBufferString(`{"auto_read_scroll":true}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/feeds/%d", feed.Id), body)
 
@@ -469,8 +470,8 @@ func TestUpdateFeedAutoReadScroll(t *testing.T) {
 		t.Fatal("got", recorder.Result().StatusCode)
 	}
 	feed = db.GetFeed(feed.Id)
-	if feed.AutoReadScroll {
-		t.Fatal("auto_read_scroll should be disabled")
+	if !feed.AutoReadScroll {
+		t.Fatal("auto_read_scroll should be enabled")
 	}
 }
 
@@ -480,7 +481,7 @@ func TestUpdateFolderAutoReadScroll(t *testing.T) {
 	folder := db.CreateFolder("news")
 	log.SetOutput(os.Stderr)
 
-	body := bytes.NewBufferString(`{"auto_read_scroll":false}`)
+	body := bytes.NewBufferString(`{"auto_read_scroll":true}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/folders/%d", folder.Id), body)
 
@@ -491,7 +492,7 @@ func TestUpdateFolderAutoReadScroll(t *testing.T) {
 		t.Fatal("got", recorder.Result().StatusCode)
 	}
 	folders := db.ListFolders()
-	if len(folders) != 1 || folders[0].AutoReadScroll {
+	if len(folders) != 1 || !folders[0].AutoReadScroll {
 		t.Fatalf("got %#v", folders)
 	}
 }

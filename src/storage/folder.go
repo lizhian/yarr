@@ -14,7 +14,7 @@ type Folder struct {
 func (s *Storage) CreateFolder(title string) *Folder {
 	expanded := true
 	row := s.db.QueryRow(`
-		insert into folders (title, is_expanded) values (?, ?)
+		insert into folders (title, is_expanded, auto_read_scroll) values (?, ?, false)
 		on conflict (title) do update set title = ?
         returning id, is_expanded, auto_read_scroll`,
 		title, expanded,
