@@ -9,8 +9,8 @@
         <link rel="stylesheet" href="https://fontsapi.zeoseven.com/292/main/result.css">
         <link rel="stylesheet" href="https://fontsapi.zeoseven.com/442/main/result.css">
     </noscript>
-    <link rel="stylesheet" href="./static/stylesheets/bootstrap.min.css">
-    <link rel="stylesheet" href="./static/stylesheets/app.css?v=ranking-mode">
+    <link rel="stylesheet" href="./static/stylesheets/bootstrap.min.css?v={% assetVersion %}">
+    <link rel="stylesheet" href="./static/stylesheets/app.css?v={% assetVersion %}">
     <link rel="icon" href="./static/graphicarts/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="./static/graphicarts/favicon.png" type="image/png">
     <link rel="manifest" href="./manifest.json" />
@@ -904,10 +904,10 @@
         </modal>
     </div>
     <!-- external -->
-    <script src="./static/javascripts/vue.min.js"></script>
+    <script src="./static/javascripts/vue.min.js?v={% assetVersion %}"></script>
     <!-- internal -->
-    <script src="./static/javascripts/api.js?v=ranking-mode"></script>
-    <script src="./static/javascripts/app.js?v=ranking-mode"></script>
-    <script src="./static/javascripts/key.js?v=ranking-mode"></script>
+    <script src="./static/javascripts/api.js?v={% assetVersion %}"></script>
+    <script src="./static/javascripts/app.js?v={% assetVersion %}"></script>
+    <script src="./static/javascripts/key.js?v={% assetVersion %}"></script>
 </body>
 </html>

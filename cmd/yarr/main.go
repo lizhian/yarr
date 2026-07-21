@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/nkanaev/yarr/src/assets"
 	"github.com/nkanaev/yarr/src/platform"
 	"github.com/nkanaev/yarr/src/server"
 	"github.com/nkanaev/yarr/src/storage"
@@ -111,6 +112,7 @@ func main() {
 		log.Fatal("Failed to initialise database: ", err)
 	}
 
+	assets.SetVersion(Version + "-" + GitHash)
 	srv := server.NewServer(store, addr)
 	srv.SetBackupService(server.NewBackupService(store, db))
 

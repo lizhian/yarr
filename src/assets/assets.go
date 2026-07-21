@@ -16,6 +16,11 @@ type assetsfs struct {
 }
 
 var FS assetsfs
+var assetVersion = "0.0-unknown"
+
+func SetVersion(version string) {
+	assetVersion = version
+}
 
 func (afs assetsfs) Open(name string) (fs.File, error) {
 	if afs.embedded != nil {
@@ -29,6 +34,9 @@ func Template(path string) *template.Template {
 	tmpl, found := FS.templates[path]
 	if !found {
 		tmpl = template.Must(template.New(path).Delims("{%", "%}").Funcs(template.FuncMap{
+			"assetVersion": func() string {
+				return assetVersion
+			},
 			"inline": func(svg string) template.HTML {
 				svgfile, err := FS.Open("graphicarts/" + svg)
 				// should never happen

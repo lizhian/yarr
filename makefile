@@ -1,11 +1,11 @@
-VERSION=2.7
+VERSION=3.58
 GITHASH=$(shell git rev-parse --short=8 HEAD)
 
 GO_TAGS    = sqlite_foreign_keys sqlite_json
 GO_LDFLAGS = -s -w -X 'main.Version=$(VERSION)' -X 'main.GitHash=$(GITHASH)'
 
 GO_FLAGS         = -tags "$(GO_TAGS)"     -ldflags="$(GO_LDFLAGS)"
-GO_FLAGS_DEBUG   = -tags "$(GO_TAGS) debug"
+GO_FLAGS_DEBUG   = -tags "$(GO_TAGS) debug" -ldflags="$(GO_LDFLAGS)"
 GO_FLAGS_GUI     = -tags "$(GO_TAGS) gui" -ldflags="$(GO_LDFLAGS)"
 GO_FLAGS_GUI_WIN = -tags "$(GO_TAGS) gui" -ldflags="$(GO_LDFLAGS) -H windowsgui"
 
