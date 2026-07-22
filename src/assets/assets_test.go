@@ -88,6 +88,38 @@ func TestFeedRowsOnlyShowUnreadCounts(t *testing.T) {
 	}
 }
 
+func TestLogoRotatesOnceWhileFeedsRefresh(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	if !strings.Contains(output.String(), `:class="{'app-logo-refreshing': loading.feeds}"`) {
+		t.Fatal("logo should reflect the feed refresh status")
+	}
+
+	file, err := FS.Open("stylesheets/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	content, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(content)
+	for _, want := range []string{
+		"@keyframes app-logo-refresh",
+		"animation: app-logo-refresh .9s cubic-bezier(.22, .61, .36, 1) 1;",
+		"@media (prefers-reduced-motion: reduce)",
+	} {
+		if !strings.Contains(css, want) {
+			t.Errorf("missing logo refresh animation rule %q", want)
+		}
+	}
+}
+
 func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	var output bytes.Buffer
 	Render("index.html", &output, map[string]interface{}{

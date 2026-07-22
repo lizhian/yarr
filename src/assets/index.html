@@ -32,7 +32,8 @@
                         title="设置"
                         aria-label="设置"
                         @click="showSettings('menu')">
-                    <span class="icon toolbar-icon">{% inline "anchor.svg" %}</span>
+                    <span class="icon toolbar-icon"
+                          :class="{'app-logo-refreshing': loading.feeds}">{% inline "anchor.svg" %}</span>
                 </button>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item ml-1"
