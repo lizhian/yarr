@@ -609,7 +609,7 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .app-logo-refreshing {
-  animation: rotate .9s infinite linear;
+  animation: rotate .9s linear 1;
   transform-origin: center;
 }
 

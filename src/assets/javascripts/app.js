@@ -693,6 +693,7 @@ var vm = new Vue({
         layer: null,
       },
       'statusPollTimeout': null,
+      'logoRefreshAnimating': false,
 
       'refreshRateOptions': [
         { title: "0", value: 0 },
@@ -1147,11 +1148,18 @@ var vm = new Vue({
         vm.refreshStats()
       }, delay)
     },
+    triggerLogoRefreshAnimation: function() {
+      this.logoRefreshAnimating = false
+      this.$nextTick(function() {
+        vm.logoRefreshAnimating = true
+      })
+    },
     refreshStats: function(loopMode) {
       return api.status().then(function(data) {
         if (loopMode && !vm.itemSelected) vm.refreshItems()
 
         vm.loading.feeds = data.running
+        if (data.running > 0) vm.triggerLogoRefreshAnimation()
         vm.rsshubDetails = data.rsshub_details || []
         vm.rsshubFailures = data.rsshub_failures || {stats: [], feeds: []}
         var nextFeedRefreshDetails = data.feed_refresh_details || {}

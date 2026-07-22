@@ -95,8 +95,14 @@ func TestLogoRotatesWhileFeedsRefresh(t *testing.T) {
 		"authenticated": false,
 	})
 
-	if !strings.Contains(output.String(), `:class="{'app-logo-refreshing': loading.feeds}"`) {
-		t.Fatal("logo should reflect the feed refresh status")
+	html := output.String()
+	for _, want := range []string{
+		`:class="{'app-logo-refreshing': logoRefreshAnimating}"`,
+		`@animationend="logoRefreshAnimating = false"`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing logo animation behavior %q", want)
+		}
 	}
 
 	file, err := FS.Open("stylesheets/app.css")
@@ -111,11 +117,36 @@ func TestLogoRotatesWhileFeedsRefresh(t *testing.T) {
 	css := string(content)
 	for _, want := range []string{
 		"@keyframes rotate",
-		"animation: rotate .9s infinite linear;",
+		"animation: rotate .9s linear 1;",
 		"@media (prefers-reduced-motion: reduce)",
 	} {
 		if !strings.Contains(css, want) {
 			t.Errorf("missing logo refresh animation rule %q", want)
+		}
+	}
+	if strings.Contains(css, ".app-logo-refreshing {\n  animation: rotate .9s infinite") {
+		t.Error("logo refresh animation should rotate only once per status response")
+	}
+
+	javascriptFile, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer javascriptFile.Close()
+	javascriptContent, err := io.ReadAll(javascriptFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	javascript := string(javascriptContent)
+	for _, want := range []string{
+		"'logoRefreshAnimating': false",
+		"triggerLogoRefreshAnimation: function()",
+		"this.logoRefreshAnimating = false",
+		"vm.logoRefreshAnimating = true",
+		"if (data.running > 0) vm.triggerLogoRefreshAnimation()",
+	} {
+		if !strings.Contains(javascript, want) {
+			t.Errorf("missing status-triggered logo animation behavior %q", want)
 		}
 	}
 }
