@@ -59,7 +59,7 @@ func TestStaticAssetVersion(t *testing.T) {
 	}
 }
 
-func TestFeedTimeDoesNotDependOnUnreadCount(t *testing.T) {
+func TestFeedRowsOnlyShowUnreadCounts(t *testing.T) {
 	var output bytes.Buffer
 	Render("index.html", &output, map[string]interface{}{
 		"settings":      map[string]interface{}{},
@@ -67,51 +67,185 @@ func TestFeedTimeDoesNotDependOnUnreadCount(t *testing.T) {
 	})
 
 	html := output.String()
+	start := strings.Index(html, `id="col-feed-list"`)
+	end := strings.Index(html, `id="col-item-list"`)
+	if start == -1 || end == -1 || start >= end {
+		t.Fatal("feed list markup not found")
+	}
+	feedList := html[start:end]
 	for _, want := range []string{
-		`:class="{'feed-settings-has-time': feed.latest_item_arrived_at}"`,
-		`v-if="feed.latest_item_arrived_at"`,
+		`<span class="counter feed-unread-count text-right">{{ filteredFolderStats[folder.id] || '' }}</span>`,
+		`<span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>`,
 	} {
-		if !strings.Contains(html, want) {
+		if !strings.Contains(feedList, want) {
 			t.Errorf("missing %q", want)
 		}
 	}
-	if strings.Contains(html, `filteredFeedStats[feed.id] &amp;&amp; feed.latest_item_arrived_at`) {
-		t.Error("feed time visibility should not depend on unread count")
+	for _, unwanted := range []string{"showFeedSettings", "showFolderSettings", "relative-time", "feed-settings-action"} {
+		if strings.Contains(feedList, unwanted) {
+			t.Errorf("feed and folder rows should only show unread counts: found %q", unwanted)
+		}
 	}
 }
 
-func TestSelectedFeedKeepsActivityTimeVisible(t *testing.T) {
+func TestItemListToolbarShowsSelectionControls(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	html := output.String()
+	start := strings.Index(html, `id="col-item-list"`)
+	end := strings.Index(html, `id="item-list-scroll"`)
+	if start == -1 || end == -1 || start >= end {
+		t.Fatal("item list toolbar markup not found")
+	}
+	toolbar := html[start:end]
+	for _, want := range []string{
+		`@click="showCurrentSettings()"`,
+		`aria-label="未读优先"`,
+		`v-if="currentLastRefreshedAt || currentLatestItemArrivedAt"`,
+		`v-if="currentLastRefreshedAt"`,
+		`:val="currentLastRefreshedAt"`,
+		`:aria-label="'最后刷新：' + formatDate(currentLastRefreshedAt)"`,
+		`v-if="currentLatestItemArrivedAt"`,
+		`:val="currentLatestItemArrivedAt"`,
+		`:aria-label="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)"`,
+		`:class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"`,
+	} {
+		if !strings.Contains(toolbar, want) {
+			t.Errorf("missing item list selection control %q", want)
+		}
+	}
+	if strings.Count(toolbar, `class="icon item-list-time-icon"`) != 2 {
+		t.Error("refresh and item-arrival times should each have an aria-hidden icon")
+	}
+
+	orderedControls := []string{
+		`@click="showFeedList()"`,
+		`@click="showCurrentSettings()"`,
+		`@click="toggleArticleListLayout()"`,
+		`aria-label="未读优先"`,
+		`@click="toggleAutoReadScroll()"`,
+		`v-if="currentLastRefreshedAt || currentLatestItemArrivedAt"`,
+		`@click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"`,
+		`@click="markItemsRead()"`,
+	}
+	previousIndex := -1
+	for _, control := range orderedControls {
+		index := strings.Index(toolbar, control)
+		if index <= previousIndex {
+			t.Fatalf("item list toolbar control is out of order: %q", control)
+		}
+		previousIndex = index
+	}
+	if strings.Contains(toolbar, `<span class="toolbar-label">未读优先</span>`) {
+		t.Error("unread-first should use an icon instead of text")
+	}
+
+	javascriptFile, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer javascriptFile.Close()
+	content, err := io.ReadAll(javascriptFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	javascript := string(content)
+	for _, want := range []string{
+		"currentLatestItemArrivedAt: function()",
+		"if (feed.folder_id != current.folder.id || !feed.latest_item_arrived_at) return",
+		"currentLastRefreshDetail: function()",
+		"return this.feedRefreshDetails[current.feed.id] || null",
+		"var refreshDetails = this.feedRefreshDetails",
+		"if (feed.folder_id != current.folder.id) return",
+		"latestDetail = detail",
+		"currentLastRefreshedAt: function()",
+		"currentLastRefreshSucceeded: function()",
+		"showCurrentSettings: function()",
+		"this.showFeedSettings(current.feed)",
+		"this.showFolderSettings(current.folder)",
+	} {
+		if !strings.Contains(javascript, want) {
+			t.Errorf("missing current selection behavior %q", want)
+		}
+	}
+}
+
+func TestFeedListToolbarDisplayScope(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	html := output.String()
+	for _, title := range []string{"全部", "未读", "收藏"} {
+		titleIndex := strings.Index(html, `title="`+title+`"`)
+		if titleIndex == -1 {
+			t.Fatalf("missing %s feed filter", title)
+		}
+		buttonStart := strings.LastIndex(html[:titleIndex], "<button")
+		buttonEndOffset := strings.Index(html[titleIndex:], "</button>")
+		if buttonStart == -1 || buttonEndOffset == -1 {
+			t.Fatalf("could not find %s feed filter button", title)
+		}
+		button := html[buttonStart : titleIndex+buttonEndOffset]
+		if !strings.Contains(button, "toolbar-label") || strings.Contains(button, "toolbar-icon") {
+			t.Errorf("%s feed filter should display text only", title)
+		}
+	}
+
 	file, err := FS.Open("stylesheets/app.css")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
+	content, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(content)
+	for _, want := range []string{
+		".toolbar-display-icon #col-item .toolbar-label",
+		".toolbar-display-text #col-item .toolbar-icon",
+		".toolbar-display-text #col-item .toolbar-item-icon-only .toolbar-icon",
+	} {
+		if !strings.Contains(css, want) {
+			t.Errorf("toolbar display setting should target article details: missing %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		"\n.toolbar-display-icon .toolbar-label,",
+		"\n.toolbar-display-text .toolbar-item-icon-only .toolbar-icon",
+	} {
+		if strings.Contains(css, unwanted) {
+			t.Errorf("toolbar display setting should not target the whole app: found %q", unwanted)
+		}
+	}
+}
 
+func TestPaneDividersUseConsistentStacking(t *testing.T) {
+	file, err := FS.Open("stylesheets/app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
 	content, err := io.ReadAll(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	css := string(content)
-	for _, unwanted := range []string{
-		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-icon",
-		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-time",
-		".feed-selectgroup:focus-within .feed-settings-icon",
-		".feed-selectgroup:focus-within .feed-settings-time",
-	} {
-		if strings.Contains(css, unwanted) {
-			t.Errorf("selected or focused feed should not switch activity time: found %q", unwanted)
-		}
-	}
 	for _, want := range []string{
-		".feed-selectgroup:hover .feed-settings-icon",
-		".feed-selectgroup:hover .feed-settings-time",
-		".feed-settings-action:focus .feed-settings-icon",
-		".feed-settings-action:focus .feed-settings-time",
-		".feed-selectgroup input:checked + .selectgroup-label .feed-settings-action:hover {\n  background-color: transparent;\n}",
+		"#col-feed-list {\n  z-index: 3;\n}",
+		"#col-item-list {\n  z-index: 2;\n}",
+		"#col-item {\n  position: relative;\n  z-index: 1;\n}",
 	} {
 		if !strings.Contains(css, want) {
-			t.Errorf("missing %q", want)
+			t.Errorf("missing pane stacking rule %q", want)
 		}
 	}
 }
@@ -141,5 +275,68 @@ func TestChangingFeedKeepsSelectedItem(t *testing.T) {
 	}
 	if strings.Contains(watcher, "this.itemSelected = null") {
 		t.Error("changing feed should keep the selected item details visible")
+	}
+}
+
+func TestDefaultColumnWidthsUseRequestedRatio(t *testing.T) {
+	file, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	javascript := string(content)
+	if !strings.Contains(javascript, "this.feedListWidth = Math.round(appWidth / 5)") {
+		t.Fatal("default feed column should use one fifth of the app width")
+	}
+	if !strings.Contains(javascript, "this.itemListWidth = Math.round(appWidth * 3 / 10)") {
+		t.Fatal("default item column should use three tenths of the app width")
+	}
+}
+
+func TestFeedSortModes(t *testing.T) {
+	javascriptFile, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer javascriptFile.Close()
+	javascriptContent, err := io.ReadAll(javascriptFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	javascript := string(javascriptContent)
+	for _, want := range []string{
+		"{name: 'name', title: '名称'}",
+		"{name: 'time', title: '时间'}",
+		"{name: 'count', title: '数量'}",
+		"if (timeA != timeB) return timeB - timeA",
+		"if (countA != countB) return countB - countA",
+		"return compareFeedNames(a, b)",
+	} {
+		if !strings.Contains(javascript, want) {
+			t.Fatalf("missing feed sort behavior %q", want)
+		}
+	}
+
+	templateFile, err := FS.Open("index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer templateFile.Close()
+	templateContent, err := io.ReadAll(templateFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := string(templateContent)
+	if !strings.Contains(template, "<header>订阅源排序</header>") {
+		t.Fatal("feed sort control is missing")
+	}
+	if strings.Contains(template, "feedSort == 'time' && feed.latest_item_arrived_at") {
+		t.Fatal("feed sorting should not control the item-list latest arrival time")
 	}
 }

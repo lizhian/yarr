@@ -97,7 +97,7 @@ func (w *Worker) RefreshRSSHubAvailability() {
 	}
 	srcqueue := make(chan string, len(bases))
 	dstqueue := make(chan result)
-	workers := NUM_WORKERS
+	workers := numWorkers()
 	if len(bases) < workers {
 		workers = len(bases)
 	}

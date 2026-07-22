@@ -184,6 +184,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
     environment:
       - TZ=Asia/Shanghai
+      - NUM_WORKERS=4
 ```
 
 然后运行：
@@ -351,6 +352,8 @@ sudo systemctl start yarr
 | `-log-file` | `YARR_LOGFILE` | 空 | 日志文件路径；为空时输出到标准输出 |
 | `-open` | 无 | `false` | 启动后在默认浏览器中打开页面 |
 | `-version` | 无 | `false` | 显示版本和 Git 提交信息 |
+
+`NUM_WORKERS` 环境变量用于设置订阅刷新和 RSSHub 可用性探测的并发 worker 数量，默认为 `4`；该值必须是正整数，没有对应的命令行参数。
 
 查看当前版本支持的完整参数：
 

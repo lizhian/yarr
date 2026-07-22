@@ -171,6 +171,12 @@ var CONTENT_MODE_OPTIONS = [
   {name: 'embed', title: '嵌入'},
 ]
 
+var FEED_SORT_OPTIONS = [
+  {name: 'name', title: '名称'},
+  {name: 'time', title: '时间'},
+  {name: 'count', title: '数量'},
+]
+
 var STATUS_POLL_INTERVAL = 10000
 
 function normalizeThemeFont(font) {
@@ -179,6 +185,28 @@ function normalizeThemeFont(font) {
 
 function normalizeContentMode(mode) {
   return CONTENT_MODE_OPTIONS.some(function(option) { return option.name == mode }) ? mode : 'normal'
+}
+
+function normalizeFeedSort(sort) {
+  return FEED_SORT_OPTIONS.some(function(option) { return option.name == sort }) ? sort : 'time'
+}
+
+function compareFeedNames(a, b) {
+  return (a.title || '').localeCompare(b.title || '') || a.id - b.id
+}
+
+function compareFeeds(sort, stats, a, b) {
+  if (sort == 'time') {
+    var timeA = Date.parse(a.latest_item_arrived_at || '') || 0
+    var timeB = Date.parse(b.latest_item_arrived_at || '') || 0
+    if (timeA != timeB) return timeB - timeA
+  }
+  if (sort == 'count') {
+    var countA = (stats[a.id] || {}).unread || 0
+    var countB = (stats[b.id] || {}).unread || 0
+    if (countA != countB) return countB - countA
+  }
+  return compareFeedNames(a, b)
 }
 
 function normalizeRSSHubSubscriptionInput(raw) {
@@ -561,6 +589,8 @@ var vm = new Vue({
       'feeds': [],
       'feedSelected': feedSelected,
       'feedListWidth': s.feed_list_width || 300,
+      'feedSort': normalizeFeedSort(s.feed_sort),
+      'feedSortOptions': FEED_SORT_OPTIONS,
       'feedIconErrors': {},
       'feedNewChoice': [],
       'feedNewChoiceSelected': '',
@@ -677,6 +707,7 @@ var vm = new Vue({
   computed: {
     foldersWithFeeds: function() {
       var feedStats = this.feedStats
+      var feedSort = this.feedSort
       var feedsByFolders = this.feeds.reduce(function(folders, feed) {
         if (!folders[feed.folder_id])
           folders[feed.folder_id] = [feed]
@@ -685,16 +716,9 @@ var vm = new Vue({
         return folders
       }, {})
       Object.keys(feedsByFolders).forEach(function(folderID) {
-        var unread = []
-        var read = []
-        feedsByFolders[folderID].forEach(function(feed) {
-          var stats = feedStats[feed.id]
-          if (stats && stats.unread > 0)
-            unread.push(feed)
-          else
-            read.push(feed)
+        feedsByFolders[folderID].sort(function(a, b) {
+          return compareFeeds(feedSort, feedStats, a, b)
         })
-        feedsByFolders[folderID] = unread.concat(read)
       })
       var folders = this.folders.slice().map(function(folder) {
         folder.feeds = feedsByFolders[folder.id]
@@ -735,6 +759,50 @@ var vm = new Vue({
         folder = this.foldersById[guid] || {}
 
       return {type: type, feed: feed, folder: folder}
+    },
+    currentLatestItemArrivedAt: function() {
+      var current = this.current
+      if (current.type == 'feed') return current.feed.latest_item_arrived_at || ''
+      if (current.type != 'folder' || !current.folder.id) return ''
+
+      var latest = ''
+      var latestTime = 0
+      this.feeds.forEach(function(feed) {
+        if (feed.folder_id != current.folder.id || !feed.latest_item_arrived_at) return
+        var arrivedAt = Date.parse(feed.latest_item_arrived_at)
+        if (arrivedAt > latestTime) {
+          latest = feed.latest_item_arrived_at
+          latestTime = arrivedAt
+        }
+      })
+      return latest
+    },
+    currentLastRefreshDetail: function() {
+      var current = this.current
+      if (current.type == 'feed') return this.feedRefreshDetails[current.feed.id] || null
+      if (current.type != 'folder' || !current.folder.id) return null
+
+      var refreshDetails = this.feedRefreshDetails
+      var latestDetail = null
+      var latestTime = 0
+      this.feeds.forEach(function(feed) {
+        if (feed.folder_id != current.folder.id) return
+        var detail = refreshDetails[feed.id]
+        if (!detail || !detail.last_refreshed_at) return
+        var refreshedAt = Date.parse(detail.last_refreshed_at)
+        if (refreshedAt > latestTime) {
+          latestDetail = detail
+          latestTime = refreshedAt
+        }
+      })
+      return latestDetail
+    },
+    currentLastRefreshedAt: function() {
+      var detail = this.currentLastRefreshDetail
+      return detail && detail.last_refreshed_at || ''
+    },
+    currentLastRefreshSucceeded: function() {
+      return !!this.currentLastRefreshDetail && this.currentLastRefreshDetail.success
     },
     autoReadScroll: function() {
       var current = this.current
@@ -889,6 +957,10 @@ var vm = new Vue({
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({item_list_width: newVal})
     }, 1000),
+    'feedSort': function(newVal, oldVal) {
+      if (oldVal === undefined) return  // do nothing, initial setup
+      api.settings.update({feed_sort: newVal})
+    },
     'refreshRate': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({refresh_rate: newVal})
@@ -1868,6 +1940,11 @@ var vm = new Vue({
       this.settingsFolder = folder
       this.settingsFeed = null
       this.settings = 'folder'
+    },
+    showCurrentSettings: function() {
+      var current = this.current
+      if (current.type == 'feed' && current.feed.id) this.showFeedSettings(current.feed)
+      if (current.type == 'folder' && current.folder.id) this.showFolderSettings(current.folder)
     },
     updateRSSHubBaseUrl: function(event) {
       var value = event.target.querySelector('[name=rsshub_base_url]').value

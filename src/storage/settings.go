@@ -12,6 +12,7 @@ func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
 		"filter":            "",
 		"feed_list_width":   0,
+		"feed_sort":         "time",
 		"item_list_width":   0,
 		"refresh_rate":      0,
 		"rsshub_base_url":   "",
@@ -120,6 +121,12 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 		}
 		if key == "unread_first" || key == "sort_newest_first" {
 			if _, ok := val.(bool); !ok {
+				return false
+			}
+		}
+		if key == "feed_sort" {
+			sval, ok := val.(string)
+			if !ok || (sval != "name" && sval != "time" && sval != "count") {
 				return false
 			}
 		}

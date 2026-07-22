@@ -98,6 +98,25 @@ func TestColumnWidthDefaultsUnset(t *testing.T) {
 	}
 }
 
+func TestFeedSortSetting(t *testing.T) {
+	db := testDB()
+
+	if got := db.GetSettingsValueString("feed_sort"); got != "time" {
+		t.Fatalf("invalid feed sort default: %q", got)
+	}
+	for _, value := range []string{"name", "time", "count"} {
+		if !db.UpdateSettings(map[string]interface{}{"feed_sort": value}) {
+			t.Fatalf("failed to save feed sort %q", value)
+		}
+		if got := db.GetSettingsValueString("feed_sort"); got != value {
+			t.Fatalf("got feed sort %q, want %q", got, value)
+		}
+	}
+	if db.UpdateSettings(map[string]interface{}{"feed_sort": "invalid"}) {
+		t.Fatal("invalid feed sort should be rejected")
+	}
+}
+
 func TestFeedSettingIgnored(t *testing.T) {
 	db := testDB()
 	setRawSetting(t, db, "feed", `"feed:9"`)

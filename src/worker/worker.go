@@ -3,6 +3,8 @@ package worker
 import (
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -11,7 +13,15 @@ import (
 	"github.com/nkanaev/yarr/src/storage"
 )
 
-const NUM_WORKERS = 4
+const defaultNumWorkers = 4
+
+func numWorkers() int {
+	workers, err := strconv.Atoi(os.Getenv("NUM_WORKERS"))
+	if err != nil || workers < 1 {
+		return defaultNumWorkers
+	}
+	return workers
+}
 
 type Worker struct {
 	db                 *storage.Storage
@@ -198,7 +208,11 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	srcqueue := make(chan storage.Feed, len(feeds))
 	dstqueue := make(chan feedRefreshJobResult)
 
-	for i := 0; i < NUM_WORKERS; i++ {
+	workers := numWorkers()
+	if len(feeds) < workers {
+		workers = len(feeds)
+	}
+	for i := 0; i < workers; i++ {
 		go w.worker(srcqueue, dstqueue)
 	}
 

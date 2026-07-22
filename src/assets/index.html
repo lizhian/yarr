@@ -40,7 +40,6 @@
                         :aria-pressed="filterSelected == ''"
                         title="全部"
                         @click="filterSelected = ''">
-                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
                     <span class="toolbar-label">全部</span>
                 </button>
                 <button class="toolbar-item mx-1"
@@ -48,7 +47,6 @@
                         :aria-pressed="filterSelected == 'unread'"
                         title="未读"
                         @click="filterSelected = 'unread'">
-                    <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
                     <span class="toolbar-label">未读</span>
                 </button>
                 <button class="toolbar-item mr-1"
@@ -56,7 +54,6 @@
                         :aria-pressed="filterSelected == 'favorite'"
                         title="收藏"
                         @click="filterSelected = 'favorite'">
-                    <span class="icon toolbar-icon">{% inline "star-full.svg" %}</span>
                     <span class="toolbar-label">收藏</span>
                 </button>
                 <div class="flex-grow-1"></div>
@@ -99,12 +96,7 @@
                                 {% inline "chevron-right.svg" %}
                             </span>
                             <span class="flex-fill text-left text-truncate">{{ folder.title }}</span>
-                            <span class="counter text-right">{{ filteredFolderStats[folder.id] || '' }}</span>
-                            <button class="selectgroup-action ml-1"
-                                    title="文件夹设置"
-                                    @click.prevent.stop="showFolderSettings(folder)">
-                                <span class="icon">{% inline "more-horizontal.svg" %}</span>
-                            </button>
+                            <span class="counter feed-unread-count text-right">{{ filteredFolderStats[folder.id] || '' }}</span>
                         </div>
                     </label>
                     <div v-show="!folder.id || folder.is_expanded" class="mt-1" :class="{'pl-3': folder.id}">
@@ -117,23 +109,7 @@
                                 <span class="icon mr-2" v-if="!feed.icon_url || feedIconErrored(feed)">{% inline "rss.svg" %}</span>
                                 <span class="icon mr-2" v-else><img :src="feed.icon_url" alt="" loading="lazy" referrerpolicy="no-referrer" @error="markFeedIconErrored(feed)"></span>
                                 <span class="flex-fill text-left text-truncate">{{ feed.title }}<span v-if="feed.ranking_mode != 'off'">🏆</span></span>
-                                <span class="feed-row-controls ml-1">
-                                    <span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
-                                    <button class="selectgroup-action feed-settings-action"
-                                            :class="{'feed-settings-has-time': feed.latest_item_arrived_at}"
-                                            title="订阅源设置"
-                                            aria-label="订阅源设置"
-                                            @click.prevent.stop="showFeedSettings(feed)">
-                                        <span class="icon feed-settings-icon">{% inline "more-horizontal.svg" %}</span>
-                                        <small class="feed-settings-time"
-                                               v-if="feed.latest_item_arrived_at"
-                                               :title="formatDate(feed.latest_item_arrived_at)">
-                                            <relative-time :key="feed.latest_item_arrived_at"
-                                                           :val="feed.latest_item_arrived_at"
-                                                           :max-days="99"></relative-time>
-                                        </small>
-                                    </button>
-                                </span>
+                                <span class="counter feed-unread-count text-right">{{ filteredFeedStats[feed.id] || '' }}</span>
                             </div>
                         </label>
                     </div>
@@ -150,18 +126,28 @@
                         title="显示订阅源">
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
                 </button>
-                <button class="toolbar-item item-list-unread-first mr-auto"
-                        :class="{'toolbar-status-active': itemUnreadFirst}"
-                        :aria-pressed="itemUnreadFirst"
-                        @click="setItemOrder('unread_first', !itemUnreadFirst)">
-                    <span class="toolbar-label">未读优先</span>
+                <button class="toolbar-item toolbar-item-icon-only item-list-selection-settings mr-1"
+                        v-if="(current.type == 'feed' && current.feed.id) || (current.type == 'folder' && current.folder.id)"
+                        :aria-label="current.type == 'folder' ? '文件夹设置' : '订阅源设置'"
+                        :title="current.type == 'folder' ? '文件夹设置' : '订阅源设置'"
+                        @click="showCurrentSettings()">
+                    <span class="icon toolbar-icon">{% inline "more-horizontal.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
-                        @click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"
-                        :aria-label="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'"
-                        :title="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'">
-                    <span class="icon toolbar-icon" v-if="itemSortNewestFirst">{% inline "chevron-down.svg" %}</span>
-                    <span class="icon toolbar-icon" v-else>{% inline "chevron-up.svg" %}</span>
+                        @click="toggleArticleListLayout()"
+                        :aria-pressed="articleListLayout == 'card'"
+                        :title="articleListLayout == 'card' ? '切换到列表模式' : '切换到卡片模式'">
+                    <span class="icon toolbar-icon" v-if="articleListLayout == 'card'">{% inline "list.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "grid.svg" %}</span>
+                </button>
+                <button class="toolbar-item toolbar-item-icon-only item-list-unread-first ml-1"
+                        :class="{'toolbar-status-active': itemUnreadFirst}"
+                        :aria-pressed="itemUnreadFirst"
+                        aria-label="未读优先"
+                        title="未读优先"
+                        @click="setItemOrder('unread_first', !itemUnreadFirst)">
+                    <span class="icon toolbar-icon" v-if="itemUnreadFirst">{% inline "circle-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "circle.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="toggleAutoReadScroll()"
@@ -171,12 +157,36 @@
                     <span class="icon toolbar-icon" v-if="autoReadScroll">{% inline "scroll-check.svg" %}</span>
                     <span class="icon toolbar-icon" v-else>{% inline "scroll-x.svg" %}</span>
                 </button>
+                <span class="item-list-times ml-1"
+                      v-if="currentLastRefreshedAt || currentLatestItemArrivedAt">
+                    <small class="item-list-time"
+                           v-if="currentLastRefreshedAt"
+                           :title="'最后刷新：' + formatDate(currentLastRefreshedAt)"
+                           :aria-label="'最后刷新：' + formatDate(currentLastRefreshedAt)">
+                        <span class="icon item-list-time-icon"
+                              :class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"
+                              aria-hidden="true">{% inline "rotate-cw.svg" %}</span>
+                        <relative-time :key="currentLastRefreshedAt"
+                                       :val="currentLastRefreshedAt"
+                                       :max-days="99"></relative-time>
+                    </small>
+                    <small class="item-list-time"
+                           v-if="currentLatestItemArrivedAt"
+                           :title="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)"
+                           :aria-label="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)">
+                        <span class="icon item-list-time-icon" aria-hidden="true">{% inline "rss.svg" %}</span>
+                        <relative-time :key="currentLatestItemArrivedAt"
+                                       :val="currentLatestItemArrivedAt"
+                                       :max-days="99"></relative-time>
+                    </small>
+                </span>
+                <div class="flex-grow-1"></div>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
-                        @click="toggleArticleListLayout()"
-                        :aria-pressed="articleListLayout == 'card'"
-                        :title="articleListLayout == 'card' ? '切换到列表模式' : '切换到卡片模式'">
-                    <span class="icon toolbar-icon" v-if="articleListLayout == 'card'">{% inline "list.svg" %}</span>
-                    <span class="icon toolbar-icon" v-else>{% inline "grid.svg" %}</span>
+                        @click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"
+                        :aria-label="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'"
+                        :title="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'">
+                    <span class="icon toolbar-icon" v-if="itemSortNewestFirst">{% inline "chevron-down.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "chevron-up.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="markItemsRead()"
@@ -453,6 +463,19 @@
                                 :class="{active: refreshRate == option.value}"
                                 @click="refreshRate = option.value"
                                 v-for="option in refreshRateOptions">
+                            {{ option.title }}
+                        </button>
+                    </div>
+                </section>
+
+                <section class="settings-dialog-section">
+                    <header>订阅源排序</header>
+                    <div class="settings-segmented settings-segmented-compact feed-sort-picker">
+                        <button class="btn btn-link"
+                                :aria-pressed="feedSort == option.name"
+                                :class="{active: feedSort == option.name}"
+                                @click="feedSort = option.name"
+                                v-for="option in feedSortOptions">
                             {{ option.title }}
                         </button>
                     </div>
