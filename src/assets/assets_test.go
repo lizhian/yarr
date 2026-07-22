@@ -115,3 +115,31 @@ func TestSelectedFeedKeepsActivityTimeVisible(t *testing.T) {
 		}
 	}
 }
+
+func TestChangingFeedKeepsSelectedItem(t *testing.T) {
+	file, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	javascript := string(content)
+	start := strings.Index(javascript, "'feedSelected': function(newVal, oldVal)")
+	end := strings.Index(javascript, "'itemSelected': function(newVal, oldVal)")
+	if start == -1 || end == -1 || start >= end {
+		t.Fatal("feedSelected watcher not found")
+	}
+
+	watcher := javascript[start:end]
+	if !strings.Contains(watcher, "this.refreshItems(false)") {
+		t.Error("changing feed should refresh the item list")
+	}
+	if strings.Contains(watcher, "this.itemSelected = null") {
+		t.Error("changing feed should keep the selected item details visible")
+	}
+}

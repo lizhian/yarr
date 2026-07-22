@@ -847,7 +847,6 @@ var vm = new Vue({
       }
       writeFeedSelected(newVal)
       this.refreshItems(false)
-      this.itemSelected = null
       if (this.$refs.itemlist) this.$refs.itemlist.scrollTop = 0
       this.syncNavigationHistory()
     },
