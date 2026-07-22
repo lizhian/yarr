@@ -24,5 +24,5 @@ The implementation targets the common sync subset used by RSS clients:
 - `reader/api/0/edit-tag`
 - `reader/api/0/stream/items/modify`
 
-Yarr stores one status per item, so starred items are treated as read. Removing
-the starred state changes an item back to read.
+Read and starred states are stored independently. Adding or removing the starred
+state does not change whether an item is read.

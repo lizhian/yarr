@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/nkanaev/yarr/src/assets"
@@ -191,6 +192,9 @@ func (s *Server) handleFolder(c *router.Context) {
 		}
 		if body.AutoReadScroll != nil {
 			s.db.UpdateFolderAutoReadScroll(id, *body.AutoReadScroll)
+		}
+		if body.UnreadFirst != nil || body.SortNewestFirst != nil {
+			s.db.UpdateFolderItemOrder(id, body.UnreadFirst, body.SortNewestFirst)
 		}
 		c.Out.WriteHeader(http.StatusOK)
 	} else if c.Req.Method == "DELETE" {
@@ -495,6 +499,26 @@ func (s *Server) handleFeed(c *router.Context) {
 			}
 			s.db.UpdateFeedAutoReadScroll(id, autoReadScroll.(bool))
 		}
+		var unreadFirst, sortNewestFirst *bool
+		if value, ok := body["unread_first"]; ok {
+			if value == nil || reflect.TypeOf(value).Kind() != reflect.Bool {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "未读优先设置不支持。"})
+				return
+			}
+			enabled := value.(bool)
+			unreadFirst = &enabled
+		}
+		if value, ok := body["sort_newest_first"]; ok {
+			if value == nil || reflect.TypeOf(value).Kind() != reflect.Bool {
+				c.JSON(http.StatusBadRequest, map[string]string{"error": "文章排序设置不支持。"})
+				return
+			}
+			enabled := value.(bool)
+			sortNewestFirst = &enabled
+		}
+		if unreadFirst != nil || sortNewestFirst != nil {
+			s.db.UpdateFeedItemOrder(id, unreadFirst, sortNewestFirst)
+		}
 		c.Out.WriteHeader(http.StatusOK)
 	} else if c.Req.Method == "DELETE" {
 		s.db.DeleteFeed(id)
@@ -538,7 +562,13 @@ func (s *Server) handleItem(c *router.Context) {
 			return
 		}
 		if body.Status != nil {
-			s.db.UpdateItemStatus(id, *body.Status)
+			if !s.db.UpdateItemStatus(id, *body.Status) {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+		if body.Favorite != nil {
+			s.db.UpdateItemFavorite(id, *body.Favorite)
 		}
 		c.Out.WriteHeader(http.StatusOK)
 	} else {
@@ -548,7 +578,7 @@ func (s *Server) handleItem(c *router.Context) {
 
 func (s *Server) handleItemList(c *router.Context) {
 	if c.Req.Method == "GET" {
-		perPage := 20
+		perPage := 30
 		query := c.Req.URL.Query()
 
 		filter := storage.ItemFilter{}
@@ -561,16 +591,43 @@ func (s *Server) handleItemList(c *router.Context) {
 		if after, err := c.QueryInt64("after"); err == nil {
 			filter.After = &after
 		}
+		if afterUnread := query.Get("after_unread"); afterUnread != "" {
+			value, err := strconv.ParseBool(afterUnread)
+			if err != nil {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			filter.AfterUnread = &value
+		}
 		if status := query.Get("status"); len(status) != 0 {
-			statusValue := storage.StatusValues[status]
+			statusValue, ok := storage.StatusValues[status]
+			if !ok {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			filter.Status = &statusValue
+		}
+		if favorite := query.Get("favorite"); favorite != "" {
+			value, err := strconv.ParseBool(favorite)
+			if err != nil {
+				c.Out.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			filter.Favorite = &value
 		}
 		if search := query.Get("search"); len(search) != 0 {
 			filter.Search = &search
 		}
 		newestFirst := query.Get("oldest_first") != "true"
+		unreadFirst := query.Get("unread_first") != "false"
+		if filter.After != nil && filter.AfterUnread == nil {
+			if item := s.db.GetItem(*filter.After); item != nil {
+				value := item.Status == storage.UNREAD
+				filter.AfterUnread = &value
+			}
+		}
 
-		items := s.db.ListItems(filter, perPage+1, newestFirst, false)
+		items := s.db.ListItemsOrdered(filter, perPage+1, unreadFirst, newestFirst, false)
 		hasMore := false
 		if len(items) == perPage+1 {
 			hasMore = true
@@ -583,9 +640,17 @@ func (s *Server) handleItemList(c *router.Context) {
 				items[i].Title = htmlutil.TruncateText(text, 140)
 			}
 		}
+		var nextAfter interface{}
+		var nextAfterUnread interface{}
+		if len(items) > 0 {
+			nextAfter = items[len(items)-1].Id
+			nextAfterUnread = items[len(items)-1].Status == storage.UNREAD
+		}
 		c.JSON(http.StatusOK, map[string]interface{}{
-			"list":     items,
-			"has_more": hasMore,
+			"list":              items,
+			"has_more":          hasMore,
+			"next_after":        nextAfter,
+			"next_after_unread": nextAfterUnread,
 		})
 	} else if c.Req.Method == "PUT" {
 		query := c.Req.URL.Query()

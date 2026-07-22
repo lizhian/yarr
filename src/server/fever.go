@@ -283,7 +283,7 @@ func (s *Server) feverItemsHandler(c *router.Context) {
 		time := date.Unix()
 
 		isSaved := 0
-		if item.Status == storage.STARRED {
+		if item.Favorite {
 			isSaved = 1
 		}
 		isRead := 0
@@ -340,11 +340,11 @@ func (s *Server) feverUnreadItemIDsHandler(c *router.Context) {
 }
 
 func (s *Server) feverSavedItemIDsHandler(c *router.Context) {
-	status := storage.STARRED
+	favorite := true
 	itemIds := make([]int64, 0)
 
 	itemFilter := storage.ItemFilter{
-		Status: &status,
+		Favorite: &favorite,
 	}
 	for {
 		items := s.db.ListItems(itemFilter, listLimit, true, false)
@@ -370,21 +370,19 @@ func (s *Server) feverMarkHandler(c *router.Context) {
 
 	switch c.Req.Form.Get("mark") {
 	case "item":
-		var status storage.ItemStatus
 		switch c.Req.Form.Get("as") {
 		case "read":
-			status = storage.READ
+			s.db.UpdateItemStatus(id, storage.READ)
 		case "unread":
-			status = storage.UNREAD
+			s.db.UpdateItemStatus(id, storage.UNREAD)
 		case "saved":
-			status = storage.STARRED
+			s.db.UpdateItemFavorite(id, true)
 		case "unsaved":
-			status = storage.READ
+			s.db.UpdateItemFavorite(id, false)
 		default:
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		s.db.UpdateItemStatus(id, status)
 	case "feed":
 		if c.Req.Form.Get("as") != "read" {
 			c.Out.WriteHeader(http.StatusBadRequest)

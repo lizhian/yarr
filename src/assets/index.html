@@ -52,10 +52,10 @@
                     <span class="toolbar-label">未读</span>
                 </button>
                 <button class="toolbar-item mr-1"
-                        :class="{'toolbar-status-active': filterSelected == 'starred'}"
-                        :aria-pressed="filterSelected == 'starred'"
+                        :class="{'toolbar-status-active': filterSelected == 'favorite'}"
+                        :aria-pressed="filterSelected == 'favorite'"
                         title="收藏"
-                        @click="filterSelected = 'starred'">
+                        @click="filterSelected = 'favorite'">
                     <span class="icon toolbar-icon">{% inline "star-full.svg" %}</span>
                     <span class="toolbar-label">收藏</span>
                 </button>
@@ -82,7 +82,7 @@
                     <div class="selectgroup-label d-flex align-items-center w-100">
                         <span class="icon mr-2">{% inline "layers.svg" %}</span>
                         <span class="flex-fill text-left text-truncate" v-if="filterSelected=='unread'">全部未读</span>
-                        <span class="flex-fill text-left text-truncate" v-if="filterSelected=='starred'">全部收藏</span>
+                        <span class="flex-fill text-left text-truncate" v-if="filterSelected=='favorite'">全部收藏</span>
                         <span class="flex-fill text-left text-truncate" v-if="filterSelected==''">全部订阅源</span>
                         <span class="counter text-right">{{ filteredTotalStats }}</span>
                     </div>
@@ -144,34 +144,26 @@
         <div id="col-item-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: itemListWidth+'px'}">
             <drag :width="itemListWidth" @resize="resizeItemList"></drag>
             <div class="px-2 toolbar d-flex align-items-center">
-                <button class="toolbar-item toolbar-item-icon-only mr-2 d-block d-md-none"
+                <button class="toolbar-item toolbar-item-icon-only item-list-back mr-1 d-block d-md-none"
                         @click="showFeedList()"
                         aria-label="显示订阅源"
                         title="显示订阅源">
                     <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
                 </button>
-                <button class="toolbar-item toolbar-item-icon-only mr-1 d-flex d-md-none"
-                        :class="{'toolbar-status-active': filterSelected == ''}"
-                        :aria-pressed="filterSelected == ''"
-                        aria-label="全部"
-                        title="全部"
-                        @click="filterSelected = ''">
-                    <span class="icon toolbar-icon">{% inline "assorted.svg" %}</span>
+                <button class="toolbar-item item-list-unread-first mr-auto"
+                        :class="{'toolbar-status-active': itemUnreadFirst}"
+                        :aria-pressed="itemUnreadFirst"
+                        @click="setItemOrder('unread_first', !itemUnreadFirst)">
+                    <span class="toolbar-label">未读优先</span>
                 </button>
-                <button class="toolbar-item toolbar-item-icon-only mr-2 d-flex d-md-none"
-                        :class="{'toolbar-status-active': filterSelected == 'unread'}"
-                        :aria-pressed="filterSelected == 'unread'"
-                        aria-label="未读"
-                        title="未读"
-                        @click="filterSelected = 'unread'">
-                    <span class="icon toolbar-icon">{% inline "circle-full.svg" %}</span>
+                <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
+                        @click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"
+                        :aria-label="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'"
+                        :title="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'">
+                    <span class="icon toolbar-icon" v-if="itemSortNewestFirst">{% inline "chevron-down.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "chevron-up.svg" %}</span>
                 </button>
-                <div class="input-icon flex-grow-1">
-                    <span class="icon">{% inline "search.svg" %}</span>
-                    <!-- id used by keybindings -->
-                    <input id="searchbar" type="" class="d-block toolbar-search" v-model="itemSearch" @keydown.enter="$event.target.blur()" placeholder="搜索">
-                </div>
-                <button class="toolbar-item toolbar-item-icon-only ml-2"
+                <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="toggleAutoReadScroll()"
                         :class="{'toolbar-status-active': autoReadScroll}"
                         :aria-pressed="autoReadScroll"
@@ -179,14 +171,14 @@
                     <span class="icon toolbar-icon" v-if="autoReadScroll">{% inline "scroll-check.svg" %}</span>
                     <span class="icon toolbar-icon" v-else>{% inline "scroll-x.svg" %}</span>
                 </button>
-                <button class="toolbar-item toolbar-item-icon-only ml-2"
+                <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="toggleArticleListLayout()"
                         :aria-pressed="articleListLayout == 'card'"
                         :title="articleListLayout == 'card' ? '切换到列表模式' : '切换到卡片模式'">
                     <span class="icon toolbar-icon" v-if="articleListLayout == 'card'">{% inline "list.svg" %}</span>
                     <span class="icon toolbar-icon" v-else>{% inline "grid.svg" %}</span>
                 </button>
-                <button class="toolbar-item toolbar-item-icon-only ml-2"
+                <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="markItemsRead()"
                         v-if="filterSelected == 'unread' || filterSelected == ''"
                         title="全部标为已读">
@@ -226,10 +218,10 @@
                     <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
                         <div class="item-list-text flex-grow-1">
                             <div class="item-list-meta d-flex align-items-center">
-                                <transition name="indicator">
-                                    <span class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
-                                    <span class="icon icon-small mr-1" v-if="item.status=='starred'">{% inline "star-full.svg" %}</span>
-                                </transition>
+                                <transition-group name="indicator" tag="span" class="d-inline-flex align-items-center">
+                                    <span key="unread" class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
+                                    <span key="favorite" class="icon icon-small mr-1" v-if="item.favorite">{% inline "star-full.svg" %}</span>
+                                </transition-group>
                                 <small class="flex-fill text-truncate mr-1">
                                     {{ (feedsById[item.feed_id] || {}).title }}
                                 </small>
@@ -260,10 +252,10 @@
             <div class="toolbar px-2 d-flex align-items-center" v-if="itemSelected">
                 <button class="toolbar-item"
                         :disabled="!itemSelectedDetails"
-                        :class="{'toolbar-status-active': itemSelectedDetails && itemSelectedDetails.status=='starred'}"
-                        @click="toggleItemStarred(itemSelectedDetails)"
+                        :class="{'toolbar-status-active': itemSelectedDetails && itemSelectedDetails.favorite}"
+                        @click="toggleItemFavorite(itemSelectedDetails)"
                         title="标为收藏">
-                    <span class="icon toolbar-icon" v-if="itemSelectedDetails && itemSelectedDetails.status=='starred'" >{% inline "star-full.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSelectedDetails && itemSelectedDetails.favorite" >{% inline "star-full.svg" %}</span>
                     <span class="icon toolbar-icon" v-else >{% inline "star.svg" %}</span>
                     <span class="toolbar-label">收藏</span>
                 </button>
@@ -472,14 +464,6 @@
                         <div class="settings-segmented settings-segmented-compact">
                             <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'text'" :class="{active: toolbarDisplay == 'text'}" @click="toolbarDisplay='text'">文字</button>
                             <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'icon'" :class="{active: toolbarDisplay == 'icon'}" @click="toolbarDisplay='icon'">图标</button>
-                        </div>
-                    </section>
-
-                    <section class="settings-dialog-section">
-                        <header>优先显示</header>
-                        <div class="settings-segmented settings-segmented-compact">
-                            <button class="btn btn-link" :aria-pressed="itemSortNewestFirst" :class="{active: itemSortNewestFirst}" @click="itemSortNewestFirst=true">最新</button>
-                            <button class="btn btn-link" :aria-pressed="!itemSortNewestFirst" :class="{active: !itemSortNewestFirst}" @click="itemSortNewestFirst=false">最早</button>
                         </div>
                     </section>
 
@@ -876,8 +860,6 @@
                 <table class="table table-borderless table-sm table-compact m-0">
                     <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td>
                                                             <td>显示全部订阅源 / 未读 / 收藏</td></tr>
-                    <tr><td><kbd>/</kbd></td>               <td>聚焦搜索框</td></tr>
-
                     <tr><td colspan=2>&nbsp;</td></tr>
                     <tr><td><kbd>j</kbd> <kbd>k</kbd></td>  <td>下一篇 / 上一篇文章</td></tr>
                     <tr><td><kbd>l</kbd> <kbd>h</kbd></td>  <td>下一个 / 上一个订阅源</td></tr>

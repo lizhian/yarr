@@ -312,6 +312,191 @@ func TestMissingItemReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestItemAPISeparatesFavoriteAndReadStatus(t *testing.T) {
+	db := testServerDB(t)
+	feed := db.CreateFeed("feed", "", "", "https://example.com/feed.xml", nil)
+	if !db.CreateItems([]storage.Item{{GUID: "item", FeedId: feed.Id, Title: "searchable needle", Date: time.Now()}}) {
+		t.Fatal("failed to create item")
+	}
+	item := db.ListItems(storage.ItemFilter{}, 1, true, false)[0]
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	request := httptest.NewRequest("PUT", fmt.Sprintf("/api/items/%d", item.Id), bytes.NewBufferString(`{"favorite":true}`))
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusOK {
+		t.Fatal("got", recorder.Result().StatusCode)
+	}
+	item = *db.GetItem(item.Id)
+	if item.Status != storage.UNREAD || !item.Favorite {
+		t.Fatalf("got status=%v favorite=%v", item.Status, item.Favorite)
+	}
+
+	request = httptest.NewRequest("PUT", fmt.Sprintf("/api/items/%d", item.Id), bytes.NewBufferString(`{"status":"read"}`))
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	item = *db.GetItem(item.Id)
+	if item.Status != storage.READ || !item.Favorite {
+		t.Fatalf("got status=%v favorite=%v", item.Status, item.Favorite)
+	}
+
+	request = httptest.NewRequest("GET", "/api/items?favorite=true", nil)
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	var listResponse struct {
+		List []storage.Item `json:"list"`
+	}
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&listResponse); err != nil {
+		t.Fatal(err)
+	}
+	if len(listResponse.List) != 1 || !listResponse.List[0].Favorite {
+		t.Fatalf("unexpected favorite list %#v", listResponse.List)
+	}
+
+	request = httptest.NewRequest("GET", "/api/items?search=needle", nil)
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&listResponse); err != nil {
+		t.Fatal(err)
+	}
+	if len(listResponse.List) != 1 || listResponse.List[0].Id != item.Id {
+		t.Fatalf("search API returned %#v", listResponse.List)
+	}
+
+	request = httptest.NewRequest("PUT", fmt.Sprintf("/api/items/%d", item.Id), bytes.NewBufferString(`{"status":"starred"}`))
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("starred update got %d", recorder.Result().StatusCode)
+	}
+	request = httptest.NewRequest("GET", "/api/items?status=starred", nil)
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if recorder.Result().StatusCode != http.StatusBadRequest {
+		t.Fatalf("starred filter got %d", recorder.Result().StatusCode)
+	}
+}
+
+func TestItemListUsesThirtyItemCursorPages(t *testing.T) {
+	db := testServerDB(t)
+	feed := db.CreateFeed("feed", "", "", "https://example.com/feed.xml", nil)
+	items := make([]storage.Item, 0, 35)
+	base := time.Date(2026, 7, 22, 0, 0, 0, 0, time.UTC)
+	for index := 0; index < 35; index++ {
+		items = append(items, storage.Item{
+			GUID:   fmt.Sprintf("item-%02d", index),
+			FeedId: feed.Id,
+			Date:   base.Add(time.Duration(index) * time.Minute),
+		})
+	}
+	if !db.CreateItems(items) {
+		t.Fatal("failed to create items")
+	}
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+	type page struct {
+		List            []storage.Item `json:"list"`
+		HasMore         bool           `json:"has_more"`
+		NextAfter       int64          `json:"next_after"`
+		NextAfterUnread bool           `json:"next_after_unread"`
+	}
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest("GET", "/api/items", nil))
+	var first page
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&first); err != nil {
+		t.Fatal(err)
+	}
+	if len(first.List) != 30 || !first.HasMore || !first.NextAfterUnread {
+		t.Fatalf("unexpected first page: len=%d has_more=%v unread=%v", len(first.List), first.HasMore, first.NextAfterUnread)
+	}
+
+	path := fmt.Sprintf("/api/items?after=%d&after_unread=%t", first.NextAfter, first.NextAfterUnread)
+	recorder = httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest("GET", path, nil))
+	var second page
+	if err := json.NewDecoder(recorder.Result().Body).Decode(&second); err != nil {
+		t.Fatal(err)
+	}
+	if len(second.List) != 5 || second.HasMore {
+		t.Fatalf("unexpected second page: len=%d has_more=%v", len(second.List), second.HasMore)
+	}
+	seen := make(map[int64]bool)
+	for _, item := range first.List {
+		seen[item.Id] = true
+	}
+	for _, item := range second.List {
+		if seen[item.Id] {
+			t.Fatalf("duplicate item %d", item.Id)
+		}
+	}
+}
+
+func TestItemOrderPreferencesPersistByScope(t *testing.T) {
+	db := testServerDB(t)
+	folder := db.CreateFolder("folder")
+	feed := db.CreateFeed("feed", "", "", "https://example.com/feed.xml", &folder.Id)
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	requests := []struct {
+		path string
+		body string
+	}{
+		{fmt.Sprintf("/api/feeds/%d", feed.Id), `{"unread_first":false,"sort_newest_first":false}`},
+		{fmt.Sprintf("/api/folders/%d", folder.Id), `{"unread_first":false,"sort_newest_first":false}`},
+		{"/api/settings", `{"unread_first":false,"sort_newest_first":false}`},
+	}
+	for _, update := range requests {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest("PUT", update.path, bytes.NewBufferString(update.body)))
+		if recorder.Result().StatusCode != http.StatusOK {
+			t.Fatalf("%s got %d", update.path, recorder.Result().StatusCode)
+		}
+	}
+	feed = db.GetFeed(feed.Id)
+	if feed.UnreadFirst || feed.SortNewestFirst {
+		t.Fatalf("feed preferences not saved: %#v", feed)
+	}
+	folders := db.ListFolders()
+	if len(folders) != 1 || folders[0].UnreadFirst || folders[0].SortNewestFirst {
+		t.Fatalf("folder preferences not saved: %#v", folders)
+	}
+	if db.GetSettingsValueBool("unread_first") || db.GetSettingsValueBool("sort_newest_first") {
+		t.Fatal("global preferences not saved")
+	}
+}
+
+func TestFeverSavedAndReadStatesAreIndependent(t *testing.T) {
+	db := testServerDB(t)
+	feed := db.CreateFeed("feed", "", "", "https://example.com/feed.xml", nil)
+	db.CreateItems([]storage.Item{{GUID: "item", FeedId: feed.Id, Date: time.Now()}})
+	item := db.ListItems(storage.ItemFilter{}, 1, true, false)[0]
+	handler := NewServer(db, "127.0.0.1:8000").handler()
+
+	mark := func(as string) {
+		t.Helper()
+		form := url.Values{"mark": {"item"}, "as": {as}, "id": {fmt.Sprint(item.Id)}}
+		request := httptest.NewRequest("POST", "/fever/", bytes.NewBufferString(form.Encode()))
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Result().StatusCode != http.StatusOK {
+			t.Fatalf("mark %s got %d", as, recorder.Result().StatusCode)
+		}
+	}
+	mark("saved")
+	if got := db.GetItem(item.Id); got.Status != storage.UNREAD || !got.Favorite {
+		t.Fatalf("saved got status=%v favorite=%v", got.Status, got.Favorite)
+	}
+	mark("read")
+	if got := db.GetItem(item.Id); got.Status != storage.READ || !got.Favorite {
+		t.Fatalf("read got status=%v favorite=%v", got.Status, got.Favorite)
+	}
+	mark("unsaved")
+	if got := db.GetItem(item.Id); got.Status != storage.READ || got.Favorite {
+		t.Fatalf("unsaved got status=%v favorite=%v", got.Status, got.Favorite)
+	}
+}
+
 func TestCreateRSSHubFeedWithoutBaseURL(t *testing.T) {
 	db := testServerDB(t)
 

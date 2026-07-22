@@ -10,13 +10,15 @@ import (
 
 func settingsDefaults() map[string]interface{} {
 	return map[string]interface{}{
-		"filter":           "",
-		"feed_list_width":  0,
-		"item_list_width":  0,
-		"refresh_rate":     0,
-		"rsshub_base_url":  "",
-		"backup_enabled":   false,
-		"auto_read_scroll": false,
+		"filter":            "",
+		"feed_list_width":   0,
+		"item_list_width":   0,
+		"refresh_rate":      0,
+		"rsshub_base_url":   "",
+		"backup_enabled":    false,
+		"auto_read_scroll":  false,
+		"unread_first":      true,
+		"sort_newest_first": true,
 	}
 }
 
@@ -115,6 +117,11 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 				return false
 			}
 			val = normalized
+		}
+		if key == "unread_first" || key == "sort_newest_first" {
+			if _, ok := val.(bool); !ok {
+				return false
+			}
 		}
 		valEncoded, err := json.Marshal(val)
 		if err != nil {

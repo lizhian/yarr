@@ -3,7 +3,8 @@ package server
 import "github.com/nkanaev/yarr/src/storage"
 
 type ItemUpdateForm struct {
-	Status *storage.ItemStatus `json:"status,omitempty"`
+	Status   *storage.ItemStatus `json:"status,omitempty"`
+	Favorite *bool               `json:"favorite,omitempty"`
 }
 
 type FolderCreateForm struct {
@@ -11,9 +12,11 @@ type FolderCreateForm struct {
 }
 
 type FolderUpdateForm struct {
-	Title          *string `json:"title,omitempty"`
-	IsExpanded     *bool   `json:"is_expanded,omitempty"`
-	AutoReadScroll *bool   `json:"auto_read_scroll,omitempty"`
+	Title           *string `json:"title,omitempty"`
+	IsExpanded      *bool   `json:"is_expanded,omitempty"`
+	AutoReadScroll  *bool   `json:"auto_read_scroll,omitempty"`
+	UnreadFirst     *bool   `json:"unread_first,omitempty"`
+	SortNewestFirst *bool   `json:"sort_newest_first,omitempty"`
 }
 
 type FeedCreateForm struct {

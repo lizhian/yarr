@@ -141,7 +141,7 @@ func TestMigrationRemovesFeedSetting(t *testing.T) {
 
 func TestFrontendSettingsAreIgnored(t *testing.T) {
 	db := testDB()
-	keys := []string{"theme_name", "theme_font", "toolbar_display", "sort_newest_first"}
+	keys := []string{"theme_name", "theme_font", "toolbar_display"}
 	for _, key := range keys {
 		setRawSetting(t, db, key, `"legacy"`)
 		if got := db.GetSettingsValue(key); got != nil {
@@ -197,6 +197,22 @@ func TestAutoReadScrollSetting(t *testing.T) {
 	}
 	if !db.GetSettingsValueBool("auto_read_scroll") {
 		t.Fatal("auto_read_scroll should be enabled")
+	}
+}
+
+func TestItemOrderSettings(t *testing.T) {
+	db := testDB()
+	if !db.GetSettingsValueBool("unread_first") || !db.GetSettingsValueBool("sort_newest_first") {
+		t.Fatal("item order settings should default to true")
+	}
+	if !db.UpdateSettings(map[string]interface{}{"unread_first": false, "sort_newest_first": false}) {
+		t.Fatal("item order settings update failed")
+	}
+	if db.GetSettingsValueBool("unread_first") || db.GetSettingsValueBool("sort_newest_first") {
+		t.Fatal("item order settings were not disabled")
+	}
+	if db.UpdateSettings(map[string]interface{}{"unread_first": "false"}) {
+		t.Fatal("invalid item order setting was accepted")
 	}
 }
 

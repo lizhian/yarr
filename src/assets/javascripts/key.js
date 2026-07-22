@@ -34,13 +34,10 @@ var shortcutFunctions = {
       vm.markItemsRead()
     }
   },
-  toggleItemStarred: function() {
+  toggleItemFavorite: function() {
     if (vm.itemSelected != null) {
-      vm.toggleItemStarred(vm.itemSelectedDetails)
+      vm.toggleItemFavorite(vm.itemSelectedDetails)
     }
-  },
-  focusSearch: function() {
-    document.getElementById("searchbar").focus()
   },
   nextItem(){
     vm.navigateToItem(+1)
@@ -69,8 +66,8 @@ var shortcutFunctions = {
   showUnread() {
     vm.filterSelected = 'unread'
   },
-  showStarred() {
-    vm.filterSelected = 'starred'
+  showFavorite() {
+    vm.filterSelected = 'favorite'
   },
 }
 
@@ -80,8 +77,7 @@ var keybindings = {
   "i": shortcutFunctions.toggleReadability,
   "r": shortcutFunctions.toggleItemRead,
   "R": shortcutFunctions.markAllRead,
-  "s": shortcutFunctions.toggleItemStarred,
-  "/": shortcutFunctions.focusSearch,
+  "s": shortcutFunctions.toggleItemFavorite,
   "j": shortcutFunctions.nextItem,
   "k": shortcutFunctions.previousItem,
   "l": shortcutFunctions.nextFeed,
@@ -91,7 +87,7 @@ var keybindings = {
   "q": shortcutFunctions.closeItem,
   "1": shortcutFunctions.showAll,
   "2": shortcutFunctions.showUnread,
-  "3": shortcutFunctions.showStarred,
+  "3": shortcutFunctions.showFavorite,
 }
 
 var codebindings = {
@@ -99,8 +95,7 @@ var codebindings = {
   "KeyI": shortcutFunctions.toggleReadability,
   //"r": shortcutFunctions.toggleItemRead,
   //"KeyR": shortcutFunctions.markAllRead,
-  "KeyS": shortcutFunctions.toggleItemStarred,
-  "Slash": shortcutFunctions.focusSearch,
+  "KeyS": shortcutFunctions.toggleItemFavorite,
   "KeyJ": shortcutFunctions.nextItem,
   "KeyK": shortcutFunctions.previousItem,
   "KeyL": shortcutFunctions.nextFeed,
@@ -110,7 +105,7 @@ var codebindings = {
   "KeyQ": shortcutFunctions.closeItem,
   "Digit1": shortcutFunctions.showAll,
   "Digit2": shortcutFunctions.showUnread,
-  "Digit3": shortcutFunctions.showStarred,
+  "Digit3": shortcutFunctions.showFavorite,
 }
 
 function isTextBox(element) {

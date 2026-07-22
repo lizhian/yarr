@@ -334,8 +334,8 @@ func (s *Server) greaderStreamFilter(stream string, values url.Values) storage.I
 	if stream == "" || stream == greaderReadingList || stream == greaderAll {
 		// no-op
 	} else if stream == greaderStarred {
-		status := storage.STARRED
-		filter.Status = &status
+		favorite := true
+		filter.Favorite = &favorite
 	} else if feedID, ok := greaderParseFeedID(stream); ok {
 		filter.FeedID = &feedID
 	} else if strings.HasPrefix(stream, "user/-/label/") {
@@ -356,8 +356,8 @@ func (s *Server) greaderStreamFilter(stream string, values url.Values) storage.I
 	}
 	for _, include := range values["it"] {
 		if include == greaderStarred {
-			status := storage.STARRED
-			filter.Status = &status
+			favorite := true
+			filter.Favorite = &favorite
 		}
 	}
 	if after := values.Get("c"); after != "" {
@@ -454,10 +454,10 @@ func (s *Server) greaderItems(items []storage.Item) []greaderItem {
 			title = htmlutil.TruncateText(htmlutil.ExtractText(item.Content), 140)
 		}
 		categories := []string{greaderFresh}
-		if item.Status == storage.READ || item.Status == storage.STARRED {
+		if item.Status == storage.READ {
 			categories = append(categories, greaderRead)
 		}
-		if item.Status == storage.STARRED {
+		if item.Favorite {
 			categories = append(categories, greaderStarred)
 		}
 		if ref.folder != nil {
@@ -524,13 +524,13 @@ func (s *Server) greaderEditTag(c *router.Context, authToken string) {
 				status = storage.READ
 			}
 			if containsString(adds, greaderStarred) {
-				status = storage.STARRED
+				s.db.UpdateItemFavorite(id, true)
 			}
 			if containsString(removes, greaderRead) {
 				status = storage.UNREAD
 			}
-			if containsString(removes, greaderStarred) && status == storage.STARRED {
-				status = storage.READ
+			if containsString(removes, greaderStarred) {
+				s.db.UpdateItemFavorite(id, false)
 			}
 			s.db.UpdateItemStatus(id, status)
 		}

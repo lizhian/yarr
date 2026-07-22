@@ -31,6 +31,7 @@ var migrations = []func(*sql.Tx) error{
 	m21_add_auto_read_scroll,
 	m22_add_feed_latest_item_arrived_at,
 	m23_add_feed_custom_icon,
+	m24_add_favorite_and_item_order,
 }
 
 var maxVersion = int64(len(migrations))
@@ -520,6 +521,35 @@ func m22_add_feed_latest_item_arrived_at(tx *sql.Tx) error {
 
 func m23_add_feed_custom_icon(tx *sql.Tx) error {
 	return addColumnIfMissing(tx, "feeds", "custom_icon", "custom_icon boolean not null default false")
+}
+
+func m24_add_favorite_and_item_order(tx *sql.Tx) error {
+	if err := addColumnIfMissing(tx, "items", "favorite", "favorite boolean not null default false"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(tx, "feeds", "unread_first", "unread_first boolean not null default true"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(tx, "feeds", "sort_newest_first", "sort_newest_first boolean not null default true"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(tx, "folders", "unread_first", "unread_first boolean not null default true"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(tx, "folders", "sort_newest_first", "sort_newest_first boolean not null default true"); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`
+		update items set status = 1, favorite = true where status = 2;
+		update settings set val = '"favorite"' where key = 'filter' and val = '"starred"';
+
+		create index if not exists idx_item_favorite_status_date_id
+		on items(favorite, status, date desc, id desc);
+
+		create index if not exists idx_item_feed_favorite_status_date_id
+		on items(feed_id, favorite, status, date desc, id desc);
+	`)
+	return err
 }
 
 func addColumnIfMissing(tx *sql.Tx, table, column, definition string) error {

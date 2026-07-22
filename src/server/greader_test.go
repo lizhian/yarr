@@ -79,11 +79,13 @@ func seedGReaderData(t *testing.T, db *storage.Storage) (storage.Feed, storage.F
 			db.UpdateItemStatus(item.Id, storage.READ)
 		case "b1":
 			starB = item
-			db.UpdateItemStatus(item.Id, storage.STARRED)
+			db.UpdateItemStatus(item.Id, storage.READ)
+			db.UpdateItemFavorite(item.Id, true)
 		}
 	}
 	readA.Status = storage.READ
-	starB.Status = storage.STARRED
+	starB.Status = storage.READ
+	starB.Favorite = true
 	return *feed1, *feed2, unreadA, readA, starB
 }
 
@@ -323,16 +325,16 @@ func TestGReaderEditTagAndModifyUpdatesStatus(t *testing.T) {
 	recorder = httptest.NewRecorder()
 	request = greaderRequest("POST", "/api/greader.php/reader/api/0/stream/items/modify", token, strings.NewReader(form.Encode()))
 	handler.ServeHTTP(recorder, request)
-	if item := db.GetItem(readA.Id); item.Status != storage.STARRED {
-		t.Fatalf("got %v", item.Status)
+	if item := db.GetItem(readA.Id); item.Status != storage.READ || !item.Favorite {
+		t.Fatalf("got status=%v favorite=%v", item.Status, item.Favorite)
 	}
 
 	form = url.Values{"i": {greaderItemID(starB.Id)}, "r": {greaderStarred}, "T": {writeToken}}
 	recorder = httptest.NewRecorder()
 	request = greaderRequest("POST", "/api/greader.php/reader/api/0/edit-tag", token, strings.NewReader(form.Encode()))
 	handler.ServeHTTP(recorder, request)
-	if item := db.GetItem(starB.Id); item.Status != storage.READ {
-		t.Fatalf("got %v", item.Status)
+	if item := db.GetItem(starB.Id); item.Status != storage.READ || item.Favorite {
+		t.Fatalf("got status=%v favorite=%v", item.Status, item.Favorite)
 	}
 
 	form = url.Values{"s": {greaderFeedID(feed1.Id)}, "a": {greaderRead}, "T": {writeToken}}

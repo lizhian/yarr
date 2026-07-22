@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -16,21 +17,18 @@ import (
 type ItemStatus int
 
 const (
-	UNREAD  ItemStatus = 0
-	READ    ItemStatus = 1
-	STARRED ItemStatus = 2
+	UNREAD ItemStatus = 0
+	READ   ItemStatus = 1
 )
 
 var StatusRepresentations = map[ItemStatus]string{
-	UNREAD:  "unread",
-	READ:    "read",
-	STARRED: "starred",
+	UNREAD: "unread",
+	READ:   "read",
 }
 
 var StatusValues = map[string]ItemStatus{
-	"unread":  UNREAD,
-	"read":    READ,
-	"starred": STARRED,
+	"unread": UNREAD,
+	"read":   READ,
 }
 
 func (s ItemStatus) MarshalJSON() ([]byte, error) {
@@ -42,7 +40,11 @@ func (s *ItemStatus) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &str); err != nil {
 		return err
 	}
-	*s = StatusValues[str]
+	status, ok := StatusValues[str]
+	if !ok {
+		return fmt.Errorf("unsupported item status %q", str)
+	}
+	*s = status
 	return nil
 }
 
@@ -78,19 +80,22 @@ type Item struct {
 	Content    string     `json:"content,omitempty"`
 	Date       time.Time  `json:"date"`
 	Status     ItemStatus `json:"status"`
+	Favorite   bool       `json:"favorite"`
 	MediaLinks MediaLinks `json:"media_links"`
 }
 
 type ItemFilter struct {
-	FolderID *int64
-	FeedID   *int64
-	Status   *ItemStatus
-	Search   *string
-	After    *int64
-	IDs      *[]int64
-	SinceID  *int64
-	MaxID    *int64
-	Before   *time.Time
+	FolderID    *int64
+	FeedID      *int64
+	Status      *ItemStatus
+	Favorite    *bool
+	Search      *string
+	After       *int64
+	AfterUnread *bool
+	IDs         *[]int64
+	SinceID     *int64
+	MaxID       *int64
+	Before      *time.Time
 }
 
 type MarkFilter struct {
@@ -208,12 +213,12 @@ func createItemTx(tx *sql.Tx, item Item, arrivedAt time.Time) (bool, error) {
 		insert into items (
 			guid, feed_id, title, link, date,
 			content, media_links,
-			date_arrived, status
+			date_arrived, status, favorite
 		)
 		values (
 			?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', ?),
 			?, ?,
-			?, ?
+			?, ?, false
 		)
 		on conflict (feed_id, guid) do nothing`,
 		item.GUID, item.FeedId, item.Title, item.Link, item.Date,
@@ -272,6 +277,10 @@ func listQueryPredicate(filter ItemFilter, newestFirst bool) (string, []interfac
 	if filter.Status != nil {
 		cond = append(cond, "i.status = ?")
 		args = append(args, *filter.Status)
+	}
+	if filter.Favorite != nil {
+		cond = append(cond, "i.favorite = ?")
+		args = append(args, *filter.Favorite)
 	}
 	if filter.Search != nil {
 		words := strings.Fields(*filter.Search)
@@ -356,7 +365,11 @@ func (s *Storage) ItemGUIDExists(feedID int64, guid string) bool {
 	return exists
 }
 
-func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, withContent bool) []Item {
+type itemQueryer interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
+func listItems(queryer itemQueryer, filter ItemFilter, limit int, newestFirst bool, withContent bool) []Item {
 	predicate, args := listQueryPredicate(filter, newestFirst)
 	result := make([]Item, 0, 0)
 
@@ -371,7 +384,7 @@ func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, with
 		order = "i.id desc"
 	}
 
-	selectCols := "i.id, i.guid, i.feed_id, i.title, i.link, i.date, i.status, i.media_links"
+	selectCols := "i.id, i.guid, i.feed_id, i.title, i.link, i.date, i.status, i.favorite, i.media_links"
 	if withContent {
 		selectCols += ", i.content"
 	} else {
@@ -384,17 +397,18 @@ func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, with
 		order by %s
 		limit %d
 		`, selectCols, predicate, order, limit)
-	rows, err := s.db.Query(query, args...)
+	rows, err := queryer.Query(query, args...)
 	if err != nil {
 		log.Print(err)
 		return result
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var x Item
 		err = rows.Scan(
 			&x.Id, &x.GUID, &x.FeedId,
 			&x.Title, &x.Link, &x.Date,
-			&x.Status, &x.MediaLinks, &x.Content,
+			&x.Status, &x.Favorite, &x.MediaLinks, &x.Content,
 		)
 		if err != nil {
 			log.Print(err)
@@ -405,17 +419,63 @@ func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, with
 	return result
 }
 
+func (s *Storage) ListItems(filter ItemFilter, limit int, newestFirst bool, withContent bool) []Item {
+	return listItems(s.db, filter, limit, newestFirst, withContent)
+}
+
+func (s *Storage) ListItemsOrdered(filter ItemFilter, limit int, unreadFirst bool, newestFirst bool, withContent bool) []Item {
+	if !unreadFirst || filter.Status != nil {
+		if unreadFirst && filter.Status != nil && *filter.Status == READ {
+			newestFirst = true
+		}
+		return s.ListItems(filter, limit, newestFirst, withContent)
+	}
+
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		log.Print(err)
+		return []Item{}
+	}
+	defer tx.Rollback()
+
+	result := make([]Item, 0, limit)
+	if filter.AfterUnread == nil || *filter.AfterUnread {
+		unread := UNREAD
+		unreadFilter := filter
+		unreadFilter.Status = &unread
+		if filter.AfterUnread == nil {
+			unreadFilter.After = nil
+		}
+		result = append(result, listItems(tx, unreadFilter, limit, newestFirst, withContent)...)
+	}
+
+	if len(result) < limit {
+		read := READ
+		readFilter := filter
+		readFilter.Status = &read
+		if filter.AfterUnread == nil || *filter.AfterUnread {
+			readFilter.After = nil
+		}
+		result = append(result, listItems(tx, readFilter, limit-len(result), true, withContent)...)
+	}
+	if err := tx.Commit(); err != nil {
+		log.Print(err)
+		return []Item{}
+	}
+	return result
+}
+
 func (s *Storage) GetItem(id int64) *Item {
 	i := &Item{}
 	err := s.db.QueryRow(`
 		select
 			i.id, i.guid, i.feed_id, i.title, i.link, i.content,
-			i.date, i.status, i.media_links
+			i.date, i.status, i.favorite, i.media_links
 		from items i
 		where i.id = ?
 	`, id).Scan(
 		&i.Id, &i.GUID, &i.FeedId, &i.Title, &i.Link, &i.Content,
-		&i.Date, &i.Status, &i.MediaLinks,
+		&i.Date, &i.Status, &i.Favorite, &i.MediaLinks,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -432,12 +492,12 @@ func (s *Storage) GetItemByGUID(feedID int64, guid string) *Item {
 	err := s.db.QueryRow(`
 		select
 			i.id, i.guid, i.feed_id, i.title, i.link, i.content,
-			i.date, i.status, i.media_links
+			i.date, i.status, i.favorite, i.media_links
 		from items i
 		where i.feed_id = ? and i.guid = ?
 	`, feedID, guid).Scan(
 		&i.Id, &i.GUID, &i.FeedId, &i.Title, &i.Link, &i.Content,
-		&i.Date, &i.Status, &i.MediaLinks,
+		&i.Date, &i.Status, &i.Favorite, &i.MediaLinks,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -450,7 +510,15 @@ func (s *Storage) GetItemByGUID(feedID int64, guid string) *Item {
 }
 
 func (s *Storage) UpdateItemStatus(item_id int64, status ItemStatus) bool {
+	if status != UNREAD && status != READ {
+		return false
+	}
 	_, err := s.db.Exec(`update items set status = ? where id = ?`, status, item_id)
+	return err == nil
+}
+
+func (s *Storage) UpdateItemFavorite(itemID int64, favorite bool) bool {
+	_, err := s.db.Exec(`update items set favorite = ? where id = ?`, favorite, itemID)
 	return err == nil
 }
 
@@ -463,8 +531,8 @@ func (s *Storage) MarkItemsRead(filter MarkFilter) bool {
 	}, false)
 	query := fmt.Sprintf(`
 		update items as i set status = %d
-		where %s and i.status != %d
-		`, READ, predicate, STARRED)
+		where %s
+		`, READ, predicate)
 	_, err := s.db.Exec(query, args...)
 	if err != nil {
 		log.Print(err)
@@ -473,9 +541,9 @@ func (s *Storage) MarkItemsRead(filter MarkFilter) bool {
 }
 
 type FeedStat struct {
-	FeedId       int64 `json:"feed_id"`
-	UnreadCount  int64 `json:"unread"`
-	StarredCount int64 `json:"starred"`
+	FeedId        int64 `json:"feed_id"`
+	UnreadCount   int64 `json:"unread"`
+	FavoriteCount int64 `json:"favorite"`
 }
 
 func (s *Storage) FeedStats() []FeedStat {
@@ -484,17 +552,17 @@ func (s *Storage) FeedStats() []FeedStat {
 		select
 			feed_id,
 			sum(case status when %d then 1 else 0 end),
-			sum(case status when %d then 1 else 0 end)
+			sum(case when favorite then 1 else 0 end)
 		from items
 		group by feed_id
-	`, UNREAD, STARRED))
+	`, UNREAD))
 	if err != nil {
 		log.Print(err)
 		return result
 	}
 	for rows.Next() {
 		stat := FeedStat{}
-		rows.Scan(&stat.FeedId, &stat.UnreadCount, &stat.StarredCount)
+		rows.Scan(&stat.FeedId, &stat.UnreadCount, &stat.FavoriteCount)
 		result = append(result, stat)
 	}
 	return result
@@ -545,7 +613,7 @@ var (
 // Delete old articles from the database to cleanup space.
 //
 // The rules:
-//   - Never delete unread or starred entries.
+//   - Never delete unread or favorite entries.
 //   - Keep up to 500 read entries for each feed.
 func (s *Storage) DeleteOldItems() {
 	rows, err := s.db.Query(`
@@ -553,7 +621,7 @@ func (s *Storage) DeleteOldItems() {
 			i.feed_id,
 			count(*) as num_items
 		from items i
-		where status = ?
+			where status = ? and not favorite
 		group by i.feed_id
 		having num_items > ?
 	`, READ, readItemsKeepSize)
@@ -575,7 +643,7 @@ func (s *Storage) DeleteOldItems() {
 			where id in (
 				select i.id
 				from items i
-				where i.feed_id = ? and status = ?
+					where i.feed_id = ? and status = ? and not favorite
 				order by date desc
 				limit -1 offset ?
 			)

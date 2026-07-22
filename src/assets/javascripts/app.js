@@ -262,7 +262,6 @@ var APP_FONT_SIZE_KEY = 'yarr.appFontSize.v1'
 var THEME_NAME_KEY = 'yarr.themeName.v1'
 var THEME_FONT_KEY = 'yarr.themeFont.v1'
 var TOOLBAR_DISPLAY_KEY = 'yarr.toolbarDisplay.v1'
-var SORT_NEWEST_FIRST_KEY = 'yarr.sortNewestFirst.v1'
 var APP_FONT_SIZE_DEFAULT = 15
 var APP_FONT_SIZE_MIN = 10
 var APP_FONT_SIZE_MAX = 30
@@ -305,10 +304,6 @@ function normalizeThemeName(theme) {
 
 function normalizeToolbarDisplay(display) {
   return display == 'icon' ? 'icon' : 'text'
-}
-
-function normalizeSortNewestFirst(value) {
-  return typeof value == 'boolean' ? value : true
 }
 
 function normalizeArticleListLayout(layout) {
@@ -575,6 +570,7 @@ var vm = new Vue({
       'feedDeleteSelectedIds': [],
       'items': [],
       'itemsHasMore': true,
+      'itemsCursor': null,
       'itemsRequestSeq': 0,
       'itemsAutoReadSeen': {},
       'itemsAutoReadPending': {},
@@ -584,8 +580,8 @@ var vm = new Vue({
       'itemSelectedReadability': '',
       'itemSelectedReadabilityError': '',
       'itemSelectedContentMode': 'normal',
-      'itemSearch': '',
-      'itemSortNewestFirst': readLocalSetting(SORT_NEWEST_FIRST_KEY, s.sort_newest_first, normalizeSortNewestFirst),
+      'itemUnreadFirstAll': s.unread_first !== false,
+      'itemSortNewestFirstAll': s.sort_newest_first !== false,
       'itemListWidth': s.item_list_width || 300,
       'articleListLayout': getArticleListLayout(feedSelected),
       'articleListLayoutApplying': false,
@@ -753,6 +749,18 @@ var vm = new Vue({
       }
       return !!this.autoReadScrollAll
     },
+    itemUnreadFirst: function() {
+      var current = this.current
+      if (current.type == 'feed') return current.feed.id ? current.feed.unread_first !== false : true
+      if (current.type == 'folder') return current.folder.id ? current.folder.unread_first !== false : true
+      return this.itemUnreadFirstAll
+    },
+    itemSortNewestFirst: function() {
+      var current = this.current
+      if (current.type == 'feed') return current.feed.id ? current.feed.sort_newest_first !== false : true
+      if (current.type == 'folder') return current.folder.id ? current.folder.sort_newest_first !== false : true
+      return this.itemSortNewestFirstAll
+    },
     itemSelectedContent: function() {
       if (!this.itemSelectedDetails) return ''
 
@@ -873,14 +881,6 @@ var vm = new Vue({
           this.itemSelected = null
         }
       }.bind(this))
-    },
-    'itemSearch': debounce(function(newVal) {
-      this.refreshItems()
-    }, 500),
-    'itemSortNewestFirst': function(newVal, oldVal) {
-      if (oldVal === undefined) return  // do nothing, initial setup
-      writeLocalSetting(SORT_NEWEST_FIRST_KEY, newVal)
-      this.refreshItems(false)
     },
     'feedListWidth': debounce(function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
@@ -1115,12 +1115,9 @@ var vm = new Vue({
           query.folder_id = guid
         }
       }
-      if (this.filterSelected) {
-        query.status = this.filterSelected
-      }
-      if (this.itemSearch) {
-        query.search = this.itemSearch
-      }
+      if (this.filterSelected == 'unread') query.status = 'unread'
+      if (this.filterSelected == 'favorite') query.favorite = true
+      query.unread_first = this.itemUnreadFirst
       if (!this.itemSortNewestFirst) {
         query.oldest_first = true
       }
@@ -1156,6 +1153,7 @@ var vm = new Vue({
       if (this.feedSelected === null) {
         vm.items = []
         vm.itemsHasMore = false
+        vm.itemsCursor = null
         vm.loading.items = false
         vm.resetItemListAutoRead()
         return
@@ -1163,11 +1161,14 @@ var vm = new Vue({
 
       var query = this.getItemsQuery()
       if (loadMore) {
-        query.after = vm.items[vm.items.length-1].id
+        if (!this.itemsCursor) return
+        query.after = this.itemsCursor.after
+        query.after_unread = this.itemsCursor.unread
       } else {
         this.resetItemListAutoRead()
         this.items = []
         this.itemsHasMore = false
+        this.itemsCursor = null
       }
 
       this.loading.items = true
@@ -1175,10 +1176,12 @@ var vm = new Vue({
         if (requestSeq != vm.itemsRequestSeq) return
 
         if (loadMore) {
-          vm.items = vm.items.concat(data.list)
+          var loaded = vm.items.reduce(function(ids, item) { ids[item.id] = true; return ids }, {})
+          vm.items = vm.items.concat(data.list.filter(function(item) { return !loaded[item.id] }))
         } else {
           vm.items = data.list
         }
+        vm.itemsCursor = data.next_after === null ? null : {after: data.next_after, unread: data.next_after_unread}
         vm.itemsHasMore = data.has_more
         vm.loading.items = false
 
@@ -1321,6 +1324,28 @@ var vm = new Vue({
         vm.autoReadScrollAll = enabled
       })
     },
+    setItemOrder: function(field, value) {
+      var current = this.current
+      var payload = {}
+      payload[field] = value
+      if (current.type == 'feed' && current.feed.id) {
+        return api.feeds.update(current.feed.id, payload).then(function() {
+          current.feed[field] = value
+          vm.refreshItems(false)
+        })
+      }
+      if (current.type == 'folder' && current.folder.id) {
+        return api.folders.update(current.folder.id, payload).then(function() {
+          current.folder[field] = value
+          vm.refreshItems(false)
+        })
+      }
+      return api.settings.update(payload).then(function() {
+        if (field == 'unread_first') vm.itemUnreadFirstAll = value
+        if (field == 'sort_newest_first') vm.itemSortNewestFirstAll = value
+        vm.refreshItems(false)
+      })
+    },
     feedIconErrored: function(feed) {
       return !!this.feedIconErrors[feed.id + ':' + (feed.icon_url || '')]
     },
@@ -1332,12 +1357,12 @@ var vm = new Vue({
       var keepCurrentItems = this.filterSelected == ''
       var feedSelected = this.feedSelected
       var filterSelected = this.filterSelected
-      var itemSearch = this.itemSearch
+      var itemUnreadFirst = this.itemUnreadFirst
       var itemSortNewestFirst = this.itemSortNewestFirst
       api.items.mark_read(query).then(function() {
         var sameItemList = vm.feedSelected == feedSelected &&
           vm.filterSelected == filterSelected &&
-          vm.itemSearch == itemSearch &&
+          vm.itemUnreadFirst == itemUnreadFirst &&
           vm.itemSortNewestFirst == itemSortNewestFirst
         var shouldShowFeedList = sameItemList &&
           filterSelected == 'unread' &&
@@ -1640,8 +1665,9 @@ var vm = new Vue({
       var newstatus = item.status !== targetstatus ? targetstatus : fallbackstatus
 
       var updateStats = function(status, incr) {
-        if ((status == 'unread') || (status == 'starred')) {
-          this.feedStats[item.feed_id][status] += incr
+        if (status == 'unread') {
+          var feedStats = this.feedStats[item.feed_id]
+          if (feedStats) feedStats[status] += incr
         }
       }.bind(this)
 
@@ -1676,8 +1702,15 @@ var vm = new Vue({
         delete this.itemsAutoReadPending[item.id]
       }.bind(this))
     },
-    toggleItemStarred: function(item) {
-      this.toggleItemStatus(item, 'starred', 'read')
+    toggleItemFavorite: function(item) {
+      var favorite = !item.favorite
+      api.items.update(item.id, {favorite: favorite}).then(function() {
+        var feedStats = this.feedStats[item.feed_id]
+        if (feedStats) feedStats.favorite += favorite ? 1 : -1
+        var itemInList = this.items.find(function(i) { return i.id == item.id })
+        if (itemInList) itemInList.favorite = favorite
+        item.favorite = favorite
+      }.bind(this))
     },
     toggleItemRead: function(item) {
       this.toggleItemStatus(item, 'unread', 'read')

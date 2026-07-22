@@ -597,7 +597,6 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .toolbar-item:hover,
-.toolbar-search:hover,
 .selectgroup-label:hover,
 .dropdown-item:hover {
   background-color: #f0f0f0;
@@ -834,35 +833,14 @@ select.form-control:not([multiple]):not([size]) {
   opacity: 1;
 }
 
-.input-icon {
-  position: relative;
+.item-list-unread-first {
+  flex: 0 0 auto;
+  font-size: .82rem;
+  white-space: nowrap;
 }
 
-.input-icon .icon {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  width: 2rem;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.input-icon input {
-  padding-left: 2rem !important;
-  width: 100%;
-}
-
-.toolbar-search {
-  border: none;
-  border-radius: 3px;
-  padding: .25rem .5rem;
-  line-height: 1;
-}
-
-.toolbar-search:hover, .toolbar-search:focus {
-  background-color: #f3f3f3;
-  outline: none;
+.item-list-unread-first .toolbar-label {
+  display: inline;
 }
 
 #opml-import-form input[type="file"]::-webkit-file-upload-button {
@@ -1574,8 +1552,7 @@ button.theme-light {
 .theme-light .btn-default,
 .theme-light .dropdown-menu,
 .theme-light .form-control,
-.theme-light .modal-content,
-.theme-light .toolbar-search {
+.theme-light .modal-content {
   --accent-color: #2f684b;
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(0, 0, 0, .08);
@@ -1609,15 +1586,13 @@ button.theme-light {
 }
 .theme-light .selectgroup-label:hover,
 .theme-light .toolbar-item:hover,
-.theme-light .toolbar-search:hover,
 .theme-light .dropdown-item:hover,
 .theme-light .selectgroup-action:hover,
 .theme-light .settings-dialog-field-action:hover,
 .theme-light .settings-dialog-action:hover,
 .theme-light .feed-delete-row:hover,
 .theme-light .settings-segmented .btn:hover,
-.theme-light .refresh-rate-picker .btn:hover,
-.theme-light .toolbar-search:focus {
+.theme-light .refresh-rate-picker .btn:hover {
   background-color: #ecece8;
 }
 
@@ -1660,8 +1635,7 @@ a,
 .theme-sepia .btn-default,
 .theme-sepia .dropdown-menu,
 .theme-sepia .form-control,
-.theme-sepia .modal-content,
-.theme-sepia .toolbar-search {
+.theme-sepia .modal-content {
   --accent-color: #7a4a14;
   --accent-contrast-color: #fff;
   --article-card-shadow: 0 2px 8px rgba(83, 67, 35, .12);
@@ -1713,15 +1687,13 @@ body.theme-sepia {
 }
 .theme-sepia .selectgroup-label:hover,
 .theme-sepia .toolbar-item:hover,
-.theme-sepia .toolbar-search:hover,
 .theme-sepia .dropdown-item:hover,
 .theme-sepia .selectgroup-action:hover,
 .theme-sepia .settings-dialog-field-action:hover,
 .theme-sepia .settings-dialog-action:hover,
 .theme-sepia .feed-delete-row:hover,
 .theme-sepia .settings-segmented .btn:hover,
-.theme-sepia .refresh-rate-picker .btn:hover,
-.theme-sepia .toolbar-search:focus {
+.theme-sepia .refresh-rate-picker .btn:hover {
   background-color: #e6d7a8;
 }
 
@@ -1745,8 +1717,7 @@ body.theme-sepia {
 .theme-night .dropdown-menu,
 .theme-night .dropdown-item,
 .theme-night .form-control,
-.theme-night .modal-content,
-.theme-night .toolbar-search {
+.theme-night .modal-content {
   --accent-color: #d39232;
   --accent-contrast-color: #1f1f1f;
   --action-button-border-color: #4a4a4a;
@@ -1787,14 +1758,12 @@ body.theme-sepia {
 .theme-night .selectgroup-label:hover,
 .theme-night .dropdown-item:hover,
 .theme-night .toolbar-item:hover,
-.theme-night .toolbar-search:hover,
 .theme-night .selectgroup-action:hover,
 .theme-night .settings-dialog-field-action:hover,
 .theme-night .settings-dialog-action:hover,
 .theme-night .feed-delete-row:hover,
 .theme-night .settings-segmented .btn:hover,
-.theme-night .refresh-rate-picker .btn:hover,
-.theme-night .toolbar-search:focus {
+.theme-night .refresh-rate-picker .btn:hover {
   background-color: #303030;
 }
 
@@ -1920,9 +1889,13 @@ body.theme-sepia {
     min-height: 3rem !important;
     max-height: 3rem !important;
   }
-  .toolbar-item,
-  .toolbar-search {
+  .toolbar-item {
     padding: .5rem;
+  }
+  .item-list-toolbar-action {
+    margin-left: .125rem !important;
+    padding-left: .375rem;
+    padding-right: .375rem;
   }
   #col-item .toolbar-label {
     display: none;
@@ -1942,5 +1915,22 @@ body.theme-sepia {
   }
   .content-skeleton-media {
     height: min(13rem, 48vw);
+  }
+}
+
+@media (max-width: 359.98px) {
+  .item-list-back {
+    margin-right: .125rem !important;
+    padding-left: .375rem;
+    padding-right: .375rem;
+  }
+  .item-list-unread-first {
+    font-size: .75rem;
+    padding-left: .375rem;
+    padding-right: .375rem;
+  }
+  .item-list-toolbar-action {
+    padding-left: .25rem;
+    padding-right: .25rem;
   }
 }
