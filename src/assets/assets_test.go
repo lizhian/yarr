@@ -88,7 +88,7 @@ func TestFeedRowsOnlyShowUnreadCounts(t *testing.T) {
 	}
 }
 
-func TestLogoRotatesOnceWhileFeedsRefresh(t *testing.T) {
+func TestLogoRotatesWhileFeedsRefresh(t *testing.T) {
 	var output bytes.Buffer
 	Render("index.html", &output, map[string]interface{}{
 		"settings":      map[string]interface{}{},
@@ -110,8 +110,8 @@ func TestLogoRotatesOnceWhileFeedsRefresh(t *testing.T) {
 	}
 	css := string(content)
 	for _, want := range []string{
-		"@keyframes app-logo-refresh",
-		"animation: app-logo-refresh .9s cubic-bezier(.22, .61, .36, 1) 1;",
+		"@keyframes rotate",
+		"animation: rotate .9s infinite linear;",
 		"@media (prefers-reduced-motion: reduce)",
 	} {
 		if !strings.Contains(css, want) {
@@ -157,7 +157,6 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	}
 
 	orderedControls := []string{
-		`@click="showFeedList()"`,
 		`@click="showCurrentSettings()"`,
 		`@click="toggleArticleListLayout()"`,
 		`aria-label="未读优先"`,
@@ -173,6 +172,9 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 			t.Fatalf("item list toolbar control is out of order: %q", control)
 		}
 		previousIndex = index
+	}
+	if strings.Contains(toolbar, `@click="showFeedList()"`) || strings.Contains(toolbar, `item-list-back`) {
+		t.Error("item list toolbar should not include a mobile back-to-feeds button")
 	}
 	if strings.Contains(toolbar, `<span class="toolbar-label">未读优先</span>`) {
 		t.Error("unread-first should use an icon instead of text")
@@ -205,6 +207,36 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		if !strings.Contains(javascript, want) {
 			t.Errorf("missing current selection behavior %q", want)
 		}
+	}
+}
+
+func TestFeedSettingsSectionOrder(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	html := output.String()
+	start := strings.Index(html, `v-else-if="settings=='feed' && settingsFeed"`)
+	end := strings.Index(html, `v-else-if="settings=='folder' && settingsFolder"`)
+	if start == -1 || end == -1 || start >= end {
+		t.Fatal("feed settings markup not found")
+	}
+	feedSettings := html[start:end]
+	orderedContent := []string{
+		`@click.prevent="refreshFeedIcon(settingsFeed)"`,
+		`<header>基础设置</header>`,
+		`<header>移动到</header>`,
+		`<header>刷新详情</header>`,
+	}
+	previousIndex := -1
+	for _, content := range orderedContent {
+		index := strings.Index(feedSettings, content)
+		if index <= previousIndex {
+			t.Fatalf("feed settings content is out of order: %q", content)
+		}
+		previousIndex = index
 	}
 }
 

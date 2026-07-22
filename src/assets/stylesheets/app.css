@@ -573,13 +573,6 @@ select.form-control:not([multiple]):not([size]) {
   to   { transform: rotate(360deg); }
 }
 
-@keyframes app-logo-refresh {
-  0%   { transform: rotate(0deg) scale(1); }
-  72%  { transform: rotate(340deg) scale(1.06); }
-  88%  { transform: rotate(366deg) scale(.98); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
 @keyframes skeleton-shimmer {
   from { background-position: 100% 0; }
   to   { background-position: -100% 0; }
@@ -616,7 +609,7 @@ select.form-control:not([multiple]):not([size]) {
 }
 
 .app-logo-refreshing {
-  animation: app-logo-refresh .9s cubic-bezier(.22, .61, .36, 1) 1;
+  animation: rotate .9s infinite linear;
   transform-origin: center;
 }
 
@@ -1947,11 +1940,6 @@ body.theme-sepia {
 }
 
 @media (max-width: 359.98px) {
-  .item-list-back {
-    margin-right: .125rem !important;
-    padding-left: .375rem;
-    padding-right: .375rem;
-  }
   .item-list-unread-first {
     padding-left: .375rem;
     padding-right: .375rem;
