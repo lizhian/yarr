@@ -167,28 +167,32 @@ docker run -d \
 docker logs -f yarr
 ```
 
-使用 Docker Compose 时，可创建以下服务配置：
+使用 Docker Compose 时，可直接使用 GHCR 中的最新镜像：
 
 ```yaml
 services:
   yarr:
-    build:
-      context: .
-      dockerfile: etc/dockerfile
-    ports:
-      - "127.0.0.1:7070:7070"
-    volumes:
-      - ./data:/data
+    image: ghcr.io/lizhian/yarr:latest
+    container_name: yarr
     restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "7070:7070"
+    volumes:
+      - ~/yarr:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - TZ=Asia/Shanghai
 ```
 
 然后运行：
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-上面的端口仅绑定到宿主机回环地址，适合搭配反向代理。若只在可信局域网中直接访问，可将映射改为 `7070:7070`，同时应启用 yarr 的访问认证并配置防火墙。
+订阅和文章数据保存在宿主机的 `~/yarr` 目录中。`7070:7070` 会在所有网络接口上开放端口，应启用 yarr 的访问认证并配置防火墙；若仅通过本机反向代理访问，可将端口映射改为 `127.0.0.1:7070:7070`。
 
 ### 方案二：Linux 原生二进制与 systemd
 
@@ -262,7 +266,7 @@ server {
 
 升级前先备份数据库。
 
-- Docker：拉取新代码或新镜像后，执行 `docker compose up -d --build` 重新创建容器。只要数据目录仍挂载到 `/data`，数据库不会随容器删除。
+- Docker Compose：执行 `docker compose pull && docker compose up -d` 拉取最新镜像并重新创建容器。只要数据目录仍挂载到 `/data`，数据库不会随容器删除。
 - 原生二进制：停止服务、替换 `/usr/local/bin/yarr`，然后重新启动。yarr 启动时会自动执行所需的 SQLite schema migration。
 
 ```bash
