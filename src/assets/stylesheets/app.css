@@ -380,6 +380,11 @@ select.form-control:not([multiple]):not([size]) {
   border-top-right-radius: 0;
 }
 
+.article-list-layout-list #item-list-scroll .selectgroup + .selectgroup input:checked + .selectgroup-label {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
 .article-list-layout-card #item-list-scroll {
   padding: .75rem !important;
 }
