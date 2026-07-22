@@ -194,6 +194,68 @@ docker compose up -d
 
 订阅和文章数据保存在宿主机的 `~/yarr` 目录中。`7070:7070` 会在所有网络接口上开放端口，应启用 yarr 的访问认证并配置防火墙；若仅通过本机反向代理访问，可将端口映射改为 `127.0.0.1:7070:7070`。
 
+#### 通过 Cloudflare WARP 访问订阅源
+
+yarr 的 HTTP 客户端会读取 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY` 环境变量。可以将 [warp-docker](https://github.com/cmj2002/warp-docker) 作为同一 Docker Compose 网络中的代理，让订阅刷新和正文抓取请求通过 Cloudflare WARP 访问：
+
+```yaml
+services:
+  warp:
+    image: caomingjun/warp:latest
+    container_name: warp
+    restart: unless-stopped
+    device_cgroup_rules:
+      - "c 10:200 rwm"
+    cap_add:
+      - MKNOD
+      - AUDIT_WRITE
+      - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    environment:
+      WARP_SLEEP: "2"
+      # WARP_LICENSE_KEY: "your-warp-plus-key"
+    volumes:
+      - ./data/warp:/var/lib/cloudflare-warp
+    expose:
+      - "1080"
+
+  yarr:
+    image: ghcr.io/lizhian/yarr:latest
+    container_name: yarr
+    restart: unless-stopped
+    pull_policy: always
+    depends_on:
+      warp:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7070:7070"
+    volumes:
+      - ./data/yarr:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      TZ: Asia/Shanghai
+      HTTP_PROXY: http://warp:1080
+      HTTPS_PROXY: http://warp:1080
+      NO_PROXY: localhost,127.0.0.1,::1
+```
+
+启动服务并检查状态：
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose exec warp \
+  curl --socks5-hostname 127.0.0.1:1080 \
+  https://cloudflare.com/cdn-cgi/trace
+```
+
+最后一条命令输出 `warp=on` 或 `warp=plus` 时，表示 WARP 已正常连接。`WARP_LICENSE_KEY` 仅用于 WARP+，使用免费 WARP 时无需配置。`./data/warp` 保存 WARP 的注册身份和配置，重建容器后可以继续使用；更换 License Key 时，应先停止服务并清空该目录再重新注册。yarr 的数据库和备份保存在 `./data/yarr`。
+
+WARP 的 `1080` 端口只在 Compose 内部网络中提供给 yarr，没有映射到宿主机。如果部分内网订阅源不应经过 WARP，可将相应域名或 IP 加入 `NO_PROXY`。WARP 只改变出口 IP，不能保证消除 HTTP 429：目标站点仍可能按照账号、共享出口 IP 或请求频率进行限流。
+
 ### 方案二：Linux 原生二进制与 systemd
 
 安装程序并创建独立运行用户：
