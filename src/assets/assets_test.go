@@ -145,6 +145,8 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		`:val="currentLatestItemArrivedAt"`,
 		`:aria-label="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)"`,
 		`:class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"`,
+		`feather-arrow-down`,
+		`feather-arrow-up`,
 	} {
 		if !strings.Contains(toolbar, want) {
 			t.Errorf("missing item list selection control %q", want)

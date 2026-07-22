@@ -821,11 +821,19 @@ select.form-control:not([multiple]):not([size]) {
   flex: 0 0 auto;
 }
 
+#col-item-list .toolbar-item-icon-only {
+  margin-left: .125rem !important;
+  margin-right: 0 !important;
+  padding-left: .375rem;
+  padding-right: .375rem;
+}
+
 .item-list-times {
   align-items: center;
   display: inline-flex;
   flex: 0 1 auto;
-  gap: .375rem;
+  gap: .25rem;
+  margin-left: .125rem !important;
   min-width: 0;
   white-space: nowrap;
 }
@@ -833,14 +841,21 @@ select.form-control:not([multiple]):not([size]) {
 .item-list-time {
   align-items: center;
   display: inline-flex;
-  font-size: 1rem;
+  font-size: .875rem;
   gap: .125rem;
   line-height: 1;
 }
 
 .item-list-time-icon {
   flex: 0 0 auto;
+  height: .875rem;
   opacity: .7;
+  width: .875rem;
+}
+
+.item-list-time-icon > svg {
+  height: .875rem;
+  width: .875rem;
 }
 
 .item-list-time-icon-success {

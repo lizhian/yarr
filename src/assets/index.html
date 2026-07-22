@@ -186,8 +186,8 @@
                         @click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"
                         :aria-label="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'"
                         :title="itemSortNewestFirst ? '当前倒序，切换为正序' : '当前正序，切换为倒序'">
-                    <span class="icon toolbar-icon" v-if="itemSortNewestFirst">{% inline "chevron-down.svg" %}</span>
-                    <span class="icon toolbar-icon" v-else>{% inline "chevron-up.svg" %}</span>
+                    <span class="icon toolbar-icon" v-if="itemSortNewestFirst">{% inline "arrow-down.svg" %}</span>
+                    <span class="icon toolbar-icon" v-else>{% inline "arrow-up.svg" %}</span>
                 </button>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
                         @click="markItemsRead()"
