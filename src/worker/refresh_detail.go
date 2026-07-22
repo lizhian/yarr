@@ -5,18 +5,20 @@ import (
 )
 
 type FeedRefreshDetail struct {
-	LastRefreshedAt time.Time `json:"last_refreshed_at"`
-	Success         bool      `json:"success"`
-	FetchedItems    int       `json:"fetched_items"`
-	NewItems        int       `json:"new_items"`
-	Error           string    `json:"error,omitempty"`
-	RSSHubLink      string    `json:"rsshub_link,omitempty"`
+	LastRefreshedAt        time.Time  `json:"last_refreshed_at"`
+	LastRefreshSucceededAt *time.Time `json:"last_refresh_succeeded_at"`
+	Success                bool       `json:"success"`
+	FetchedItems           int        `json:"fetched_items"`
+	NewItems               int        `json:"new_items"`
+	Error                  string     `json:"error,omitempty"`
+	RSSHubLink             string     `json:"rsshub_link,omitempty"`
 }
 
-func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult, refreshErr error, fetchedItems, newItems int) {
+func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult, refreshErr error, fetchedItems, newItems int, refreshedAt time.Time, lastRefreshSucceededAt *time.Time) {
 	detail := FeedRefreshDetail{
-		LastRefreshedAt: time.Now().UTC(),
-		Success:         refreshErr == nil,
+		LastRefreshedAt:        refreshedAt,
+		LastRefreshSucceededAt: lastRefreshSucceededAt,
+		Success:                refreshErr == nil,
 	}
 	if refreshErr != nil {
 		detail.Error = refreshErr.Error()

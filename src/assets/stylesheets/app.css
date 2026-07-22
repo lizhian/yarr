@@ -825,35 +825,43 @@ select.form-control:not([multiple]):not([size]) {
   align-items: center;
   display: inline-flex;
   flex: 0 1 auto;
-  gap: .25rem;
+  gap: .125rem;
   margin-left: .125rem !important;
   min-width: 0;
   white-space: nowrap;
 }
 
-.item-list-time {
-  align-items: center;
+.item-list-time-values {
   display: inline-flex;
-  font-size: .875rem;
-  gap: .125rem;
+  gap: .25rem;
+  min-width: 0;
+}
+
+.item-list-time {
+  display: block;
+  font-size: .7rem;
   line-height: 1;
 }
 
 .item-list-time-icon {
   flex: 0 0 auto;
-  height: .875rem;
+  height: .75rem;
   opacity: .7;
-  width: .875rem;
+  width: .75rem;
 }
 
 .item-list-time-icon > svg {
-  height: .875rem;
-  width: .875rem;
+  height: .75rem;
+  width: .75rem;
 }
 
 .item-list-time-icon-success {
   color: var(--accent-color);
   opacity: 1;
+}
+
+.item-list-time-success {
+  color: var(--accent-color);
 }
 
 #opml-import-form input[type="file"]::-webkit-file-upload-button {

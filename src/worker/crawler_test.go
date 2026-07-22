@@ -252,6 +252,51 @@ func TestRefreshWithoutValidatorsUpdatesLastRefreshed(t *testing.T) {
 	}
 }
 
+func TestRefreshFeedsPrioritizesOldestSuccessfulRefresh(t *testing.T) {
+	t.Setenv("NUM_WORKERS", "1")
+	requests := make(chan string, 3)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests <- r.URL.Path
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, rssBody("Test Feed"))
+	}))
+	defer server.Close()
+
+	db := testStorage(t)
+	recent := db.CreateFeed("Recent", "", "", server.URL+"/recent.xml", nil)
+	db.CreateFeed("Never", "", "", server.URL+"/never.xml", nil)
+	older := db.CreateFeed("Older", "", "", server.URL+"/older.xml", nil)
+	olderAt := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	if !db.RecordFeedRefresh(older.Id, true, olderAt) {
+		t.Fatal("failed to record older refresh")
+	}
+	if !db.RecordFeedRefresh(recent.Id, true, olderAt.Add(time.Hour)) {
+		t.Fatal("failed to record recent refresh")
+	}
+
+	worker := NewWorker(db)
+	worker.RefreshFeeds()
+
+	want := []string{"/never.xml", "/older.xml", "/recent.xml"}
+	for i, wantPath := range want {
+		select {
+		case got := <-requests:
+			if got != wantPath {
+				t.Fatalf("request %d got %q, want %q", i, got, wantPath)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for request %d", i)
+		}
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for worker.FeedsPending() > 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if pending := worker.FeedsPending(); pending != 0 {
+		t.Fatalf("got %d pending feeds", pending)
+	}
+}
+
 func TestRefreshCreatesRankingModeItem(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")

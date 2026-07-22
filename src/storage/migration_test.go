@@ -6,6 +6,63 @@ import (
 	"time"
 )
 
+func TestMigrationAddsFeedRefreshTimes(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	for version := int64(1); version <= 24; version++ {
+		if err := migrateVersion(version, db); err != nil {
+			t.Fatalf("migrate to version %d: %v", version, err)
+		}
+	}
+	refreshedResult, err := db.Exec(`insert into feeds (title, feed_link) values ('refreshed', 'https://example.com/refreshed.xml')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	refreshedID, _ := refreshedResult.LastInsertId()
+	emptyResult, err := db.Exec(`insert into feeds (title, feed_link) values ('empty', 'https://example.com/empty.xml')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyID, _ := emptyResult.LastInsertId()
+	historicalTime := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	if _, err := db.Exec(`
+		insert into http_states (feed_id, last_refreshed, last_modified, etag)
+		values (?, ?, '', '')`, refreshedID, historicalTime); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := migrate(db); err != nil {
+		t.Fatal(err)
+	}
+	var lastRefreshedAt, lastRefreshSucceededAt *time.Time
+	if err := db.QueryRow(`
+		select last_refreshed_at, last_refresh_succeeded_at from feeds where id = ?`,
+		refreshedID,
+	).Scan(&lastRefreshedAt, &lastRefreshSucceededAt); err != nil {
+		t.Fatal(err)
+	}
+	if lastRefreshedAt == nil || !lastRefreshedAt.Equal(historicalTime) {
+		t.Fatalf("last_refreshed_at got %#v", lastRefreshedAt)
+	}
+	if lastRefreshSucceededAt == nil || !lastRefreshSucceededAt.Equal(historicalTime) {
+		t.Fatalf("last_refresh_succeeded_at got %#v", lastRefreshSucceededAt)
+	}
+	if err := db.QueryRow(`
+		select last_refreshed_at, last_refresh_succeeded_at from feeds where id = ?`,
+		emptyID,
+	).Scan(&lastRefreshedAt, &lastRefreshSucceededAt); err != nil {
+		t.Fatal(err)
+	}
+	if lastRefreshedAt != nil || lastRefreshSucceededAt != nil {
+		t.Fatalf("empty feed refresh times got %#v, %#v", lastRefreshedAt, lastRefreshSucceededAt)
+	}
+	assertSchemaObjectExists(t, db, "index", "idx_feed_last_refresh_succeeded_at")
+}
+
 func TestMigrationAddsLatestItemArrivedAt(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {

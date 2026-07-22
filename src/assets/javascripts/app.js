@@ -209,6 +209,26 @@ function compareFeeds(sort, stats, a, b) {
   return compareFeedNames(a, b)
 }
 
+function feedRefreshTime(feed, refreshDetails, field) {
+  var detail = refreshDetails[feed.id]
+  return detail && detail[field] || feed[field] || ''
+}
+
+function latestFeedRefreshTime(feeds, refreshDetails, folderID, field) {
+  var latest = ''
+  var latestTime = 0
+  feeds.forEach(function(feed) {
+    if (feed.folder_id != folderID) return
+    var value = feedRefreshTime(feed, refreshDetails, field)
+    var timestamp = Date.parse(value) || 0
+    if (timestamp > latestTime) {
+      latest = value
+      latestTime = timestamp
+    }
+  })
+  return latest
+}
+
 function normalizeRSSHubSubscriptionInput(raw) {
   raw = (raw || '').trim()
   if (!raw) return {value: raw, normalized: false}
@@ -761,49 +781,22 @@ var vm = new Vue({
 
       return {type: type, feed: feed, folder: folder}
     },
-    currentLatestItemArrivedAt: function() {
-      var current = this.current
-      if (current.type == 'feed') return current.feed.latest_item_arrived_at || ''
-      if (current.type != 'folder' || !current.folder.id) return ''
-
-      var latest = ''
-      var latestTime = 0
-      this.feeds.forEach(function(feed) {
-        if (feed.folder_id != current.folder.id || !feed.latest_item_arrived_at) return
-        var arrivedAt = Date.parse(feed.latest_item_arrived_at)
-        if (arrivedAt > latestTime) {
-          latest = feed.latest_item_arrived_at
-          latestTime = arrivedAt
-        }
-      })
-      return latest
-    },
-    currentLastRefreshDetail: function() {
-      var current = this.current
-      if (current.type == 'feed') return this.feedRefreshDetails[current.feed.id] || null
-      if (current.type != 'folder' || !current.folder.id) return null
-
-      var refreshDetails = this.feedRefreshDetails
-      var latestDetail = null
-      var latestTime = 0
-      this.feeds.forEach(function(feed) {
-        if (feed.folder_id != current.folder.id) return
-        var detail = refreshDetails[feed.id]
-        if (!detail || !detail.last_refreshed_at) return
-        var refreshedAt = Date.parse(detail.last_refreshed_at)
-        if (refreshedAt > latestTime) {
-          latestDetail = detail
-          latestTime = refreshedAt
-        }
-      })
-      return latestDetail
-    },
     currentLastRefreshedAt: function() {
-      var detail = this.currentLastRefreshDetail
-      return detail && detail.last_refreshed_at || ''
+      var current = this.current
+      if (current.type == 'feed') return feedRefreshTime(current.feed, this.feedRefreshDetails, 'last_refreshed_at')
+      if (current.type != 'folder' || !current.folder.id) return ''
+      return latestFeedRefreshTime(this.feeds, this.feedRefreshDetails, current.folder.id, 'last_refreshed_at')
+    },
+    currentLastRefreshSucceededAt: function() {
+      var current = this.current
+      if (current.type == 'feed') return feedRefreshTime(current.feed, this.feedRefreshDetails, 'last_refresh_succeeded_at')
+      if (current.type != 'folder' || !current.folder.id) return ''
+      return latestFeedRefreshTime(this.feeds, this.feedRefreshDetails, current.folder.id, 'last_refresh_succeeded_at')
     },
     currentLastRefreshSucceeded: function() {
-      return !!this.currentLastRefreshDetail && this.currentLastRefreshDetail.success
+      var refreshedAt = Date.parse(this.currentLastRefreshedAt) || 0
+      var succeededAt = Date.parse(this.currentLastRefreshSucceededAt) || 0
+      return refreshedAt > 0 && succeededAt >= refreshedAt
     },
     autoReadScroll: function() {
       var current = this.current
@@ -862,6 +855,14 @@ var vm = new Vue({
     currentFeedRefreshDetail: function() {
       if (!this.settingsFeed) return null
       return this.feedRefreshDetails[this.settingsFeed.id] || null
+    },
+    currentFeedLastRefreshedAt: function() {
+      if (!this.settingsFeed) return ''
+      return feedRefreshTime(this.settingsFeed, this.feedRefreshDetails, 'last_refreshed_at')
+    },
+    currentFeedLastRefreshSucceededAt: function() {
+      if (!this.settingsFeed) return ''
+      return feedRefreshTime(this.settingsFeed, this.feedRefreshDetails, 'last_refresh_succeeded_at')
     },
     showFeedContentSelector: function() {
       return this.settingsFeed && normalizeContentMode(this.settingsFeed.content_mode) == 'readability'

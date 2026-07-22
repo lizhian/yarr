@@ -145,6 +145,81 @@ func TestListFeedsByLatestItemArrivedAt(t *testing.T) {
 	}
 }
 
+func TestListFeedsByLastRefreshSucceededAt(t *testing.T) {
+	db := testDB()
+	alpha := db.CreateFeed("Alpha", "", "", "http://example.com/alpha.xml", nil)
+	never := db.CreateFeed("Never", "", "", "http://example.com/never.xml", nil)
+	older := db.CreateFeed("Older", "", "", "http://example.com/older.xml", nil)
+	zulu := db.CreateFeed("Zulu", "", "", "http://example.com/zulu.xml", nil)
+
+	olderAt := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	latestAt := olderAt.Add(time.Hour)
+	if _, err := db.db.Exec(`
+		update feeds
+		set last_refresh_succeeded_at = case id
+			when ? then ?
+			when ? then ?
+			when ? then ?
+		end
+		where id in (?, ?, ?)`,
+		alpha.Id, latestAt,
+		older.Id, olderAt,
+		zulu.Id, latestAt,
+		alpha.Id, older.Id, zulu.Id,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	feeds := db.ListFeedsByLastRefreshSucceededAt()
+	wantIDs := []int64{never.Id, older.Id, alpha.Id, zulu.Id}
+	if len(feeds) != len(wantIDs) {
+		t.Fatalf("got %d feeds", len(feeds))
+	}
+	for i, wantID := range wantIDs {
+		if feeds[i].Id != wantID {
+			t.Fatalf("feed %d got id %d, want %d", i, feeds[i].Id, wantID)
+		}
+	}
+
+	nameSorted := db.ListFeeds()
+	if got := []int64{nameSorted[0].Id, nameSorted[1].Id, nameSorted[2].Id, nameSorted[3].Id}; !reflect.DeepEqual(got, []int64{alpha.Id, never.Id, older.Id, zulu.Id}) {
+		t.Fatalf("ListFeeds order changed: %v", got)
+	}
+}
+
+func TestRecordFeedRefresh(t *testing.T) {
+	db := testDB()
+	feed := db.CreateFeed("Feed", "", "", "http://example.com/feed.xml", nil)
+	first := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	failed := first.Add(time.Hour)
+	second := failed.Add(time.Hour)
+
+	if !db.RecordFeedRefresh(feed.Id, true, first) {
+		t.Fatal("failed to record successful refresh")
+	}
+	got := db.GetFeed(feed.Id)
+	if got.LastRefreshedAt == nil || !got.LastRefreshedAt.Equal(first) || got.LastRefreshSucceededAt == nil || !got.LastRefreshSucceededAt.Equal(first) {
+		t.Fatalf("successful refresh times got %#v", got)
+	}
+	if !db.RecordFeedRefresh(feed.Id, false, failed) {
+		t.Fatal("failed to record failed refresh")
+	}
+	got = db.GetFeed(feed.Id)
+	if got.LastRefreshedAt == nil || !got.LastRefreshedAt.Equal(failed) || got.LastRefreshSucceededAt == nil || !got.LastRefreshSucceededAt.Equal(first) {
+		t.Fatalf("failed refresh times got %#v", got)
+	}
+	if !db.RecordFeedRefresh(feed.Id, true, second) {
+		t.Fatal("failed to record second successful refresh")
+	}
+	got = db.GetFeed(feed.Id)
+	if got.LastRefreshedAt == nil || !got.LastRefreshedAt.Equal(second) || got.LastRefreshSucceededAt == nil || !got.LastRefreshSucceededAt.Equal(second) {
+		t.Fatalf("second successful refresh times got %#v", got)
+	}
+	if db.RecordFeedRefresh(feed.Id+1000, true, second) {
+		t.Fatal("recorded refresh for missing feed")
+	}
+}
+
 func TestUpdateFeed(t *testing.T) {
 	db := testDB()
 	feed1 := db.CreateFeedWithContentSelector("feed 1", "", "http://example1.com", "http://example1.com/feed.xml", ".article", nil)

@@ -154,27 +154,27 @@
                     <span class="icon toolbar-icon" v-else>{% inline "scroll-x.svg" %}</span>
                 </button>
                 <span class="item-list-times ml-1"
-                      v-if="currentLastRefreshedAt || currentLatestItemArrivedAt">
-                    <small class="item-list-time"
-                           v-if="currentLastRefreshedAt"
-                           :title="'最后刷新：' + formatDate(currentLastRefreshedAt)"
-                           :aria-label="'最后刷新：' + formatDate(currentLastRefreshedAt)">
-                        <span class="icon item-list-time-icon"
-                              :class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"
-                              aria-hidden="true">{% inline "rotate-cw.svg" %}</span>
-                        <relative-time :key="currentLastRefreshedAt"
-                                       :val="currentLastRefreshedAt"
-                                       :max-days="99"></relative-time>
-                    </small>
-                    <small class="item-list-time"
-                           v-if="currentLatestItemArrivedAt"
-                           :title="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)"
-                           :aria-label="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)">
-                        <span class="icon item-list-time-icon" aria-hidden="true">{% inline "rss.svg" %}</span>
-                        <relative-time :key="currentLatestItemArrivedAt"
-                                       :val="currentLatestItemArrivedAt"
-                                       :max-days="99"></relative-time>
-                    </small>
+                      v-if="currentLastRefreshedAt">
+                    <span class="icon item-list-time-icon"
+                          :class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"
+                          aria-hidden="true">{% inline "rotate-cw.svg" %}</span>
+                    <span class="item-list-time-values">
+                        <small class="item-list-time"
+                               :title="'刷新时间：' + formatDate(currentLastRefreshedAt)"
+                               :aria-label="'刷新时间：' + formatDate(currentLastRefreshedAt)">
+                            <relative-time :key="currentLastRefreshedAt"
+                                           :val="currentLastRefreshedAt"
+                                           :max-days="99"></relative-time>
+                        </small>
+                        <small class="item-list-time item-list-time-success"
+                               v-if="currentLastRefreshSucceededAt"
+                               :title="'成功时间：' + formatDate(currentLastRefreshSucceededAt)"
+                               :aria-label="'成功时间：' + formatDate(currentLastRefreshSucceededAt)">
+                            <relative-time :key="currentLastRefreshSucceededAt"
+                                           :val="currentLastRefreshSucceededAt"
+                                           :max-days="99"></relative-time>
+                        </small>
+                    </span>
                 </span>
                 <div class="flex-grow-1"></div>
                 <button class="toolbar-item toolbar-item-icon-only item-list-toolbar-action ml-1"
@@ -662,18 +662,25 @@
 
                 <section class="settings-dialog-section">
                     <header>刷新详情</header>
-                    <div class="settings-dialog-fields" v-if="currentFeedRefreshDetail">
+                    <div class="settings-dialog-fields" v-if="currentFeedLastRefreshedAt">
                         <div class="settings-dialog-field settings-dialog-field-disabled">
                             <span class="settings-dialog-field-label">刷新时间</span>
                             <span class="settings-dialog-field-value">
-                                <relative-time :val="currentFeedRefreshDetail.last_refreshed_at"></relative-time>
+                                <relative-time :val="currentFeedLastRefreshedAt"></relative-time>
                             </span>
                         </div>
                         <div class="settings-dialog-field settings-dialog-field-disabled">
+                            <span class="settings-dialog-field-label">成功时间</span>
+                            <span class="settings-dialog-field-value" v-if="currentFeedLastRefreshSucceededAt">
+                                <relative-time :val="currentFeedLastRefreshSucceededAt"></relative-time>
+                            </span>
+                            <span class="settings-dialog-field-value" v-else>从未成功</span>
+                        </div>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-if="currentFeedRefreshDetail">
                             <span class="settings-dialog-field-label">状态</span>
                             <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.success ? '成功' : '失败' }}</span>
                         </div>
-                        <template v-if="currentFeedRefreshDetail.success">
+                        <template v-if="currentFeedRefreshDetail && currentFeedRefreshDetail.success">
                             <div class="settings-dialog-field settings-dialog-field-disabled">
                                 <span class="settings-dialog-field-label">文章</span>
                                 <span class="settings-dialog-field-value">获取 {{ currentFeedRefreshDetail.fetched_items }} 篇，新增 {{ currentFeedRefreshDetail.new_items }} 篇</span>
@@ -688,7 +695,7 @@
                                 <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.rsshub_link }}</span>
                             </a>
                         </template>
-                        <div class="settings-dialog-field settings-dialog-field-disabled" v-else>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-else-if="currentFeedRefreshDetail">
                             <span class="settings-dialog-field-label">错误</span>
                             <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.error }}</span>
                         </div>

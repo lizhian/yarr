@@ -168,13 +168,14 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	for _, want := range []string{
 		`@click="showCurrentSettings()"`,
 		`aria-label="未读优先"`,
-		`v-if="currentLastRefreshedAt || currentLatestItemArrivedAt"`,
 		`v-if="currentLastRefreshedAt"`,
+		`class="item-list-time-values"`,
 		`:val="currentLastRefreshedAt"`,
-		`:aria-label="'最后刷新：' + formatDate(currentLastRefreshedAt)"`,
-		`v-if="currentLatestItemArrivedAt"`,
-		`:val="currentLatestItemArrivedAt"`,
-		`:aria-label="'最新文章入库：' + formatDate(currentLatestItemArrivedAt)"`,
+		`:aria-label="'刷新时间：' + formatDate(currentLastRefreshedAt)"`,
+		`class="item-list-time item-list-time-success"`,
+		`v-if="currentLastRefreshSucceededAt"`,
+		`:val="currentLastRefreshSucceededAt"`,
+		`:aria-label="'成功时间：' + formatDate(currentLastRefreshSucceededAt)"`,
 		`:class="{'item-list-time-icon-success': currentLastRefreshSucceeded}"`,
 		`feather-arrow-down`,
 		`feather-arrow-up`,
@@ -183,8 +184,13 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 			t.Errorf("missing item list selection control %q", want)
 		}
 	}
-	if strings.Count(toolbar, `class="icon item-list-time-icon"`) != 2 {
-		t.Error("refresh and item-arrival times should each have an aria-hidden icon")
+	if strings.Count(toolbar, `class="icon item-list-time-icon"`) != 1 {
+		t.Error("refresh times should share one aria-hidden icon")
+	}
+	for _, unwanted := range []string{"currentLatestItemArrivedAt", "最新文章入库", "从未成功"} {
+		if strings.Contains(toolbar, unwanted) {
+			t.Errorf("item list toolbar should not show latest item arrival %q", unwanted)
+		}
 	}
 
 	orderedControls := []string{
@@ -192,7 +198,7 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		`@click="toggleArticleListLayout()"`,
 		`aria-label="未读优先"`,
 		`@click="toggleAutoReadScroll()"`,
-		`v-if="currentLastRefreshedAt || currentLatestItemArrivedAt"`,
+		`v-if="currentLastRefreshedAt"`,
 		`@click="setItemOrder('sort_newest_first', !itemSortNewestFirst)"`,
 		`@click="markItemsRead()"`,
 	}
@@ -222,14 +228,13 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	}
 	javascript := string(content)
 	for _, want := range []string{
-		"currentLatestItemArrivedAt: function()",
-		"if (feed.folder_id != current.folder.id || !feed.latest_item_arrived_at) return",
-		"currentLastRefreshDetail: function()",
-		"return this.feedRefreshDetails[current.feed.id] || null",
-		"var refreshDetails = this.feedRefreshDetails",
-		"if (feed.folder_id != current.folder.id) return",
-		"latestDetail = detail",
+		"function feedRefreshTime(feed, refreshDetails, field)",
+		"function latestFeedRefreshTime(feeds, refreshDetails, folderID, field)",
+		"return detail && detail[field] || feed[field] || ''",
 		"currentLastRefreshedAt: function()",
+		"currentLastRefreshSucceededAt: function()",
+		"latestFeedRefreshTime(this.feeds, this.feedRefreshDetails, current.folder.id, 'last_refreshed_at')",
+		"latestFeedRefreshTime(this.feeds, this.feedRefreshDetails, current.folder.id, 'last_refresh_succeeded_at')",
 		"currentLastRefreshSucceeded: function()",
 		"showCurrentSettings: function()",
 		"this.showFeedSettings(current.feed)",
@@ -268,6 +273,19 @@ func TestFeedSettingsSectionOrder(t *testing.T) {
 			t.Fatalf("feed settings content is out of order: %q", content)
 		}
 		previousIndex = index
+	}
+	for _, want := range []string{
+		`v-if="currentFeedLastRefreshedAt"`,
+		`<span class="settings-dialog-field-label">刷新时间</span>`,
+		`:val="currentFeedLastRefreshedAt"`,
+		`<span class="settings-dialog-field-label">成功时间</span>`,
+		`:val="currentFeedLastRefreshSucceededAt"`,
+		`<span class="settings-dialog-field-value" v-else>从未成功</span>`,
+		`v-if="currentFeedRefreshDetail"`,
+	} {
+		if !strings.Contains(feedSettings, want) {
+			t.Errorf("missing feed refresh detail %q", want)
+		}
 	}
 }
 

@@ -310,6 +310,13 @@ func TestRefresherRecordsFeedRefreshDetailSuccess(t *testing.T) {
 	if detail.RSSHubLink != server.URL+"/bilibili/weekly" {
 		t.Fatalf("got RSSHub link %q", detail.RSSHubLink)
 	}
+	if detail.LastRefreshSucceededAt == nil || !detail.LastRefreshSucceededAt.Equal(detail.LastRefreshedAt) {
+		t.Fatalf("invalid successful refresh times: %#v", detail)
+	}
+	stored := db.GetFeed(feed.Id)
+	if stored.LastRefreshedAt == nil || !stored.LastRefreshedAt.Equal(detail.LastRefreshedAt) || stored.LastRefreshSucceededAt == nil || !stored.LastRefreshSucceededAt.Equal(detail.LastRefreshedAt) {
+		t.Fatalf("stored refresh times got %#v", stored)
+	}
 }
 
 func TestRefresherRecordsFeedRefreshDetailFailure(t *testing.T) {
@@ -330,6 +337,13 @@ func TestRefresherRecordsFeedRefreshDetailFailure(t *testing.T) {
 	}
 	if detail.Error != "status code 500" {
 		t.Fatalf("got error %q", detail.Error)
+	}
+	if detail.LastRefreshSucceededAt != nil {
+		t.Fatalf("last success got %#v", detail.LastRefreshSucceededAt)
+	}
+	stored := db.GetFeed(feed.Id)
+	if stored.LastRefreshedAt == nil || !stored.LastRefreshedAt.Equal(detail.LastRefreshedAt) || stored.LastRefreshSucceededAt != nil {
+		t.Fatalf("stored refresh times got %#v", stored)
 	}
 }
 
@@ -366,6 +380,12 @@ func TestRSSHubNotModifiedRefreshRecordsSuccessfulBase(t *testing.T) {
 	}
 	if result.RSSHubLink != server.URL+"/bilibili/weekly" {
 		t.Fatalf("got link %q", result.RSSHubLink)
+	}
+
+	worker.refresher([]storage.Feed{*feed})
+	detail := worker.FeedRefreshDetails()[feed.Id]
+	if !detail.Success || detail.LastRefreshSucceededAt == nil || !detail.LastRefreshSucceededAt.Equal(detail.LastRefreshedAt) {
+		t.Fatalf("not-modified refresh detail got %#v", detail)
 	}
 }
 

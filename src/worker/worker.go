@@ -178,7 +178,7 @@ func (w *Worker) SetRefreshRate(minute int64) {
 }
 
 func (w *Worker) RefreshFeeds() {
-	w.refreshFeeds(w.db.ListFeeds())
+	w.refreshFeeds(w.db.ListFeedsByLastRefreshSucceededAt())
 }
 
 func (w *Worker) RefreshFeed(feed storage.Feed) {
@@ -274,10 +274,20 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 				w.db.SetFeedError(job.feed.Id, job.err)
 			}
 		}
+		refreshedAt := time.Now().UTC()
+		if !w.db.RecordFeedRefresh(job.feed.Id, refreshSucceeded, refreshedAt) {
+			refreshSucceeded = false
+			if job.err == nil {
+				job.err = fmt.Errorf("failed to record refresh result")
+				w.db.SetFeedError(job.feed.Id, job.err)
+			}
+		}
+		lastRefreshSucceededAt := job.feed.LastRefreshSucceededAt
 		if refreshSucceeded {
+			lastRefreshSucceededAt = &refreshedAt
 			w.recordRSSHubRefreshHit(result)
 		}
-		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, fetchedItems, newItems)
+		w.recordFeedRefreshDetail(job.feed.Id, result, job.err, fetchedItems, newItems, refreshedAt, lastRefreshSucceededAt)
 		w.pending.Add(-1)
 	}
 	close(srcqueue)

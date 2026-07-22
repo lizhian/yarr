@@ -124,6 +124,10 @@ func TestFeedListSortsByLatestItemArrival(t *testing.T) {
 	if !db.CreateItems([]storage.Item{{GUID: "newer", FeedId: newer.Id, Date: time.Now()}}) {
 		t.Fatal("failed to create newer item")
 	}
+	refreshedAt := time.Date(2026, 7, 20, 8, 0, 0, 0, time.UTC)
+	if !db.RecordFeedRefresh(older.Id, true, refreshedAt) {
+		t.Fatal("failed to record refresh time")
+	}
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/api/feeds", nil)
@@ -147,6 +151,12 @@ func TestFeedListSortsByLatestItemArrival(t *testing.T) {
 	}
 	if feeds[2].LatestItemArrivedAt != nil {
 		t.Fatalf("empty feed timestamp got %#v", feeds[2].LatestItemArrivedAt)
+	}
+	if feeds[1].LastRefreshedAt == nil || !feeds[1].LastRefreshedAt.Equal(refreshedAt) || feeds[1].LastRefreshSucceededAt == nil || !feeds[1].LastRefreshSucceededAt.Equal(refreshedAt) {
+		t.Fatalf("refresh timestamps got %#v", feeds[1])
+	}
+	if feeds[2].LastRefreshedAt != nil || feeds[2].LastRefreshSucceededAt != nil {
+		t.Fatalf("empty feed refresh timestamps got %#v", feeds[2])
 	}
 }
 

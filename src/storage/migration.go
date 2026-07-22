@@ -32,6 +32,7 @@ var migrations = []func(*sql.Tx) error{
 	m22_add_feed_latest_item_arrived_at,
 	m23_add_feed_custom_icon,
 	m24_add_favorite_and_item_order,
+	m25_add_feed_refresh_times,
 }
 
 var maxVersion = int64(len(migrations))
@@ -548,6 +549,29 @@ func m24_add_favorite_and_item_order(tx *sql.Tx) error {
 
 		create index if not exists idx_item_feed_favorite_status_date_id
 		on items(feed_id, favorite, status, date desc, id desc);
+	`)
+	return err
+}
+
+func m25_add_feed_refresh_times(tx *sql.Tx) error {
+	if err := addColumnIfMissing(tx, "feeds", "last_refreshed_at", "last_refreshed_at datetime"); err != nil {
+		return err
+	}
+	if err := addColumnIfMissing(tx, "feeds", "last_refresh_succeeded_at", "last_refresh_succeeded_at datetime"); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`
+		update feeds
+		set last_refreshed_at = (
+				select last_refreshed from http_states where http_states.feed_id = feeds.id
+			),
+			last_refresh_succeeded_at = (
+				select last_refreshed from http_states where http_states.feed_id = feeds.id
+			)
+		where exists (select 1 from http_states where http_states.feed_id = feeds.id);
+
+		create index if not exists idx_feed_last_refresh_succeeded_at
+		on feeds(last_refresh_succeeded_at);
 	`)
 	return err
 }
