@@ -870,6 +870,17 @@ var vm = new Vue({
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
     },
+    markItemsReadBoundaryId: function() {
+      if (this.filterSelected != '' || !this.itemUnreadFirst) return null
+      if (!this.items.some(function(item) { return item.status == 'unread' })) return null
+
+      for (var i = 1; i < this.items.length; i++) {
+        if (this.items[i - 1].listStatus == 'unread' && this.items[i].listStatus == 'read') {
+          return this.items[i].id
+        }
+      }
+      return null
+    },
     showBottomMarkItemsRead: function() {
       return this.filterSelected == 'unread' &&
         this.items.length > 0 &&
@@ -1255,6 +1266,10 @@ var vm = new Vue({
       return api.items.list(query).then(function(data) {
         if (requestSeq != vm.itemsRequestSeq) return
 
+        // Preserve the server-sorted group when an item becomes read in place.
+        data.list.forEach(function(item) {
+          item.listStatus = item.status
+        })
         if (loadMore) {
           var loaded = vm.items.reduce(function(ids, item) { ids[item.id] = true; return ids }, {})
           vm.items = vm.items.concat(data.list.filter(function(item) { return !loaded[item.id] }))

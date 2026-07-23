@@ -265,9 +265,9 @@ func TestItemListMarksUnreadAtReadBoundary(t *testing.T) {
 		t.Error("both item-list mark-read buttons should use the small button style")
 	}
 	for _, want := range []string{
-		`<template v-for="(item, index) in items">`,
+		`<template v-for="item in items">`,
 		`:key="'mark-read-' + item.id"`,
-		`v-if="filterSelected == '' && itemUnreadFirst && index > 0 && items[index - 1].status == 'unread' && item.status == 'read'"`,
+		`v-if="item.id == markItemsReadBoundaryId"`,
 		`@click="markItemsRead()"`,
 		`全部设为已读`,
 	} {
@@ -277,6 +277,28 @@ func TestItemListMarksUnreadAtReadBoundary(t *testing.T) {
 	}
 	if strings.Index(itemList, `:key="'mark-read-' + item.id"`) > strings.Index(itemList, `<label :key="item.id"`) {
 		t.Error("mark-read button should appear before the first read item")
+	}
+
+	javascriptFile, err := FS.Open("javascripts/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer javascriptFile.Close()
+	content, err := io.ReadAll(javascriptFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	javascript := string(content)
+	for _, want := range []string{
+		"markItemsReadBoundaryId: function()",
+		"if (this.filterSelected != '' || !this.itemUnreadFirst) return null",
+		"this.items.some(function(item) { return item.status == 'unread' })",
+		"this.items[i - 1].listStatus == 'unread' && this.items[i].listStatus == 'read'",
+		"item.listStatus = item.status",
+	} {
+		if !strings.Contains(javascript, want) {
+			t.Errorf("missing stable mark-read boundary behavior %q", want)
+		}
 	}
 }
 
