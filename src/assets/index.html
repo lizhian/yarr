@@ -218,7 +218,7 @@
                     </div>
                 </div>
                 <template v-for="(item, index) in items">
-                    <button class="btn btn-default btn-block my-3 item-list-mark-read"
+                    <button class="btn btn-sm btn-default btn-block my-3 item-list-mark-read"
                             :key="'mark-read-' + item.id"
                             @click="markItemsRead()"
                             v-if="filterSelected == '' && itemUnreadFirst && index > 0 && items[index - 1].status == 'unread' && item.status == 'read'">
@@ -253,7 +253,7 @@
                     </label>
                 </template>
                 <button class="btn btn-link btn-block loading my-3" v-if="itemsHasMore"></button>
-                <button class="btn btn-default btn-block my-3 item-list-mark-read" @click="markItemsRead()" v-if="showBottomMarkItemsRead">
+                <button class="btn btn-sm btn-default btn-block my-3 item-list-mark-read" @click="markItemsRead()" v-if="showBottomMarkItemsRead">
                     全部设为已读
                 </button>
             </div>

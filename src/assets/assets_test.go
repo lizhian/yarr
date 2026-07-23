@@ -260,6 +260,10 @@ func TestItemListMarksUnreadAtReadBoundary(t *testing.T) {
 		t.Fatal("item list markup not found")
 	}
 	itemList := html[start:end]
+	smallButtonClass := `class="btn btn-sm btn-default btn-block my-3 item-list-mark-read"`
+	if strings.Count(itemList, smallButtonClass) != 2 {
+		t.Error("both item-list mark-read buttons should use the small button style")
+	}
 	for _, want := range []string{
 		`<template v-for="(item, index) in items">`,
 		`:key="'mark-read-' + item.id"`,
