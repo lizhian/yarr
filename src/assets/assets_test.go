@@ -246,6 +246,36 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	}
 }
 
+func TestItemListMarksUnreadAtReadBoundary(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{
+		"settings":      map[string]interface{}{},
+		"authenticated": false,
+	})
+
+	html := output.String()
+	start := strings.Index(html, `<div id="item-list-scroll"`)
+	end := strings.Index(html, `<div id="col-item"`)
+	if start == -1 || end == -1 || start >= end {
+		t.Fatal("item list markup not found")
+	}
+	itemList := html[start:end]
+	for _, want := range []string{
+		`<template v-for="(item, index) in items">`,
+		`:key="'mark-read-' + item.id"`,
+		`v-if="filterSelected == '' && itemUnreadFirst && index > 0 && items[index - 1].status == 'unread' && item.status == 'read'"`,
+		`@click="markItemsRead()"`,
+		`全部设为已读`,
+	} {
+		if !strings.Contains(itemList, want) {
+			t.Errorf("missing mark-read boundary behavior %q", want)
+		}
+	}
+	if strings.Index(itemList, `:key="'mark-read-' + item.id"`) > strings.Index(itemList, `<label :key="item.id"`) {
+		t.Error("mark-read button should appear before the first read item")
+	}
+}
+
 func TestFeedSettingsSectionOrder(t *testing.T) {
 	var output bytes.Buffer
 	Render("index.html", &output, map[string]interface{}{

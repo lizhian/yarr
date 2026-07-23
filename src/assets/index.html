@@ -217,33 +217,41 @@
                         </div>
                     </div>
                 </div>
-                <label v-for="item in items" :key="item.id"
-                       :data-item-id="item.id"
-                       class="selectgroup">
-                    <input type="radio" name="item" :value="item.id" v-model="itemSelected">
-                    <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
-                        <div class="item-list-text flex-grow-1">
-                            <div class="item-list-meta d-flex align-items-center">
-                                <transition-group name="indicator" tag="span" class="d-inline-flex align-items-center">
-                                    <span key="unread" class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
-                                    <span key="favorite" class="icon icon-small mr-1" v-if="item.favorite">{% inline "star-full.svg" %}</span>
-                                </transition-group>
-                                <small class="flex-fill text-truncate mr-1">
-                                    {{ (feedsById[item.feed_id] || {}).title }}
-                                </small>
-                                <small class="flex-shrink-0"><relative-time v-bind:title="formatDate(item.date)" :val="item.date"/></small>
+                <template v-for="(item, index) in items">
+                    <button class="btn btn-default btn-block my-3 item-list-mark-read"
+                            :key="'mark-read-' + item.id"
+                            @click="markItemsRead()"
+                            v-if="filterSelected == '' && itemUnreadFirst && index > 0 && items[index - 1].status == 'unread' && item.status == 'read'">
+                        全部设为已读
+                    </button>
+                    <label :key="item.id"
+                           :data-item-id="item.id"
+                           class="selectgroup">
+                        <input type="radio" name="item" :value="item.id" v-model="itemSelected">
+                        <div class="selectgroup-label d-flex align-items-center" :class="'item-status-'+item.status">
+                            <div class="item-list-text flex-grow-1">
+                                <div class="item-list-meta d-flex align-items-center">
+                                    <transition-group name="indicator" tag="span" class="d-inline-flex align-items-center">
+                                        <span key="unread" class="icon icon-small mr-1" v-if="item.status=='unread'">{% inline "circle-full.svg" %}</span>
+                                        <span key="favorite" class="icon icon-small mr-1" v-if="item.favorite">{% inline "star-full.svg" %}</span>
+                                    </transition-group>
+                                    <small class="flex-fill text-truncate mr-1">
+                                        {{ (feedsById[item.feed_id] || {}).title }}
+                                    </small>
+                                    <small class="flex-shrink-0"><relative-time v-bind:title="formatDate(item.date)" :val="item.date"/></small>
+                                </div>
+                                <div class="item-list-title">{{ item.title || '无标题' }}</div>
                             </div>
-                            <div class="item-list-title">{{ item.title || '无标题' }}</div>
+                            <img class="item-list-image ml-2"
+                                 v-if="itemImage(item)"
+                                 :src="itemImage(item)"
+                                 alt=""
+                                 loading="lazy"
+                                 referrerpolicy="no-referrer"
+                                 @error="$event.target.style.display='none'">
                         </div>
-                        <img class="item-list-image ml-2"
-                             v-if="itemImage(item)"
-                             :src="itemImage(item)"
-                             alt=""
-                             loading="lazy"
-                             referrerpolicy="no-referrer"
-                             @error="$event.target.style.display='none'">
-                    </div>
-                </label>
+                    </label>
+                </template>
                 <button class="btn btn-link btn-block loading my-3" v-if="itemsHasMore"></button>
                 <button class="btn btn-default btn-block my-3 item-list-mark-read" @click="markItemsRead()" v-if="showBottomMarkItemsRead">
                     全部设为已读
