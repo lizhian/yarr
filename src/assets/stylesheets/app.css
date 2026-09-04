@@ -1948,6 +1948,11 @@ body.theme-sepia {
 }
 
 @media (max-width: 359.98px) {
+  .item-list-back {
+    margin-right: .125rem !important;
+    padding-left: .375rem;
+    padding-right: .375rem;
+  }
   .item-list-unread-first {
     padding-left: .375rem;
     padding-right: .375rem;

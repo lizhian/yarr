@@ -122,6 +122,12 @@
         <div id="col-item-list" class="vh-100 position-relative d-flex flex-column border-right flex-shrink-0" :style="{width: itemListWidth+'px'}">
             <drag :width="itemListWidth" @resize="resizeItemList"></drag>
             <div class="px-2 toolbar d-flex align-items-center">
+                <button class="toolbar-item toolbar-item-icon-only item-list-back mr-1 d-block d-md-none"
+                        @click="showFeedList()"
+                        aria-label="显示订阅源"
+                        title="显示订阅源">
+                    <span class="icon toolbar-icon">{% inline "chevron-left.svg" %}</span>
+                </button>
                 <button class="toolbar-item toolbar-item-icon-only item-list-selection-settings mr-1"
                         v-if="(current.type == 'feed' && current.feed.id) || (current.type == 'folder' && current.folder.id)"
                         :aria-label="current.type == 'folder' ? '文件夹设置' : '订阅源设置'"

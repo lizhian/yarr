@@ -194,6 +194,7 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 	}
 
 	orderedControls := []string{
+		`@click="showFeedList()"`,
 		`@click="showCurrentSettings()"`,
 		`@click="toggleArticleListLayout()"`,
 		`aria-label="未读优先"`,
@@ -210,8 +211,15 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		}
 		previousIndex = index
 	}
-	if strings.Contains(toolbar, `@click="showFeedList()"`) || strings.Contains(toolbar, `item-list-back`) {
-		t.Error("item list toolbar should not include a mobile back-to-feeds button")
+	for _, want := range []string{
+		`class="toolbar-item toolbar-item-icon-only item-list-back mr-1 d-block d-md-none"`,
+		`aria-label="显示订阅源"`,
+		`title="显示订阅源"`,
+		`feather-chevron-left`,
+	} {
+		if !strings.Contains(toolbar, want) {
+			t.Errorf("missing mobile back-to-feeds control %q", want)
+		}
 	}
 	if strings.Contains(toolbar, `<span class="toolbar-label">未读优先</span>`) {
 		t.Error("unread-first should use an icon instead of text")
