@@ -1,4 +1,4 @@
-VERSION=3.81
+VERSION=4.0
 GITHASH=$(shell git rev-parse --short=8 HEAD)
 
 GO_TAGS    = sqlite_foreign_keys sqlite_json
@@ -81,10 +81,14 @@ serve:
 test:
 	go test $(GO_FLAGS) ./...
 
+# Requires Playwright and an installed Chrome (or PLAYWRIGHT_CHANNEL).
+test-ui:
+	node --test tests/ui/*.test.cjs
+
 .PHONY: \
 	host \
 	darwin_amd64 darwin_amd64_gui \
 	darwin_arm64 darwin_arm64_gui \
 	windows_amd64 windows_amd64_gui \
 	windows_arm64 windows_arm64_gui \
-	serve test
+	serve test test-ui

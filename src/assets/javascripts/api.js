@@ -43,9 +43,6 @@
       delete: function(id) {
         return api('delete', './api/feeds/' + id)
       },
-      list_items: function(id) {
-        return api('get', './api/feeds/' + id + '/items').then(json)
-      },
       refresh: function() {
         return api('post', './api/feeds/refresh')
       },
@@ -74,9 +71,6 @@
       },
       delete: function(id) {
         return api('delete', './api/folders/' + id)
-      },
-      list_items: function(id) {
-        return api('get', './api/folders/' + id + '/items').then(json)
       }
     },
     items: {

@@ -413,14 +413,21 @@ _Avoid_: Sticky folder, 固定文件夹
 - **字体显示** is changed from the main settings menu, near **主题**.
 - Some compact top-level toolbar actions remain icon-only regardless of **工具栏显示**.
 - Narrow layouts may temporarily render top-level toolbar actions as **仅图标** without changing the saved **工具栏显示** preference.
-- **订阅源设置** is opened from the corresponding **订阅源** row in the subscription source list.
+- **订阅源设置** is opened from the current selection's settings action in the article list toolbar.
 - **基础设置** shows the selected **订阅源** title, website link, subscription link, and **订阅源图标链接** as fixed rows.
 - Empty **基础设置** values are shown as `未设置`.
 - In **基础设置**, clicking the label of an openable link opens that link while clicking the value edits it.
 - In **基础设置**, only an HTTP(S) **订阅链接** can be opened directly; an **RSSHub 订阅链接** is not opened from the row label.
 - In **基础设置**, an empty link value cannot be opened from the row label.
-- **文件夹设置** is opened from the corresponding **文件夹** row in the subscription source list.
-- **订阅源设置** and **文件夹设置** are not article list toolbar actions.
+- **文件夹设置** is opened from the current selection's settings action in the article list toolbar.
+- System settings, **订阅源设置**, **文件夹设置**, and their child settings replace the visible **文章详情** surface, not the reader's selected article state.
+- Settings use one vertically grouped page inside the existing detail column; they do not add a navigation column or use a large modal.
+- Closing settings restores the selected article, content mode, and scroll position. Selecting an article, including the already selected article, closes settings.
+- Changing the subscription list scope while settings are open does not change the object being edited.
+- Settings subpages return to their parent and restore its scroll position. In **移动端视图**, browser Back follows the same hierarchy without changing the address bar.
+- Text fields are edited inline with Save and Cancel. Unsaved drafts are retained by object for the current page session, not across a browser reload. Passwords are never persisted by the frontend.
+- Theme and option changes do not require a page-wide Save. Failed server writes keep the last saved value and show feedback inside settings.
+- Only destructive actions use confirmation dialogs. Reading shortcuts are inactive while settings or a confirmation dialog is open.
 
 ## Example dialogue
 

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -76,8 +76,7 @@ func (s *Server) handleIndex(c *router.Context) {
 
 func (s *Server) handleStatic(c *router.Context) {
 	// don't serve templates
-	dir, name := filepath.Split(c.Vars["path"])
-	if dir == "" && strings.HasSuffix(name, ".html") {
+	if strings.EqualFold(path.Ext(path.Clean(c.Vars["path"])), ".html") {
 		c.Out.WriteHeader(http.StatusNotFound)
 		return
 	}

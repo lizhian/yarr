@@ -3,9 +3,49 @@ package assets
 import (
 	"bytes"
 	"io"
+	"io/fs"
 	"strings"
 	"testing"
+
+	"golang.org/x/net/html"
 )
+
+func TestSettingsAreRenderedInDetailColumn(t *testing.T) {
+	var output bytes.Buffer
+	Render("index.html", &output, map[string]interface{}{"settings": map[string]interface{}{}, "authenticated": false})
+	document, err := html.Parse(&output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var settings, confirmations int
+	var walk func(*html.Node, bool)
+	walk = func(node *html.Node, inDetail bool) {
+		for _, attr := range node.Attr {
+			if attr.Key == "id" && attr.Val == "col-item" {
+				inDetail = true
+			}
+			if attr.Key == "class" && strings.Contains(attr.Val, "settings-workspace") {
+				settings++
+				if !inDetail {
+					t.Error("settings must be in the article detail column")
+				}
+			}
+			if node.Data == "modal" && attr.Key == ":open" {
+				confirmations++
+				if attr.Val != "dialog.open" {
+					t.Errorf("unexpected non-confirmation modal: %s", attr.Val)
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			walk(child, inDetail)
+		}
+	}
+	walk(document, false)
+	if settings != 1 || confirmations != 1 {
+		t.Fatalf("got %d settings workspaces and %d confirmation modals", settings, confirmations)
+	}
+}
 
 func TestStaticAssetVersion(t *testing.T) {
 	previousVersion := assetVersion
@@ -30,6 +70,10 @@ func TestStaticAssetVersion(t *testing.T) {
 				"javascripts/api.js",
 				"javascripts/app.js",
 				"javascripts/key.js",
+				"javascripts/settings.js",
+				"javascripts/navigation.js",
+				"javascripts/components.js",
+				"stylesheets/settings.css",
 			},
 		},
 		{
@@ -235,6 +279,10 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		t.Fatal(err)
 	}
 	javascript := string(content)
+	settings, err := fs.ReadFile(FS, "javascripts/settings.js")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{
 		"function feedRefreshTime(feed, refreshDetails, field)",
 		"function latestFeedRefreshTime(feeds, refreshDetails, folderID, field)",
@@ -245,10 +293,10 @@ func TestItemListToolbarShowsSelectionControls(t *testing.T) {
 		"latestFeedRefreshTime(this.feeds, this.feedRefreshDetails, current.folder.id, 'last_refresh_succeeded_at')",
 		"currentLastRefreshSucceeded: function()",
 		"showCurrentSettings: function()",
-		"this.showFeedSettings(current.feed)",
-		"this.showFolderSettings(current.folder)",
+		"this.showFeedSettings(this.current.feed)",
+		"this.showFolderSettings(this.current.folder)",
 	} {
-		if !strings.Contains(javascript, want) {
+		if !strings.Contains(javascript+string(settings), want) {
 			t.Errorf("missing current selection behavior %q", want)
 		}
 	}
@@ -502,16 +550,9 @@ func TestFeedSortModes(t *testing.T) {
 		}
 	}
 
-	templateFile, err := FS.Open("index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer templateFile.Close()
-	templateContent, err := io.ReadAll(templateFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	template := string(templateContent)
+	var rendered bytes.Buffer
+	Render("index.html", &rendered, map[string]interface{}{"settings": map[string]interface{}{}, "authenticated": false})
+	template := rendered.String()
 	if !strings.Contains(template, "<header>订阅源排序</header>") {
 		t.Fatal("feed sort control is missing")
 	}

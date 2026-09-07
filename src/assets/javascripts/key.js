@@ -71,7 +71,7 @@ var shortcutFunctions = {
   },
 }
 
-// If you edit, make sure you update the help modal
+// Keep the shortcuts settings page in sync with these bindings.
 var keybindings = {
   "o": shortcutFunctions.openItemLink,
   "i": shortcutFunctions.toggleReadability,
@@ -109,17 +109,18 @@ var codebindings = {
 }
 
 function isTextBox(element) {
-  var tagName = element.tagName.toLowerCase()
-  // Input elements that aren't text
-  var inputBlocklist = ['button','checkbox','color','file','hidden','image','radio','range','reset','search','submit']
-
-  return tagName === 'textarea' ||
-    ( tagName === 'input'
-      && inputBlocklist.indexOf(element.getAttribute('type').toLowerCase()) == -1
-    )
+  return !!element.closest('input, textarea, select, [contenteditable="true"]')
 }
 
 document.addEventListener('keydown',function(event) {
+  if (vm.dialog.open) return
+  if (vm.settings) {
+    if (event.key === 'Escape' && !isTextBox(event.target)) {
+      event.preventDefault()
+      vm.backSettings()
+    }
+    return
+  }
   // Ignore while focused on text or
   // when using modifier keys (to not clash with browser behaviour)
   if (isTextBox(event.target) || event.metaKey || event.ctrlKey || event.altKey) {

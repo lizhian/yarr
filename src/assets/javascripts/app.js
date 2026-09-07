@@ -343,7 +343,10 @@ function readLocalSetting(key, fallback, normalize) {
 function writeLocalSetting(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch (e) {}
+    return true
+  } catch (e) {
+    return false
+  }
 }
 
 function normalizeThemeName(theme) {
@@ -390,12 +393,6 @@ function readAppFontSize() {
   }
 }
 
-function writeAppFontSize(size) {
-  try {
-    localStorage.setItem(APP_FONT_SIZE_KEY, JSON.stringify(normalizeAppFontSize(size)))
-  } catch (e) {}
-}
-
 function applyAppFontSize(size) {
   document.documentElement.style.setProperty('font-size', normalizeAppFontSize(size) + 'px', 'important')
 }
@@ -410,165 +407,8 @@ function setArticleListLayout(feedSelected, layout) {
   writeArticleListLayouts(layouts)
 }
 
-Vue.component('drag', {
-  props: ['width'],
-  template: '<div class="drag"></div>',
-  mounted: function() {
-    var self = this
-    var startX = undefined
-    var initW = undefined
-    var onMouseMove = function(e) {
-      var offset = e.clientX - startX
-      var newWidth = initW + offset
-      self.$emit('resize', newWidth)
-    }
-    var onMouseUp = function(e) {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-    this.$el.addEventListener('mousedown', function(e) {
-      startX = e.clientX
-      initW = self.width
-      document.addEventListener('mousemove', onMouseMove)
-      document.addEventListener('mouseup', onMouseUp)
-    })
-  },
-})
-
-Vue.component('dropdown', {
-  props: ['class', 'toggle-class', 'ref', 'drop', 'title'],
-  data: function() {
-    return {open: false}
-  },
-  template: `
-    <div class="dropdown" :class="$attrs.class">
-      <button ref="btn" @click="toggle" :class="btnToggleClass" :title="$props.title"><slot name="button"></slot></button>
-      <div ref="menu" class="dropdown-menu" :class="{show: open}"><slot v-if="open"></slot></div>
-    </div>
-  `,
-  computed: {
-    btnToggleClass: function() {
-      var c = this.$props.toggleClass || ''
-      c += ' dropdown-toggle dropdown-toggle-no-caret'
-      c += this.open ? ' show' : ''
-      return c.trim()
-    }
-  },
-  methods: {
-    toggle: function(e) {
-      this.open ? this.hide() : this.show()
-    },
-    show: function(e) {
-      this.open = true
-      this.$refs.menu.style.top = this.$refs.btn.offsetHeight + 'px'
-      var drop = this.$props.drop
-
-      if (drop === 'right') {
-        this.$refs.menu.style.left = 'auto'
-        this.$refs.menu.style.right = '0'
-      } else if (drop === 'center') {
-        this.$nextTick(function() {
-          var btnWidth = this.$refs.btn.getBoundingClientRect().width
-          var menuWidth = this.$refs.menu.getBoundingClientRect().width
-          this.$refs.menu.style.left = '-' + ((menuWidth - btnWidth) / 2) + 'px'
-        }.bind(this))
-      }
-
-      document.addEventListener('click', this.clickHandler)
-    },
-    hide: function() {
-      this.open = false
-      document.removeEventListener('click', this.clickHandler)
-    },
-    clickHandler: function(e) {
-      var dropdown = e.target.closest('.dropdown')
-      if (dropdown == null || dropdown != this.$el) return this.hide()
-      if (e.target.closest('.dropdown-item') != null) return this.hide()
-    }
-  },
-})
-
-Vue.component('modal', {
-  props: ['open'],
-  template: `
-    <div class="modal custom-modal" tabindex="-1" role="dialog" aria-modal="true" v-if="$props.open">
-      <div class="modal-dialog">
-        <div class="modal-content" ref="content">
-          <div class="modal-body">
-            <slot v-if="$props.open"></slot>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-  data: function() {
-    return {opening: false}
-  },
-  watch: {
-    'open': function(newVal) {
-      if (newVal) {
-        this.opening = true
-        document.addEventListener('click', this.handleClick)
-      } else {
-        document.removeEventListener('click', this.handleClick)
-      }
-    },
-  },
-  methods: {
-    handleClick: function(e) {
-      if (this.opening) {
-        this.opening = false
-        return
-      }
-      if (e.target.closest('.custom-modal') !== this.$el) return
-      if (e.target.closest('.modal-content') == null) this.$emit('hide')
-    },
-  },
-})
-
-function dateRepr(d, maxDays) {
-  var sec = (new Date().getTime() - d.getTime()) / 1000
-  var neg = sec < 0
-  var out = ''
-
-  sec = Math.abs(sec)
-  if (sec < 2700)  // less than 45 minutes
-    out = Math.round(sec / 60) + 'm'
-  else if (sec < 86400)  // less than 24 hours
-    out = Math.round(sec / 3600) + 'h'
-  else if (maxDays)
-    out = Math.min(Math.round(sec / 86400), maxDays) + 'd'
-  else if (sec < 604800)  // less than a week
-    out = Math.round(sec / 86400) + 'd'
-  else
-    out = d.toLocaleDateString(undefined, {year: "numeric", month: "long", day: "numeric"})
-
-  if (neg) return '-' + out
-  return out
-}
-
-Vue.component('relative-time', {
-  props: ['val', 'maxDays'],
-  data: function() {
-    var d = new Date(this.val)
-    return {
-      'date': d,
-      'formatted': dateRepr(d, this.maxDays),
-      'interval': null,
-    }
-  },
-  template: '<time :datetime="val">{{ formatted }}</time>',
-  mounted: function() {
-    this.interval = setInterval(function() {
-      this.formatted = dateRepr(this.date, this.maxDays)
-    }.bind(this), 600000)  // every 10 minutes
-  },
-  destroyed: function() {
-    clearInterval(this.interval)
-  },
-})
-
 var vm = new Vue({
+  mixins: [settingsMixin, navigationMixin],
   created: function() {
     applyAppFontSize(this.appFontSize)
     this.refreshStats()
@@ -612,12 +452,6 @@ var vm = new Vue({
       'feedSort': normalizeFeedSort(s.feed_sort),
       'feedSortOptions': FEED_SORT_OPTIONS,
       'feedIconErrors': {},
-      'feedNewChoice': [],
-      'feedNewChoiceSelected': '',
-      'feedNewFolderId': null,
-      'feedNewContentMode': 'normal',
-      'feedNewRankingMode': 'off',
-      'feedDeleteSelectedIds': [],
       'items': [],
       'itemsHasMore': true,
       'itemsCursor': null,
@@ -641,35 +475,10 @@ var vm = new Vue({
       'feedRefreshDetails': {},
       'feedRefreshDetailsInitialized': false,
       'autoReadScrollAll': !!s.auto_read_scroll,
-      'authConfig': {
-        enabled: app.authenticated,
-        username: '',
-      },
-      'authForm': {
-        enabled: app.authenticated,
-        username: '',
-        password: '',
-      },
-
       'filteredFeedStats': {},
       'filteredFolderStats': {},
       'filteredTotalStats': null,
 
-      'settings': '',
-      'settingsFeed': null,
-      'settingsFolder': null,
-      'dialog': {
-        open: false,
-        type: 'alert',
-        title: '',
-        message: '',
-        inputValue: '',
-        inputType: 'text',
-        confirmText: '确定',
-        cancelText: '取消',
-        danger: false,
-        resolve: null,
-      },
       'loading': {
         'feeds': 0,
         'newfeed': false,
@@ -692,7 +501,7 @@ var vm = new Vue({
       'themeColors': {
         'night': '#1f1f1f',
         'sepia': '#f2e6bd',
-        'light': '#f7f7f5',
+        'light': '#f5f6f6',
       },
       'refreshRate': s.refresh_rate,
       'backupEnabled': !!s.backup_enabled,
@@ -706,12 +515,6 @@ var vm = new Vue({
       ],
       'authenticated': app.authenticated,
       'feed_errors': {},
-      'navigationHistory': {
-        initialized: false,
-        applyingPop: false,
-        syncPending: false,
-        layer: null,
-      },
       'statusPollTimeout': null,
       'logoRefreshAnimating': false,
 
@@ -747,19 +550,6 @@ var vm = new Vue({
       })
       folders.push({id: null, feeds: feedsByFolders[null]})
       return folders
-    },
-    feedDeleteGroups: function() {
-      return this.foldersWithFeeds
-        .filter(function(folder) {
-          return folder.feeds && folder.feeds.length
-        })
-        .map(function(folder) {
-          return {
-            id: folder.id,
-            title: folder.id ? folder.title : '无文件夹',
-            feeds: folder.feeds,
-          }
-        })
     },
     feedsById: function() {
       return this.feeds.reduce(function(acc, f) { acc[f.id] = f; return acc }, {})
@@ -852,21 +642,6 @@ var vm = new Vue({
     itemAtEnd: function() {
       return !this.items.length || this.itemSelected == this.items[this.items.length - 1].id
     },
-    currentFeedRefreshDetail: function() {
-      if (!this.settingsFeed) return null
-      return this.feedRefreshDetails[this.settingsFeed.id] || null
-    },
-    currentFeedLastRefreshedAt: function() {
-      if (!this.settingsFeed) return ''
-      return feedRefreshTime(this.settingsFeed, this.feedRefreshDetails, 'last_refreshed_at')
-    },
-    currentFeedLastRefreshSucceededAt: function() {
-      if (!this.settingsFeed) return ''
-      return feedRefreshTime(this.settingsFeed, this.feedRefreshDetails, 'last_refresh_succeeded_at')
-    },
-    showFeedContentSelector: function() {
-      return this.settingsFeed && normalizeContentMode(this.settingsFeed.content_mode) == 'readability'
-    },
     toolbarNarrow: function() {
       return this.feedListWidth < 280 || this.itemListWidth < 280
     },
@@ -894,8 +669,6 @@ var vm = new Vue({
       handler: function(theme) {
         this.updateMetaTheme(theme.name)
         this.updateBodyClass()
-        writeLocalSetting(THEME_NAME_KEY, theme.name)
-        writeLocalSetting(THEME_FONT_KEY, theme.font)
       },
     },
     'feedStats': {
@@ -915,7 +688,7 @@ var vm = new Vue({
     'filterSelected': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({filter: newVal}).then(this.refreshItems.bind(this, false))
-      this.itemSelected = null
+      if (!this.settings) this.itemSelected = null
       this.computeStats()
       this.syncNavigationHistory()
     },
@@ -970,26 +743,9 @@ var vm = new Vue({
       if (oldVal === undefined) return  // do nothing, initial setup
       api.settings.update({item_list_width: newVal})
     }, 1000),
-    'feedSort': function(newVal, oldVal) {
-      if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({feed_sort: newVal})
-    },
-    'refreshRate': function(newVal, oldVal) {
-      if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({refresh_rate: newVal})
-    },
     'appFontSize': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
       applyAppFontSize(newVal)
-      writeAppFontSize(newVal)
-    },
-    'backupEnabled': function(newVal, oldVal) {
-      if (oldVal === undefined) return  // do nothing, initial setup
-      api.settings.update({backup_enabled: newVal})
-    },
-    'toolbarDisplay': function(newVal, oldVal) {
-      if (oldVal === undefined) return  // do nothing, initial setup
-      writeLocalSetting(TOOLBAR_DISPLAY_KEY, newVal)
     },
     'articleListLayout': function(newVal, oldVal) {
       if (oldVal === undefined) return  // do nothing, initial setup
@@ -1001,132 +757,6 @@ var vm = new Vue({
     },
   },
   methods: {
-    currentNavigationLayer: function() {
-      if (this.itemSelected !== null) return 'item'
-      if (this.feedSelected !== null) return 'items'
-      return 'feeds'
-    },
-    navigationLayerRank: function(layer) {
-      return {
-        feeds: 0,
-        items: 1,
-        item: 2,
-      }[layer]
-    },
-    navigationState: function(layer) {
-      return {
-        yarr: true,
-        layer: layer,
-        feedSelected: this.feedSelected,
-        itemSelected: this.itemSelected,
-      }
-    },
-    canUseNavigationHistory: function() {
-      return isMobileLayout() &&
-        window.history &&
-        typeof window.history.pushState === 'function' &&
-        typeof window.history.replaceState === 'function'
-    },
-    initNavigationHistory: function() {
-      if (this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
-
-      var layer = this.currentNavigationLayer()
-      window.history.replaceState(this.navigationState('feeds'), document.title)
-
-      if (this.navigationLayerRank(layer) >= this.navigationLayerRank('items')) {
-        window.history.pushState(this.navigationState('items'), document.title)
-      }
-      if (layer === 'item') {
-        window.history.pushState(this.navigationState('item'), document.title)
-      }
-
-      this.navigationHistory.initialized = true
-      this.navigationHistory.layer = layer
-      window.addEventListener('popstate', this.handleNavigationPop)
-    },
-    syncNavigationHistory: function() {
-      if (this.navigationHistory.applyingPop) return
-      if (!this.navigationHistory.initialized) this.initNavigationHistory()
-      if (!this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
-      if (this.navigationHistory.syncPending) return
-
-      this.navigationHistory.syncPending = true
-      this.$nextTick(function() {
-        this.navigationHistory.syncPending = false
-        this.applyNavigationHistorySync()
-      })
-    },
-    applyNavigationHistorySync: function() {
-      if (this.navigationHistory.applyingPop) return
-      if (!this.navigationHistory.initialized || !this.canUseNavigationHistory()) return
-
-      var oldLayer = this.navigationHistory.layer
-      var newLayer = this.currentNavigationLayer()
-
-      if (oldLayer === newLayer) {
-        window.history.replaceState(this.navigationState(newLayer), document.title)
-        return
-      }
-
-      var oldRank = this.navigationLayerRank(oldLayer)
-      var newRank = this.navigationLayerRank(newLayer)
-
-      if (newRank > oldRank) {
-        if (oldLayer === 'feeds' && this.navigationLayerRank(newLayer) >= this.navigationLayerRank('items')) {
-          window.history.pushState(this.navigationState('items'), document.title)
-        }
-        if (newLayer === 'item') {
-          window.history.pushState(this.navigationState('item'), document.title)
-        }
-      } else {
-        this.navigationHistory.applyingPop = true
-        window.history.go(newRank - oldRank)
-        setTimeout(function() {
-          this.navigationHistory.applyingPop = false
-        }.bind(this), 500)
-      }
-
-      this.navigationHistory.layer = newLayer
-    },
-    handleNavigationPop: function(event) {
-      if (!isMobileLayout()) return
-      if (!event.state || !event.state.yarr) return
-
-      this.navigationHistory.applyingPop = true
-      this.navigationHistory.layer = event.state.layer || 'feeds'
-
-      if (event.state.layer === 'feeds') {
-        this.itemSelected = null
-        this.feedSelected = null
-      } else if (event.state.layer === 'items') {
-        this.feedSelected = event.state.feedSelected
-        this.itemSelected = null
-      } else if (event.state.layer === 'item') {
-        this.feedSelected = event.state.feedSelected
-        this.itemSelected = event.state.itemSelected
-      }
-
-      this.$nextTick(function() {
-        this.navigationHistory.applyingPop = false
-      })
-    },
-    closeItem: function() {
-      if (this.itemSelected === null) return
-      if (this.navigationHistory.initialized && this.canUseNavigationHistory()) {
-        window.history.back()
-        return
-      }
-      this.itemSelected = null
-    },
-    showFeedList: function() {
-      if (this.feedSelected === null) return
-      if (this.navigationHistory.initialized && this.canUseNavigationHistory() && this.currentNavigationLayer() === 'items') {
-        window.history.back()
-        return
-      }
-      this.itemSelected = null
-      this.feedSelected = null
-    },
     updateMetaTheme: function(theme) {
       document.querySelector("meta[name='theme-color']").content = this.themeColors[theme]
     },
@@ -1237,6 +867,7 @@ var vm = new Vue({
           vm.folders = values[0]
           vm.feeds = values[1]
           vm.ensureFeedSelectionExists()
+          vm.reconcileSettingsTargets()
         })
     },
     refreshItems: function(loadMore = false) {
@@ -1494,267 +1125,6 @@ var vm = new Vue({
       }
       return new Date(datestr).toLocaleDateString(undefined, options)
     },
-    moveFeed: function(feed, folder) {
-      var folder_id = folder ? folder.id : null
-      api.feeds.update(feed.id, {folder_id: folder_id}).then(function() {
-        feed.folder_id = folder_id
-        vm.refreshStats()
-      })
-    },
-    moveFeedToNewFolder: function(feed) {
-      this.promptDialog('请输入文件夹名称：').then(function(title) {
-        if (!title) return
-        api.folders.create({'title': title}).then(function(folder) {
-          api.feeds.update(feed.id, {folder_id: folder.id}).then(function() {
-            feed.folder_id = folder.id
-            vm.settings = ''
-            vm.refreshFeeds().then(function() {
-              vm.refreshStats()
-            })
-          })
-        })
-      })
-    },
-    createNewFeedFolder: function() {
-      this.promptDialog('请输入文件夹名称：').then(function(title) {
-        if (!title) return
-        api.folders.create({'title': title}).then(function(result) {
-          vm.refreshFeeds().then(function() {
-            vm.feedNewFolderId = result.id
-          })
-        })
-      })
-    },
-    renameFolder: function(folder) {
-      this.promptDialog('请输入新名称', folder.title).then(function(newTitle) {
-        if (!newTitle) return
-        api.folders.update(folder.id, {title: newTitle}).then(function() {
-          folder.title = newTitle
-          this.folders.sort(function(a, b) {
-            return a.title.localeCompare(b.title)
-          })
-        }.bind(this))
-      }.bind(this))
-    },
-    deleteFolder: function(folder) {
-      this.confirmDialog('确定删除文件夹「' + folder.title + '」吗？', '删除文件夹').then(function(confirmed) {
-        if (!confirmed) return
-        api.folders.delete(folder.id).then(function() {
-          vm.settings = ''
-          vm.settingsFolder = null
-          vm.feedSelected = null
-          vm.refreshStats()
-          vm.refreshFeeds()
-        })
-      })
-    },
-    updateFeedLink: function(feed) {
-      this.promptDialog('请输入订阅源链接', feed.feed_link).then(function(newLink) {
-        if (!newLink) return
-        api.feeds.update(feed.id, {feed_link: newLink}).then(function() {
-          feed.feed_link = newLink
-        })
-      })
-    },
-    renameFeed: function(feed) {
-      this.promptDialog('请输入新名称', feed.title).then(function(newTitle) {
-        if (!newTitle) return
-        api.feeds.update(feed.id, {title: newTitle}).then(function() {
-          feed.title = newTitle
-        })
-      })
-    },
-    updateFeedContentSelector: function(feed) {
-      this.promptDialog('请输入正文选择器', feed.content_selector || '').then(function(selector) {
-        if (selector === null) return
-        api.feeds.update(feed.id, {content_selector: selector}).then(function(res) {
-          if (res.ok) {
-            feed.content_selector = selector.trim()
-          } else {
-            vm.alertDialog('正文选择器格式不支持。')
-          }
-        })
-      })
-    },
-    updateFeedContentMode: function(feed, mode) {
-      mode = normalizeContentMode(mode)
-      api.feeds.update(feed.id, {content_mode: mode}).then(function(res) {
-        if (res.ok) {
-          feed.content_mode = mode
-        } else {
-          vm.alertDialog('内容方式不支持。')
-        }
-      })
-    },
-    updateFeedRankingMode: function(feed, mode) {
-      api.feeds.update(feed.id, {ranking_mode: mode}).then(function(res) {
-        if (res.ok) {
-          feed.ranking_mode = mode
-        } else {
-          vm.alertDialog('榜单模式设置不支持。')
-        }
-      })
-    },
-    normalizeContentMode: normalizeContentMode,
-    trimValue: function(value) {
-      return (value || '').trim()
-    },
-    isHTTPURL: function(value) {
-      return /^https?:\/\//i.test(this.trimValue(value))
-    },
-    updateFeedIconURL: function(feed) {
-      this.promptDialog('请输入图标链接', feed.icon_url || '').then(function(iconURL) {
-        if (iconURL === null) return
-        api.feeds.update(feed.id, {icon_url: iconURL}).then(function(res) {
-          if (res.ok) {
-            feed.icon_url = iconURL.trim()
-            feed.custom_icon = !!feed.icon_url
-          } else {
-            vm.alertDialog('订阅源图标链接必须是 HTTP(S) URL。')
-          }
-        })
-      })
-    },
-    refreshFeedIcon: function(feed) {
-      if (!feed || this.loading.feedIcon === feed.id) return
-      this.loading.feedIcon = feed.id
-      api.feeds.refresh_icon(feed.id).then(function(updatedFeed) {
-        if (updatedFeed && updatedFeed.id) {
-          feed.icon_url = updatedFeed.icon_url
-          feed.custom_icon = !!updatedFeed.custom_icon
-        }
-        vm.feedIconErrors = {}
-      }).then(function() {
-        vm.loading.feedIcon = null
-      }, function() {
-        vm.loading.feedIcon = null
-      })
-    },
-    refreshFeed: function(feed) {
-      if (!feed || this.loading.feed === feed.id) return
-      this.loading.feed = feed.id
-      api.feeds.refresh_one(feed.id).then(function() {
-        vm.refreshStats(true)
-        return vm.refreshItems()
-      }).then(function() {
-        vm.loading.feed = null
-      }, function() {
-        vm.loading.feed = null
-      })
-    },
-    deleteFeed: function(feed) {
-      this.confirmDialog('确定删除订阅源「' + feed.title + '」吗？', '删除订阅源').then(function(confirmed) {
-        if (!confirmed) return
-        api.feeds.delete(feed.id).then(function() {
-          vm.settings = ''
-          vm.settingsFeed = null
-          vm.feedSelected = null
-          vm.refreshStats()
-          vm.refreshFeeds()
-        })
-      })
-    },
-    deleteSelectedFeeds: function() {
-      var ids = this.feedDeleteSelectedIds.slice()
-      if (!ids.length || this.loading.deletefeeds) return
-
-      this.confirmDialog('确定删除 ' + ids.length + ' 个订阅源吗？', '删除订阅源').then(function(confirmed) {
-        if (!confirmed) return
-
-        vm.loading.deletefeeds = true
-        Promise.all(ids.map(function(id) {
-          return api.feeds.delete(id).then(function(res) {
-            return res.ok
-          }).catch(function() {
-            return false
-          })
-        })).then(function(results) {
-          var failed = results.some(function(ok) { return !ok })
-          vm.settings = ''
-          vm.settingsFeed = null
-          vm.feedDeleteSelectedIds = []
-          vm.feedSelected = null
-          vm.itemSelected = null
-          return vm.refreshFeeds().then(function() {
-            vm.refreshStats()
-            if (failed) vm.alertDialog('部分订阅源删除失败。')
-          })
-        }).then(function() {
-          vm.loading.deletefeeds = false
-        }).catch(function() {
-          vm.loading.deletefeeds = false
-          vm.alertDialog('部分订阅源删除失败。')
-        })
-      })
-    },
-    createFeed: function(event) {
-      var form = event.target
-      var contentSelector = ''
-      if (this.feedNewContentMode == 'readability') {
-        var contentSelectorInput = form.querySelector('input[name=content_selector]')
-        contentSelector = contentSelectorInput ? contentSelectorInput.value : ''
-      }
-      var data = {
-        url: normalizeRSSHubSubscriptionInput(form.querySelector('input[name=url]').value).value,
-        folder_id: this.feedNewFolderId,
-        content_selector: contentSelector,
-        content_mode: this.feedNewContentMode,
-        ranking_mode: this.feedNewRankingMode,
-      }
-      if (this.feedNewChoiceSelected) {
-        data.url = this.feedNewChoiceSelected
-      }
-      this.createFeedFromData(data, true)
-    },
-    createFeedFromData: function(data, allowChoice) {
-      this.loading.newfeed = true
-      api.feeds.create(data).then(function(result) {
-        if (result.status === 'success') {
-          vm.refreshFeeds()
-          vm.refreshStats()
-          vm.settings = ''
-          vm.feedSelected = 'feed:' + result.feed.id
-        } else if (allowChoice && result.status === 'multiple') {
-          vm.feedNewChoice = result.choice
-          vm.feedNewChoiceSelected = result.choice[0].url
-        } else if (result.status === 'error') {
-          vm.alertDialog(result.message || '无法添加订阅源。')
-        } else if (result.error) {
-          vm.alertDialog(result.error)
-        } else {
-          vm.alertDialog('未在给定 URL 找到订阅源。')
-        }
-        vm.loading.newfeed = false
-      })
-    },
-    createRSSHubFeed: function(kind) {
-      var config = {
-        bilibili: {
-          prompt: '请输入 Bilibili UID 或空间链接',
-          normalize: normalizeBilibiliQuickAddInput,
-        },
-        telegram: {
-          prompt: '请输入 Telegram 频道 ID 或 t.me 链接',
-          normalize: normalizeTelegramQuickAddInput,
-        },
-      }[kind]
-      if (!config) return
-
-      this.promptDialog(config.prompt).then(function(value) {
-        var normalized = config.normalize((value || '').trim())
-        if (!normalized.value) return
-        if (!normalized.normalized) {
-          vm.alertDialog('无法识别 UID/频道 ID。')
-          return
-        }
-
-        var folderId = vm.current.feed.folder_id || vm.current.folder.id || null
-        vm.createFeedFromData({
-          url: normalized.value,
-          folder_id: folderId,
-        }, false)
-      })
-    },
     toggleItemStatus: function(item, targetstatus, fallbackstatus) {
       var oldstatus = item.status
       var newstatus = item.status !== targetstatus ? targetstatus : fallbackstatus
@@ -1809,78 +1179,6 @@ var vm = new Vue({
     },
     toggleItemRead: function(item) {
       this.toggleItemStatus(item, 'unread', 'read')
-    },
-    importOPML: function(event) {
-      var input = event.target
-      var form = document.querySelector('#opml-import-form')
-      this.settings = ''
-      api.upload_opml(form).then(function() {
-        input.value = ''
-        vm.refreshFeeds()
-        vm.refreshStats()
-      })
-    },
-    logout: function() {
-      api.logout().then(function() {
-        document.location.reload()
-      })
-    },
-    loadAuthConfig: function() {
-      return api.auth.get().then(function(config) {
-        vm.authConfig = config
-        vm.authForm.enabled = config.enabled
-        vm.authForm.username = config.username || ''
-        vm.authForm.password = ''
-        vm.authenticated = config.enabled
-      })
-    },
-    updateAuthConfig: function() {
-      var payload = {
-        enabled: this.authForm.enabled,
-        username: this.authForm.username,
-        password: this.authForm.password,
-      }
-      if (!payload.enabled) {
-        this.confirmDialog('关闭访问认证后将清空已保存的用户名和密码。', '关闭访问认证').then(function(confirmed) {
-          if (!confirmed) return
-          api.auth.update({enabled: false}).then(function(res) {
-            if (res.ok) document.location.reload()
-            else vm.alertDialog('未能关闭访问认证。')
-          })
-        })
-        return
-      }
-      api.auth.update(payload).then(function(res) {
-        if (res.ok) {
-          document.location.reload()
-        } else {
-          vm.alertDialog('用户名和密码不能为空。')
-        }
-      })
-    },
-    backupData: function() {
-      if (this.loading.backup) return
-      this.loading.backup = true
-      api.backups.create().then(function(result) {
-        vm.alertDialog(vm.backupSummaryMessage(result), '备份完成')
-      }).catch(function() {
-        vm.alertDialog('备份失败。')
-      }).then(function() {
-        vm.loading.backup = false
-      })
-    },
-    backupSummaryMessage: function(result) {
-      var files = result.files || []
-      var lines = [
-        '订阅源：' + (result.feed_count || 0) + ' 个',
-        '备份目录：' + (result.path || ''),
-        '',
-        '文件：',
-      ]
-      files.forEach(function(name) {
-        lines.push(name)
-      })
-      return lines.join('\n')
     },
     toggleReadability: function() {
       this.setItemSelectedContentMode(this.itemSelectedContentMode == 'readability' ? 'normal' : 'readability')
@@ -1938,113 +1236,6 @@ var vm = new Vue({
         vm.$nextTick(vm.refreshRankingTimes)
       })
     },
-    showSettings: function(settings) {
-      this.settings = settings
-
-      if (settings === 'create') {
-        vm.feedNewChoice = []
-        vm.feedNewChoiceSelected = ''
-        vm.feedNewFolderId = vm.current.feed.folder_id || vm.current.folder.id || null
-        vm.feedNewContentMode = 'normal'
-        vm.feedNewRankingMode = 'off'
-      } else if (settings === 'deletefeeds') {
-        vm.feedDeleteSelectedIds = []
-      } else if (settings === 'auth') {
-        vm.loadAuthConfig()
-      } else if (settings === 'rsshubdetails') {
-        vm.refreshStats()
-      }
-    },
-    showFeedSettings: function(feed) {
-      this.settingsFeed = feed
-      this.settingsFolder = null
-      this.settings = 'feed'
-    },
-    showFolderSettings: function(folder) {
-      this.settingsFolder = folder
-      this.settingsFeed = null
-      this.settings = 'folder'
-    },
-    showCurrentSettings: function() {
-      var current = this.current
-      if (current.type == 'feed' && current.feed.id) this.showFeedSettings(current.feed)
-      if (current.type == 'folder' && current.folder.id) this.showFolderSettings(current.folder)
-    },
-    updateRSSHubBaseUrl: function(event) {
-      var value = event.target.querySelector('[name=rsshub_base_url]').value
-      api.settings.update({rsshub_base_url: value}).then(function(res) {
-        if (res.ok) {
-          api.settings.get().then(function(settings) {
-            vm.rsshubBaseUrl = settings.rsshub_base_url || ''
-            vm.settings = ''
-          })
-        } else {
-          vm.alertDialog('RSSHub 基础链接列表必须每行都是 HTTP(S) URL；以 # 开头的停用地址也必须是合法 URL。')
-        }
-      })
-    },
-    openDialog: function(options) {
-      return new Promise(function(resolve) {
-        this.dialog = {
-          open: true,
-          type: options.type || 'alert',
-          title: options.title || '提示',
-          message: options.message || '',
-          inputValue: options.inputValue || '',
-          inputType: options.inputType || 'text',
-          confirmText: options.confirmText || '确定',
-          cancelText: options.cancelText || '取消',
-          danger: !!options.danger,
-          resolve: resolve,
-        }
-      }.bind(this))
-    },
-    resolveDialog: function(value) {
-      if (!this.dialog.open) return
-      var resolve = this.dialog.resolve
-      this.dialog.open = false
-      this.dialog.resolve = null
-      if (resolve) resolve(value)
-    },
-    submitDialog: function() {
-      if (this.dialog.type === 'prompt') {
-        this.resolveDialog(this.dialog.inputValue)
-      } else {
-        this.resolveDialog(true)
-      }
-    },
-    cancelDialog: function() {
-      if (this.dialog.type === 'confirm') return this.resolveDialog(false)
-      if (this.dialog.type === 'prompt') return this.resolveDialog(null)
-      this.resolveDialog(true)
-    },
-    alertDialog: function(message, title) {
-      return this.openDialog({
-        type: 'alert',
-        title: title || '提示',
-        message: message,
-      })
-    },
-    confirmDialog: function(message, title) {
-      return this.openDialog({
-        type: 'confirm',
-        title: title || '确认',
-        message: message,
-        confirmText: '确定',
-        cancelText: '取消',
-        danger: true,
-      })
-    },
-    promptDialog: function(message, value) {
-      return this.openDialog({
-        type: 'prompt',
-        title: '输入',
-        message: message,
-        inputValue: value || '',
-        confirmText: '确定',
-        cancelText: '取消',
-      })
-    },
     resizeFeedList: function(width) {
       this.feedListWidth = Math.min(Math.max(200, width), 700)
     },
@@ -2077,34 +1268,21 @@ var vm = new Vue({
       this.resetColumnWidths()
       return this.syncReadingState()
     },
-    resetFeedChoice: function() {
-      this.feedNewChoice = []
-      this.feedNewChoiceSelected = ''
-    },
-    adjustAppFontSize: function(delta) {
-      this.appFontSize = Math.min(APP_FONT_SIZE_MAX, Math.max(APP_FONT_SIZE_MIN, this.appFontSize + delta))
-    },
-    fetchAllFeeds: function() {
-      this.resetColumnWidths()
-      return this.refreshAllFeeds()
-    },
     refreshAllFeeds: function() {
       if (this.loading.feeds) return Promise.resolve()
-      return api.feeds.refresh().then(function() {
-        return vm.refreshStats()
-      })
+      return this.runSettingsAction('refresh-all', function() {
+        return api.feeds.refresh().then(requireSettingResponse)
+      }, function() { return this.refreshStats() }.bind(this), '已开始刷新。')
     },
     refreshFeedIcons: function() {
       if (this.loading.icons) return
       this.loading.icons = true
-      api.feeds.refresh_icons().then(function() {
-        vm.feedIconErrors = {}
-        return vm.refreshFeeds()
-      }).then(function() {
-        vm.loading.icons = false
+      return this.runSettingsAction('icons', function() {
+        return api.feeds.refresh_icons().then(requireSettingResponse)
       }, function() {
-        vm.loading.icons = false
-      })
+        this.feedIconErrors = {}
+        return this.refreshFeeds()
+      }.bind(this), '图标已更新。').then(function() { this.loading.icons = false }.bind(this))
     },
     computeStats: function() {
       var filter = this.filterSelected

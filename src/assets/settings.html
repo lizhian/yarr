@@ -1,0 +1,411 @@
+{% define "settings" %}
+<section v-if="settings" class="settings-workspace" aria-labelledby="settings-heading">
+    <div class="toolbar settings-toolbar px-2 d-flex align-items-center">
+        <button class="toolbar-item toolbar-item-icon-only" @click="backSettings()" title="返回" aria-label="返回"><span class="icon">{% inline "chevron-left.svg" %}</span></button>
+        <h1 id="settings-heading" ref="settingsHeading" tabindex="-1">{{ settingsTitle }}</h1>
+        <button class="toolbar-item toolbar-item-icon-only" @click="closeSettings()" title="关闭设置" aria-label="关闭设置"><span class="icon">{% inline "x.svg" %}</span></button>
+    </div>
+    <div v-if="settingsNotice" class="settings-notice" role="status">{{ settingsNotice }}</div>
+    <div class="settings-scroll scroll-touch" ref="settingsScroll" @scroll="saveSettingsScroll()">
+            <div v-if="settings=='menu'" class="settings-dialog">
+                <section class="settings-group">
+                    <h2>外观</h2>
+                    <div class="settings-row"><span>主题</span>
+                        <div class="settings-segmented theme-picker">
+                            <button class="btn btn-link" :aria-label="themeTitle(t)" :aria-pressed="theme.name == t" :class="{active: theme.name == t}" @click="saveBrowserSetting('themeName', t)" v-for="t in ['light', 'sepia', 'night']">{{ themeTitle(t) }}</button>
+                        </div>
+                    </div>
+                    <div class="settings-row"><span>字体显示</span>
+                        <div class="settings-segmented">
+                            <button class="btn btn-link" :aria-pressed="theme.font == font.name" :class="{active: theme.font == font.name}" @click="saveBrowserSetting('themeFont', font.name)" v-for="font in fontOptions">{{ font.title }}</button>
+                        </div>
+                    </div>
+                    <div class="settings-row"><label for="settings-font-size">字体大小</label>
+                        <input id="settings-font-size" class="form-control settings-number" type="number" min="10" max="30" :value="appFontSize" @change="saveBrowserSetting('appFontSize', normalizeFontSize($event.target.value)); $event.target.value = appFontSize">
+                    </div>
+                    <div class="settings-row"><span>工具栏显示</span>
+                        <div class="settings-segmented settings-segmented-compact">
+                            <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'text'" :class="{active: toolbarDisplay == 'text'}" @click="saveBrowserSetting('toolbarDisplay', 'text')">文字</button>
+                            <button class="btn btn-link" :aria-pressed="toolbarDisplay == 'icon'" :class="{active: toolbarDisplay == 'icon'}" @click="saveBrowserSetting('toolbarDisplay', 'icon')">图标</button>
+                        </div>
+                    </div>
+                </section>
+                <section class="settings-group">
+                    <h2>阅读</h2>
+                    <div class="settings-row"><span>自动刷新</span>
+                        <div class="settings-segmented settings-segmented-compact refresh-rate-picker">
+                            <button class="btn btn-link" :disabled="settingsPending.refresh_rate" :aria-pressed="refreshRate == option.value" :class="{active: refreshRate == option.value}" @click="saveGlobalSetting('refreshRate', 'refresh_rate', option.value)" v-for="option in refreshRateOptions">{{ option.title }}</button>
+                        </div>
+                    </div>
+                    <div class="settings-row"><header>订阅源排序</header>
+                        <div class="settings-segmented settings-segmented-compact feed-sort-picker">
+                            <button class="btn btn-link" :disabled="settingsPending.feed_sort" :aria-pressed="feedSort == option.name" :class="{active: feedSort == option.name}" @click="saveGlobalSetting('feedSort', 'feed_sort', option.name)" v-for="option in feedSortOptions">{{ option.title }}</button>
+                        </div>
+                    </div>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <button class="settings-dialog-action" @click="showSettings('shortcuts')"><span class="icon mr-2">{% inline "help-circle.svg" %}</span>快捷键</button>
+                    </div>
+                </section>
+                <section class="settings-group" ref="subscriptionSettings">
+                    <h2>订阅管理</h2>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <button class="settings-dialog-action" @click="showSettings('create')"><span class="icon mr-2">{% inline "plus.svg" %}</span>新订阅源</button>
+                        <button class="settings-dialog-action" :disabled="!!loading.feeds" @click="refreshAllFeeds()"><span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>刷新订阅源</button>
+                        <button class="settings-dialog-action" :disabled="loading.icons" @click="refreshFeedIcons()"><span class="icon mr-2">{% inline "globe.svg" %}</span>更新图标</button>
+                        <button class="settings-dialog-action text-danger" @click="showSettings('deletefeeds')"><span class="icon mr-2">{% inline "trash.svg" %}</span>删除订阅源</button>
+                        <form id="opml-import-form" enctype="multipart/form-data">
+                            <input id="opml-import" class="settings-file-input" type="file" name="opml" accept=".opml,.xml" :disabled="settingsPending.opml" @change="importOPML">
+                            <label class="settings-dialog-action mb-0 cursor-pointer" for="opml-import"><span class="icon mr-2">{% inline "download.svg" %}</span>导入 OPML</label>
+                        </form>
+                        <a class="settings-dialog-action" href="./opml/export"><span class="icon mr-2">{% inline "upload.svg" %}</span>导出 OPML</a>
+                    </div>
+                </section>
+                <section class="settings-group">
+                    <h2>RSSHub</h2>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <button class="settings-dialog-action" @click="showSettings('rsshub')"><span class="icon mr-2">{% inline "rss.svg" %}</span>基础链接列表</button>
+                        <button class="settings-dialog-action" @click="showSettings('rsshubdetails')"><span class="icon mr-2">{% inline "list.svg" %}</span>刷新详情</button>
+                    </div>
+                    <setting-field label="Bilibili UID" :draft="settingsDraft('rsshub:bilibili', '')" @save="createRSSHubFeed('bilibili')" placeholder="UID 或空间链接"></setting-field>
+                    <setting-field label="Telegram" :draft="settingsDraft('rsshub:telegram', '')" @save="createRSSHubFeed('telegram')" placeholder="频道 ID 或 t.me 链接"></setting-field>
+                </section>
+                <section class="settings-group">
+                    <h2>数据与安全</h2>
+                    <div class="settings-row"><label for="settings-backup">自动备份</label><input id="settings-backup" type="checkbox" :checked="backupEnabled" :disabled="settingsPending.backup_enabled" @change="saveGlobalSetting('backupEnabled', 'backup_enabled', $event.target.checked)"></div>
+                    <div class="settings-dialog-actions settings-dialog-actions-inline">
+                        <button class="settings-dialog-action" :disabled="loading.backup" @click="backupData()"><span class="icon mr-2">{% inline "download.svg" %}</span>备份数据</button>
+                        <button class="settings-dialog-action" @click="showSettings('auth')"><span class="icon mr-2">{% inline "sliders.svg" %}</span>访问认证</button>
+                        <button class="settings-dialog-action" v-if="authenticated" @click="logout()"><span class="icon mr-2">{% inline "log-out.svg" %}</span>退出登录</button>
+                    </div>
+                </section>
+            </div>
+            <div v-else-if="settings=='feed' && settingsFeed" class="settings-dialog">
+
+
+                <div class="settings-dialog-actions settings-dialog-actions-inline settings-dialog-actions-three mt-3">
+                    <button class="settings-dialog-action" :disabled="loading.feedIcon === settingsFeed.id" @click.prevent="refreshFeedIcon(settingsFeed)">
+                        <span class="icon mr-2">{% inline "globe.svg" %}</span>
+                        更新图标
+                    </button>
+                    <button class="settings-dialog-action" :disabled="loading.feed === settingsFeed.id" @click.prevent="refreshFeed(settingsFeed)" title="刷新订阅源" aria-label="刷新订阅源">
+                        <span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>
+                        刷新
+                    </button>
+                    <button class="settings-dialog-action text-danger" @click.prevent="deleteFeed(settingsFeed)">
+                        <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                        删除
+                    </button>
+                </div>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>基础设置</header>
+                    <div class="settings-dialog-fields">
+                        <setting-field label="标题" :value="settingsFeed.title"  :draft="settingsDraft('feed:' + settingsFeed.id + ':title', settingsFeed.title)" @save="saveTextSetting('feed', settingsFeed, 'title')"></setting-field>
+                        <a class="settings-dialog-field settings-dialog-field-action" :href="settingsFeed.link" rel="noopener noreferrer" target="_blank" referrerpolicy="no-referrer" v-if="settingsFeed.link">
+                            <span class="settings-dialog-field-label">网站链接</span>
+                            <span class="settings-dialog-field-value">{{ settingsFeed.link }}</span>
+                        </a>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-else>
+                            <span class="settings-dialog-field-label">网站链接</span>
+                            <span class="settings-dialog-field-value">未设置</span>
+                        </div>
+                        <setting-field label="订阅链接" :value="settingsFeed.feed_link" :href="isHTTPURL(settingsFeed.feed_link) ? trimValue(settingsFeed.feed_link) : null" :draft="settingsDraft('feed:' + settingsFeed.id + ':feed_link', settingsFeed.feed_link)" @save="saveTextSetting('feed', settingsFeed, 'feed_link')"></setting-field>
+                        <setting-field :label="settingsFeed.custom_icon ? '*图标链接' : '图标链接'" :value="settingsFeed.icon_url" :href="isHTTPURL(settingsFeed.icon_url) ? trimValue(settingsFeed.icon_url) : null" :draft="settingsDraft('feed:' + settingsFeed.id + ':icon_url', settingsFeed.icon_url)" @save="saveTextSetting('feed', settingsFeed, 'icon_url')"></setting-field>
+                        <div class="settings-dialog-field settings-dialog-field-choice">
+                            <span class="settings-dialog-field-label">内容方式</span>
+                            <div class="settings-segmented settings-segmented-compact content-mode-picker">
+                                <button class="btn btn-link"
+                                        :disabled="settingsPending['feed:' + settingsFeed.id + ':content_mode']" :aria-pressed="normalizeContentMode(settingsFeed.content_mode) == option.name"
+                                        :class="{active: normalizeContentMode(settingsFeed.content_mode) == option.name}"
+                                        @click="updateFeedContentMode(settingsFeed, option.name)"
+                                        v-for="option in contentModeOptions">
+                                    {{ option.title }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="settings-dialog-field settings-dialog-field-choice">
+                            <span class="settings-dialog-field-label">榜单模式</span>
+                            <div class="settings-segmented settings-segmented-compact content-mode-picker">
+                                <button class="btn btn-link"
+                                        :disabled="settingsPending['feed:' + settingsFeed.id + ':ranking_mode']" :aria-pressed="settingsFeed.ranking_mode == option.name"
+                                        :class="{active: settingsFeed.ranking_mode == option.name}"
+                                        @click="updateFeedRankingMode(settingsFeed, option.name)"
+                                        v-for="option in rankingModeOptions">
+                                    {{ option.title }}
+                                </button>
+                            </div>
+                        </div>
+                        <setting-field label="正文选择器" :value="settingsFeed.content_selector" v-if="showFeedContentSelector" :draft="settingsDraft('feed:' + settingsFeed.id + ':content_selector', settingsFeed.content_selector)" @save="saveTextSetting('feed', settingsFeed, 'content_selector')"></setting-field>
+
+                    </div>
+                </section>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>移动到</header>
+                    <div class="settings-dialog-actions settings-dialog-actions-three settings-dialog-actions-left">
+                        <button class="settings-dialog-action"
+                                v-if="folder.id != settingsFeed.folder_id"
+                                v-for="folder in folders"
+                                @click="moveFeed(settingsFeed, folder)">
+                            <span class="icon mr-2">{% inline "folder.svg" %}</span>
+                            <span class="settings-dialog-action-label">{{ folder.title }}</span>
+                        </button>
+                        <button class="settings-dialog-action text-muted" @click="moveFeed(settingsFeed, null)" v-if="settingsFeed.folder_id">
+                            <span class="icon mr-2">{% inline "folder-minus.svg" %}</span>
+                            无文件夹
+                        </button>
+                        <setting-field label="新文件夹" :draft="settingsDraft('feed:' + settingsFeed.id + ':newfolder', '')" @save="createSettingsFolder(settingsFeed)"></setting-field>
+                    </div>
+                </section>
+
+                <hr>
+
+                <section class="settings-dialog-section">
+                    <header>刷新详情</header>
+                    <div class="settings-dialog-fields" v-if="currentFeedLastRefreshedAt">
+                        <div class="settings-dialog-field settings-dialog-field-disabled">
+                            <span class="settings-dialog-field-label">刷新时间</span>
+                            <span class="settings-dialog-field-value">
+                                <relative-time :val="currentFeedLastRefreshedAt"></relative-time>
+                            </span>
+                        </div>
+                        <div class="settings-dialog-field settings-dialog-field-disabled">
+                            <span class="settings-dialog-field-label">成功时间</span>
+                            <span class="settings-dialog-field-value" v-if="currentFeedLastRefreshSucceededAt">
+                                <relative-time :val="currentFeedLastRefreshSucceededAt"></relative-time>
+                            </span>
+                            <span class="settings-dialog-field-value" v-else>从未成功</span>
+                        </div>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-if="currentFeedRefreshDetail">
+                            <span class="settings-dialog-field-label">状态</span>
+                            <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.success ? '成功' : '失败' }}</span>
+                        </div>
+                        <template v-if="currentFeedRefreshDetail && currentFeedRefreshDetail.success">
+                            <div class="settings-dialog-field settings-dialog-field-disabled">
+                                <span class="settings-dialog-field-label">文章</span>
+                                <span class="settings-dialog-field-value">获取 {{ currentFeedRefreshDetail.fetched_items }} 篇，新增 {{ currentFeedRefreshDetail.new_items }} 篇</span>
+                            </div>
+                            <a class="settings-dialog-field settings-dialog-field-action"
+                               :href="currentFeedRefreshDetail.rsshub_link"
+                               rel="noopener noreferrer"
+                               target="_blank"
+                               referrerpolicy="no-referrer"
+                               v-if="currentFeedRefreshDetail.rsshub_link">
+                                <span class="settings-dialog-field-label">刷新链接</span>
+                                <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.rsshub_link }}</span>
+                            </a>
+                        </template>
+                        <div class="settings-dialog-field settings-dialog-field-disabled" v-else-if="currentFeedRefreshDetail">
+                            <span class="settings-dialog-field-label">错误</span>
+                            <span class="settings-dialog-field-value">{{ currentFeedRefreshDetail.error }}</span>
+                        </div>
+                    </div>
+                    <p class="light cursor-default mb-0" v-else>暂无刷新记录</p>
+                </section>
+
+            </div>
+            <div v-else-if="settings=='folder' && settingsFolder" class="settings-dialog">
+
+
+                <div class="settings-dialog-actions mt-3">
+                    <setting-field label="名称" :value="settingsFolder.title" :draft="settingsDraft('folder:' + settingsFolder.id + ':title', settingsFolder.title)" @save="saveTextSetting('folder', settingsFolder, 'title')"></setting-field>
+                    <button class="settings-dialog-action text-danger" @click="deleteFolder(settingsFolder)">
+                        <span class="icon mr-2">{% inline "trash.svg" %}</span>
+                        删除
+                    </button>
+                </div>
+            </div>
+            <div v-else-if="settings=='create'">
+
+                <form action="" @submit.prevent="createFeed()" class="mt-4">
+                    <label for="feed-url">URL</label>
+                    <input id="feed-url" name="url" v-model="settingsNewURL" type="text" class="form-control" required autocomplete="off" :readonly="feedNewChoice.length > 0" placeholder="https://example.com/feed、Bilibili 空间或 t.me 频道" v-focus>
+                    <label class="mt-3 d-block">
+                        文件夹
+
+                    </label>
+                    <div class="settings-segmented feed-folder-picker">
+                        <label class="btn btn-link mb-0" :class="{active: feedNewFolderId === null}">
+                            <input type="radio" name="folder_id" :value="null" v-model="feedNewFolderId">
+                            <span class="text-truncate">无文件夹</span>
+                        </label>
+                        <label class="btn btn-link mb-0"
+                               :class="{active: feedNewFolderId === folder.id}"
+                               v-for="folder in folders">
+                            <input type="radio" name="folder_id" :value="folder.id" v-model="feedNewFolderId">
+                            <span class="icon mr-2">{% inline "folder.svg" %}</span>
+                            <span class="text-truncate">{{ folder.title }}</span>
+                        </label>
+                    </div>
+                    <setting-field label="新文件夹" :draft="settingsDraft('create:newfolder', '')" @save="createSettingsFolder(null)"></setting-field>
+                    <label class="mt-3 d-block">内容方式</label>
+                    <div class="settings-segmented content-mode-picker">
+                        <label class="btn btn-link mb-0"
+                               :class="{active: feedNewContentMode == option.name}"
+                               v-for="option in contentModeOptions">
+                            <input type="radio" name="content_mode" :value="option.name" v-model="feedNewContentMode">
+                            {{ option.title }}
+                        </label>
+                    </div>
+                    <template v-if="feedNewContentMode == 'readability'">
+                        <label for="feed-content-selector" class="mt-3 d-block">正文选择器</label>
+                        <input id="feed-content-selector" name="content_selector" v-model="settingsNewSelector" type="text" class="form-control" autocomplete="off" placeholder=".content__default">
+                    </template>
+                    <label class="mt-3 d-block">榜单模式</label>
+                    <div class="settings-segmented content-mode-picker">
+                        <label class="btn btn-link mb-0"
+                               :class="{active: feedNewRankingMode == option.name}"
+                               v-for="option in rankingModeOptions">
+                            <input type="radio" name="ranking_mode" :value="option.name" v-model="feedNewRankingMode">
+                            {{ option.title }}
+                        </label>
+                    </div>
+                    <div class="mt-4" v-if="feedNewChoice.length">
+                        <p class="mb-2">
+                            找到多个订阅源，请选择一个：
+                            <a href="#" class="float-right text-decoration-none" @click.prevent="resetFeedChoice()">取消</a>
+                        </p>
+                        <label class="selectgroup" v-for="choice in feedNewChoice">
+                            <input type="radio" name="feedToAdd" :value="choice.url" v-model="feedNewChoiceSelected">
+                            <div class="selectgroup-label">
+                                <div class="text-truncate">{{ choice.title }}</div>
+                                <div class="text-truncate" :class="{light: choice.title}">{{ choice.url }}</div>
+                            </div>
+                        </label>
+                    </div>
+                    <button class="btn btn-block btn-default mt-3" :class="{loading: loading.newfeed}" :disabled="loading.newfeed" type="submit">添加</button>
+                </form>
+            </div>
+            <div v-else-if="settings=='deletefeeds'" class="settings-dialog">
+
+
+                <div class="feed-delete-list mt-3" v-if="feedDeleteGroups.length">
+                    <section class="feed-delete-group" v-for="group in feedDeleteGroups">
+                        <header>{{ group.title }}</header>
+                        <label class="feed-delete-row" v-for="feed in group.feeds">
+                            <input type="checkbox" :value="feed.id" v-model="feedDeleteSelectedIds">
+                            <span class="feed-delete-title">{{ feed.title }}</span>
+                        </label>
+                    </section>
+                </div>
+                <p class="mt-3 light cursor-default" v-else>暂无订阅源</p>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-link mr-2" type="button" @click="backSettings()">取消</button>
+                    <button class="btn btn-default text-danger"
+                            :class="{loading: loading.deletefeeds}"
+                            :disabled="!feedDeleteSelectedIds.length || loading.deletefeeds"
+                            type="button"
+                            @click="deleteSelectedFeeds()">
+                        删除
+                    </button>
+                </div>
+            </div>
+            <div v-else-if="settings=='auth'">
+
+                <form action="" @submit.prevent="updateAuthConfig()" class="mt-4">
+                    <section class="settings-dialog-section">
+                        <header>状态</header>
+                        <div class="settings-segmented settings-segmented-compact">
+                            <button class="btn btn-link" type="button" :aria-pressed="authForm.enabled" :class="{active: authForm.enabled}" @click="authForm.enabled=true">启用</button>
+                            <button class="btn btn-link" type="button" :aria-pressed="!authForm.enabled" :class="{active: !authForm.enabled}" @click="authForm.enabled=false">关闭</button>
+                        </div>
+                    </section>
+                    <template v-if="authForm.enabled">
+                        <label for="auth-username" class="mt-3">用户名</label>
+                        <input id="auth-username" name="username" type="text" class="form-control" required autocomplete="off" v-model="authForm.username" v-focus>
+                        <label for="auth-password" class="mt-3">密码</label>
+                        <input id="auth-password" name="password" type="password" class="form-control" required autocomplete="new-password" v-model="authForm.password">
+                    </template>
+                    <button class="btn btn-default mt-3" :disabled="settingsPending.auth || settingsPending['auth-load']" type="submit">保存</button>
+                </form>
+            </div>
+            <div v-else-if="settings=='rsshub'">
+
+                <form action="" @submit.prevent="updateRSSHubBaseUrl()" class="mt-4">
+                    <label for="rsshub-base-url">RSSHub 基础链接列表</label>
+                    <textarea id="rsshub-base-url" name="rsshub_base_url" class="form-control" rows="5" autocomplete="off" v-model="settingsRSSHubDraft" placeholder="https://rsshub.rssforever.com&#10;#https://example.com" v-focus></textarea>
+                    <button class="btn btn-default mt-3" :disabled="settingsPending.rsshub" type="submit">保存</button><button class="btn btn-link mt-3" :disabled="settingsPending.rsshub" type="button" @click="settingsRSSHubDraft = rsshubBaseUrl">取消</button>
+                </form>
+            </div>
+            <div v-else-if="settings=='rsshubdetails'" class="settings-dialog">
+
+
+                <section class="settings-dialog-section mt-3" v-if="rsshubDetails.length">
+                    <header>刷新命中</header>
+                    <div class="settings-dialog-fields">
+                        <div class="settings-dialog-field settings-dialog-field-disabled rsshub-detail-row" v-for="detail in rsshubDetails">
+                            <span class="settings-dialog-field-label">{{ detail.feeds }} 个</span>
+                            <span class="settings-dialog-field-value">{{ detail.base_url }}</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="settings-dialog-section" v-if="hasRSSHubFailureStats()">
+                    <header>刷新失败</header>
+                    <div class="settings-dialog-fields">
+                        <div class="settings-dialog-field settings-dialog-field-disabled rsshub-detail-row" v-for="stat in rsshubFailures.stats">
+                            <span class="settings-dialog-field-label">{{ stat.feeds }} 个</span>
+                            <span class="settings-dialog-field-value">{{ stat.error }}</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="settings-dialog-section" v-if="hasRSSHubFeedDetails()">
+                    <header>订阅源</header>
+                    <div class="rsshub-detail-feed-list">
+                        <template v-for="detail in rsshubDetails">
+                            <a class="rsshub-detail-feed-row"
+                               :href="feed.link"
+                               rel="noopener noreferrer"
+                               target="_blank"
+                               referrerpolicy="no-referrer"
+                               v-for="feed in detail.details">
+                                <span class="rsshub-detail-feed-title">{{ feed.title }}</span>
+                                <span class="rsshub-detail-feed-link">{{ feed.link }}</span>
+                            </a>
+                        </template>
+                    </div>
+                </section>
+                <section class="settings-dialog-section" v-if="hasRSSHubFailedFeeds()">
+                    <header>刷新失败的订阅源</header>
+                    <div class="rsshub-detail-feed-list">
+                        <div class="rsshub-detail-feed-row rsshub-detail-feed-row-static" v-for="feed in rsshubFailures.feeds">
+                            <span class="rsshub-detail-feed-title">{{ feed.title }}</span>
+                            <span class="rsshub-detail-feed-link">{{ feed.error }}</span>
+                        </div>
+                    </div>
+                </section>
+                <p class="mt-3 light cursor-default" v-if="!rsshubDetails.length && !hasRSSHubFailures()">暂无 RSSHub 基础链接</p>
+            </div>
+            <div v-else-if="settings=='shortcuts'">
+
+
+                <table class="table table-borderless table-sm table-compact m-0">
+                    <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td>
+                                                            <td>显示全部订阅源 / 未读 / 收藏</td></tr>
+                    <tr><td colspan=2>&nbsp;</td></tr>
+                    <tr><td><kbd>j</kbd> <kbd>k</kbd></td>  <td>下一篇 / 上一篇文章</td></tr>
+                    <tr><td><kbd>l</kbd> <kbd>h</kbd></td>  <td>下一个 / 上一个订阅源</td></tr>
+                    <tr><td><kbd>q</kbd></td>               <td>关闭文章</td></tr>
+
+                    <tr><td colspan=2>&nbsp;</td></tr>
+                    <tr><td><kbd>R</kbd></td>               <td>全部标为已读</td></tr>
+                    <tr><td><kbd>r</kbd></td>               <td>标为已读 / 未读</td></tr>
+                    <tr><td><kbd>s</kbd></td>               <td>标为收藏 / 取消收藏</td></tr>
+                    <tr><td><kbd>o</kbd></td>               <td>打开链接</td></tr>
+                    <tr><td><kbd>i</kbd></td>               <td>正文模式</td> </tr>
+                    <tr><td><kbd>f</kbd> <kbd>b</kbd></td>  <td>向前 / 向后滚动正文</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="settings-refresh-status" v-if="loading.feeds">
+                <span class="icon loading"></span>
+                <span class="text-truncate cursor-default noselect">正在刷新（剩余 {{ loading.feeds }} 个）</span>
+            </div>
+
+    </div>
+</section>
+{% end %}

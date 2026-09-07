@@ -63,14 +63,20 @@ func TestStaticWithBase(t *testing.T) {
 }
 
 func TestStaticBanTemplates(t *testing.T) {
-	handler := NewServer(nil, "127.0.0.1:8000").handler()
-	url := "/static/login.html"
-
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", url, nil)
-	handler.ServeHTTP(recorder, request)
-	if recorder.Result().StatusCode != 404 {
-		t.FailNow()
+	for _, base := range []string{"", "/sub"} {
+		server := NewServer(nil, "127.0.0.1:8000")
+		server.BasePath = base
+		handler := server.handler()
+		for _, name := range []string{"login.html", "index.html", "settings.html", "/settings.html", "javascripts/../settings.html", "settings.html/", "SETTINGS.HTML"} {
+			t.Run(base+"/"+name, func(t *testing.T) {
+				recorder := httptest.NewRecorder()
+				request := httptest.NewRequest("GET", base+"/static/"+name, nil)
+				handler.ServeHTTP(recorder, request)
+				if recorder.Code != http.StatusNotFound {
+					t.Fatalf("template must not be served: got %d", recorder.Code)
+				}
+			})
+		}
 	}
 }
 

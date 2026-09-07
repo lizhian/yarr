@@ -33,6 +33,10 @@ func Template(path string) *template.Template {
 	var tmpl *template.Template
 	tmpl, found := FS.templates[path]
 	if !found {
+		paths := []string{path}
+		if path == "index.html" {
+			paths = append(paths, "settings.html")
+		}
 		tmpl = template.Must(template.New(path).Delims("{%", "%}").Funcs(template.FuncMap{
 			"assetVersion": func() string {
 				return assetVersion
@@ -52,7 +56,7 @@ func Template(path string) *template.Template {
 				}
 				return template.HTML(content)
 			},
-		}).ParseFS(FS, path))
+		}).ParseFS(FS, paths...))
 		if FS.embedded != nil {
 			FS.templates[path] = tmpl
 		}
