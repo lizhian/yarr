@@ -9,10 +9,10 @@
     <div class="settings-scroll scroll-touch" ref="settingsScroll" @scroll="saveSettingsScroll()">
             <div v-if="settings=='menu'" class="settings-dialog">
                 <section class="settings-group">
-                    <h2>外观</h2>
+                    <h2><span class="icon" aria-hidden="true">{% inline "sliders.svg" %}</span>外观</h2>
                     <div class="settings-row"><span>主题</span>
                         <div class="settings-segmented theme-picker">
-                            <button class="btn btn-link" :aria-label="themeTitle(t)" :aria-pressed="theme.name == t" :class="{active: theme.name == t}" @click="saveBrowserSetting('themeName', t)" v-for="t in ['light', 'sepia', 'night']">{{ themeTitle(t) }}</button>
+                            <button class="btn btn-link" :aria-label="themeTitle(t)" :aria-pressed="theme.name == t" :class="{active: theme.name == t}" @click="saveBrowserSetting('themeName', t)" v-for="t in ['light', 'sepia', 'night']"><span class="settings-theme-swatch" :class="'settings-theme-swatch-' + t" aria-hidden="true"></span>{{ themeTitle(t) }}</button>
                         </div>
                     </div>
                     <div class="settings-row"><span>字体显示</span>
@@ -21,7 +21,10 @@
                         </div>
                     </div>
                     <div class="settings-row"><label for="settings-font-size">字体大小</label>
-                        <input id="settings-font-size" class="form-control settings-number" type="number" min="10" max="30" :value="appFontSize" @change="saveBrowserSetting('appFontSize', normalizeFontSize($event.target.value)); $event.target.value = appFontSize">
+                        <div class="settings-number-control">
+                            <input id="settings-font-size" class="form-control settings-number" type="number" min="10" max="30" :value="appFontSize" @change="saveBrowserSetting('appFontSize', normalizeFontSize($event.target.value)); $event.target.value = appFontSize">
+                            <span>px</span>
+                        </div>
                     </div>
                     <div class="settings-row"><span>工具栏显示</span>
                         <div class="settings-segmented settings-segmented-compact">
@@ -31,7 +34,7 @@
                     </div>
                 </section>
                 <section class="settings-group">
-                    <h2>阅读</h2>
+                    <h2><span class="icon" aria-hidden="true">{% inline "book-open.svg" %}</span>阅读</h2>
                     <div class="settings-row"><span>自动刷新</span>
                         <div class="settings-segmented settings-segmented-compact refresh-rate-picker">
                             <button class="btn btn-link" :disabled="settingsPending.refresh_rate" :aria-pressed="refreshRate == option.value" :class="{active: refreshRate == option.value}" @click="saveGlobalSetting('refreshRate', 'refresh_rate', option.value)" v-for="option in refreshRateOptions">{{ option.title }}</button>
@@ -43,11 +46,11 @@
                         </div>
                     </div>
                     <div class="settings-dialog-actions settings-dialog-actions-inline">
-                        <button class="settings-dialog-action" @click="showSettings('shortcuts')"><span class="icon mr-2">{% inline "help-circle.svg" %}</span>快捷键</button>
+                        <button class="settings-dialog-action" @click="showSettings('shortcuts')"><span class="icon mr-2">{% inline "help-circle.svg" %}</span>快捷键<span class="icon settings-action-chevron" aria-hidden="true">{% inline "chevron-right.svg" %}</span></button>
                     </div>
                 </section>
                 <section class="settings-group" ref="subscriptionSettings">
-                    <h2>订阅管理</h2>
+                    <h2><span class="icon" aria-hidden="true">{% inline "layers.svg" %}</span>订阅管理</h2>
                     <div class="settings-dialog-actions settings-dialog-actions-inline">
                         <button class="settings-dialog-action" @click="showSettings('create')"><span class="icon mr-2">{% inline "plus.svg" %}</span>新订阅源</button>
                         <button class="settings-dialog-action" :disabled="!!loading.feeds" @click="refreshAllFeeds()"><span class="icon mr-2">{% inline "rotate-cw.svg" %}</span>刷新订阅源</button>
@@ -61,20 +64,20 @@
                     </div>
                 </section>
                 <section class="settings-group">
-                    <h2>RSSHub</h2>
+                    <h2><span class="icon" aria-hidden="true">{% inline "rss.svg" %}</span>RSSHub</h2>
                     <div class="settings-dialog-actions settings-dialog-actions-inline">
-                        <button class="settings-dialog-action" @click="showSettings('rsshub')"><span class="icon mr-2">{% inline "rss.svg" %}</span>基础链接列表</button>
-                        <button class="settings-dialog-action" @click="showSettings('rsshubdetails')"><span class="icon mr-2">{% inline "list.svg" %}</span>刷新详情</button>
+                        <button class="settings-dialog-action" @click="showSettings('rsshub')"><span class="icon mr-2">{% inline "rss.svg" %}</span>基础链接列表<span class="icon settings-action-chevron" aria-hidden="true">{% inline "chevron-right.svg" %}</span></button>
+                        <button class="settings-dialog-action" @click="showSettings('rsshubdetails')"><span class="icon mr-2">{% inline "list.svg" %}</span>刷新详情<span class="icon settings-action-chevron" aria-hidden="true">{% inline "chevron-right.svg" %}</span></button>
                     </div>
                     <setting-field label="Bilibili UID" :draft="settingsDraft('rsshub:bilibili', '')" @save="createRSSHubFeed('bilibili')" placeholder="UID 或空间链接"></setting-field>
                     <setting-field label="Telegram" :draft="settingsDraft('rsshub:telegram', '')" @save="createRSSHubFeed('telegram')" placeholder="频道 ID 或 t.me 链接"></setting-field>
                 </section>
                 <section class="settings-group">
-                    <h2>数据与安全</h2>
+                    <h2><span class="icon" aria-hidden="true">{% inline "folder.svg" %}</span>数据与安全</h2>
                     <div class="settings-row"><label for="settings-backup">自动备份</label><input id="settings-backup" type="checkbox" :checked="backupEnabled" :disabled="settingsPending.backup_enabled" @change="saveGlobalSetting('backupEnabled', 'backup_enabled', $event.target.checked)"></div>
                     <div class="settings-dialog-actions settings-dialog-actions-inline">
                         <button class="settings-dialog-action" :disabled="loading.backup" @click="backupData()"><span class="icon mr-2">{% inline "download.svg" %}</span>备份数据</button>
-                        <button class="settings-dialog-action" @click="showSettings('auth')"><span class="icon mr-2">{% inline "sliders.svg" %}</span>访问认证</button>
+                        <button class="settings-dialog-action" @click="showSettings('auth')"><span class="icon mr-2">{% inline "sliders.svg" %}</span>访问认证<span class="icon settings-action-chevron" aria-hidden="true">{% inline "chevron-right.svg" %}</span></button>
                         <button class="settings-dialog-action" v-if="authenticated" @click="logout()"><span class="icon mr-2">{% inline "log-out.svg" %}</span>退出登录</button>
                     </div>
                 </section>
