@@ -495,6 +495,33 @@ func TestMarkItemsRead(t *testing.T) {
 	}
 }
 
+func TestMarkItemsReadSkipsReadItems(t *testing.T) {
+	db := testDB()
+	defer db.db.Close()
+	scope := testItemsSetup(db)
+	_, err := db.db.Exec(`
+		create trigger reject_read_item_update before update of status on items
+		when old.status = 1
+		begin
+			select raise(abort, 'already-read item updated');
+		end;
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filter := MarkFilter{FolderID: &scope.folder1.Id}
+	if !db.MarkItemsRead(filter) {
+		t.Fatal("marking folder read updated an already-read item")
+	}
+	unread := UNREAD
+	if count := db.CountItems(ItemFilter{FolderID: &scope.folder1.Id, Status: &unread}); count != 0 {
+		t.Fatalf("want no unread items in folder, have %d", count)
+	}
+	if !db.MarkItemsRead(filter) {
+		t.Fatal("marking folder read again should skip all items")
+	}
+}
+
 func TestDeleteOldItems(t *testing.T) {
 	extraItems := 10
 

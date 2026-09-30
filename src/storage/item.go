@@ -523,7 +523,9 @@ func (s *Storage) UpdateItemFavorite(itemID int64, favorite bool) bool {
 }
 
 func (s *Storage) MarkItemsRead(filter MarkFilter) bool {
+	unread := UNREAD
 	predicate, args := listQueryPredicate(ItemFilter{
+		Status:   &unread,
 		FolderID: filter.FolderID,
 		FeedID:   filter.FeedID,
 		Search:   filter.Search,
