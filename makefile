@@ -1,4 +1,4 @@
-VERSION=4.2
+VERSION=4.3
 GITHASH=$(shell git rev-parse --short=8 HEAD)
 
 GO_TAGS    = sqlite_foreign_keys sqlite_json
