@@ -183,7 +183,7 @@ func (s *Service) refresh(key, id, token string, j *job) {
 	if fetchErr == nil {
 		c.RSS = body
 		c.SucceededAt = now.Unix()
-		c.ExpiresAt = now.Add(s.client.jitter(2*time.Hour, 4*time.Hour)).Unix()
+		c.ExpiresAt = now.Add(s.client.jitter(30*time.Minute, 2*time.Hour)).Unix()
 		c.Failure = ""
 		c.FailureAt = 0
 		c.RetryAt = 0

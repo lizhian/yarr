@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"bytes"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -11,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nkanaev/yarr/src/content/sanitizer"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 type channel struct {
@@ -158,18 +164,31 @@ func attachmentHTML(a attachment) string {
 	return `<img src="` + html.EscapeString(a.URL) + `" alt="` + html.EscapeString(a.Filename) + `"><br>` + link
 }
 
+var discordMarkdown = goldmark.New(
+	goldmark.WithExtensions(extension.Linkify, extension.Strikethrough),
+	goldmark.WithRendererOptions(goldmarkhtml.WithHardWraps()),
+)
+
+func markdownHTML(text string) string {
+	var out bytes.Buffer
+	if err := discordMarkdown.Convert([]byte(text), &out); err != nil {
+		return textHTML(text)
+	}
+	return out.String()
+}
+
 func bodyHTML(m message) string {
-	parts := []string{textHTML(m.Content)}
+	parts := []string{markdownHTML(m.Content)}
 	for _, e := range m.Embeds {
-		parts = append(parts, linkHTML(e.URL, e.Title), textHTML(e.Description))
+		parts = append(parts, linkHTML(e.URL, e.Title), markdownHTML(e.Description))
 		for _, f := range e.Fields {
-			parts = append(parts, textHTML(f.Name)+": "+textHTML(f.Value))
+			parts = append(parts, textHTML(f.Name)+": "+markdownHTML(f.Value))
 		}
 	}
 	for _, a := range m.Attachments {
 		parts = append(parts, attachmentHTML(a))
 	}
-	return strings.Join(parts, "<br>\n")
+	return sanitizer.Sanitize("https://discord.com", strings.Join(parts, "<br>\n"))
 }
 func messageItem(m message, base string) (rssItem, error) {
 	if !numericID(m.ID) {

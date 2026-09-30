@@ -127,7 +127,7 @@ func TestNormalRSSAndCacheIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.ExpiresAt-c.SucceededAt != 7200 || c.AccessedAt != clock.now().Unix() {
+	if c.ExpiresAt-c.SucceededAt != 1800 || c.AccessedAt != clock.now().Unix() {
 		t.Fatal(c)
 	}
 	encoded, _ := json.Marshal(c)
@@ -161,7 +161,7 @@ func TestForumInlineContentAndMissingStarter(t *testing.T) {
 		t.Fatal(got)
 	}
 	items := readRSS(t, got.Body).Channel.Items
-	if calls.Load() != 3 || len(items) != 3 || items[0].GUID.Value != "300" || items[1].GUID.Value != "200" || items[0].Description != "inline" || items[1].Description != "" {
+	if calls.Load() != 3 || len(items) != 3 || items[0].GUID.Value != "300" || items[1].GUID.Value != "200" || items[0].Description != "<p>inline</p>\n" || items[1].Description != "" {
 		t.Fatal(items, calls.Load())
 	}
 }
@@ -521,7 +521,7 @@ func TestRedirectNeverForwardsCredential(t *testing.T) {
 func TestRandomRangesAndRetryHeaders(t *testing.T) {
 	c := newClient()
 	for i := 0; i < 100; i++ {
-		for _, bounds := range [][2]time.Duration{{2 * time.Hour, 4 * time.Hour}, {3 * time.Second, 7 * time.Second}} {
+		for _, bounds := range [][2]time.Duration{{30 * time.Minute, 2 * time.Hour}, {3 * time.Second, 7 * time.Second}} {
 			got := c.jitter(bounds[0], bounds[1])
 			if got < bounds[0] || got > bounds[1] {
 				t.Fatal(got)
@@ -622,5 +622,63 @@ func TestFirstImageEnclosureFeedsListImage(t *testing.T) {
 	}
 	if firstImageEnclosure(message{Attachments: []attachment{{Filename: "file.zip", URL: "https://example.com/file.zip"}}}) != nil {
 		t.Fatal("non-image enclosure")
+	}
+}
+
+func TestMarkdownRenderedInRSSBodies(t *testing.T) {
+	for _, forum := range []bool{false, true} {
+		t.Run(fmt.Sprint(forum), func(t *testing.T) {
+			content := "# Heading\n\n**bold** and *italic* and ~~gone~~\nnext line\n\n- one\n- two\n\n> quote\n\n[link](https://example.com/read) and `code`\n\n```go\nfmt.Println(\"<safe>\")\n```\n\nhttps://example.com/plain"
+			msg := message{ID: "300", ChannelID: "300", Timestamp: "2026-09-30T03:00:00Z", Content: content, Attachments: []attachment{{Filename: "cover.png", URL: "https://cdn.discordapp.com/cover.png", ContentType: "image/png"}}}
+			s, _, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "/123") {
+					typ := 0
+					if forum {
+						typ = 15
+					}
+					json.NewEncoder(w).Encode(map[string]interface{}{"id": "123", "guild_id": "456", "type": typ})
+					return
+				}
+				if forum {
+					json.NewEncoder(w).Encode(map[string]interface{}{"threads": []thread{{ID: "300", Name: "post"}}, "first_messages": []message{msg}, "has_more": false})
+				} else {
+					json.NewEncoder(w).Encode([]message{msg})
+				}
+			})
+			got := s.Get(context.Background(), "123", "secret")
+			if got.Status != 200 {
+				t.Fatal(got)
+			}
+			parsed, err := parser.Parse(bytes.NewReader(got.Body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rendered := parsed.Items[0].Content
+			for _, want := range []string{"<h1>Heading</h1>", "<strong>bold</strong>", "<em>italic</em>", "<del>gone</del>", "<br>", "<ul>", "<li>one</li>", "<blockquote>", `href="https://example.com/read"`, "<code>code</code>", "<pre><code", "&lt;safe&gt;", `href="https://example.com/plain"`, `<img src="https://cdn.discordapp.com/cover.png"`} {
+				if !strings.Contains(rendered, want) {
+					t.Errorf("missing %q in %s", want, rendered)
+				}
+			}
+			if len(parsed.Items[0].MediaLinks) != 1 {
+				t.Fatal("cover lost")
+			}
+		})
+	}
+}
+
+func TestMarkdownSafetyAndEmbedDescription(t *testing.T) {
+	m := message{Content: "before\n\n<script>alert(1)</script>\n\n[bad](javascript:alert%281%29)\n\n![bad](data:text/html,payload)", Embeds: []embed{{Title: "card", URL: "https://example.com", Description: "**card description**"}}}
+	m.Embeds[0].Fields = append(m.Embeds[0].Fields, struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	}{Name: "field", Value: "*value*"})
+	got := bodyHTML(m)
+	for _, bad := range []string{"<script", "javascript:", "data:text/html", "alert(1)"} {
+		if strings.Contains(got, bad) {
+			t.Fatal("unsafe output", got)
+		}
+	}
+	if !strings.Contains(got, "<strong>card description</strong>") || !strings.Contains(got, "<em>value</em>") {
+		t.Fatal(got)
 	}
 }
