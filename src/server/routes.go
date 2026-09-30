@@ -40,6 +40,7 @@ func (s *Server) handler() http.Handler {
 	r.For("/", s.handleIndex)
 	r.For("/manifest.json", s.handleManifest)
 	r.For("/static/*path", s.handleStatic)
+	r.For("/rss/discord/channel/:channelId/:token", s.handleDiscordRSS)
 	r.For("/api/status", s.handleStatus)
 	r.For("/api/auth", s.handleAuth)
 	r.For("/api/folders", s.handleFolderList)
@@ -345,7 +346,7 @@ func (s *Server) createFeed(c *router.Context, form FeedCreateForm, skipExisting
 	result, err := s.worker.DiscoverFeed(form.Url)
 	switch {
 	case err != nil:
-		log.Printf("Faild to discover feed for %s: %s", form.Url, err)
+		log.Printf("Faild to discover feed for %s: %s", htmlutil.RedactDiscordToken(form.Url), htmlutil.RedactDiscordToken(err.Error()))
 		if rsshub.IsLink(form.Url) {
 			c.JSON(http.StatusOK, map[string]string{"status": "error", "message": err.Error()})
 			return

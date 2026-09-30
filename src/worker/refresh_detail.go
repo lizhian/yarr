@@ -2,6 +2,8 @@ package worker
 
 import (
 	"time"
+
+	"github.com/nkanaev/yarr/src/content/htmlutil"
 )
 
 type FeedRefreshDetail struct {
@@ -21,7 +23,7 @@ func (w *Worker) recordFeedRefreshDetail(feedID int64, result *FeedRefreshResult
 		Success:                refreshErr == nil,
 	}
 	if refreshErr != nil {
-		detail.Error = refreshErr.Error()
+		detail.Error = htmlutil.RedactDiscordToken(refreshErr.Error())
 	} else if result != nil {
 		detail.FetchedItems = fetchedItems
 		if newItems > 0 {

@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/nkanaev/yarr/src/content/htmlutil"
 	"github.com/nkanaev/yarr/src/rsshub"
 	"github.com/nkanaev/yarr/src/storage"
 )
@@ -102,7 +103,7 @@ func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 		feedImageUrl = result.Feed.ImageURL
 		feedLink = result.FeedLink
 	} else if err != nil {
-		log.Printf("Failed to discover favicon feed image for %s: %s", feed.FeedLink, err)
+		log.Printf("Failed to discover favicon feed image for %s: %s", htmlutil.RedactDiscordToken(feed.FeedLink), htmlutil.RedactDiscordToken(err.Error()))
 	}
 	w.findFeedIcon(feed, feedImageUrl, feedLink)
 }
@@ -113,7 +114,7 @@ func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
 	}
 	feedLink, err := w.resolveLink(feed.FeedLink)
 	if err != nil {
-		log.Printf("Failed to resolve icon feed link for %s: %s", feed.FeedLink, err)
+		log.Printf("Failed to resolve icon feed link for %s: %s", htmlutil.RedactDiscordToken(feed.FeedLink), htmlutil.RedactDiscordToken(err.Error()))
 		return
 	}
 	w.findFeedIcon(feed, feedImageUrl, feedLink)
@@ -122,7 +123,7 @@ func (w *Worker) FindFeedIcon(feed storage.Feed, feedImageUrl string) {
 func (w *Worker) findFeedIcon(feed storage.Feed, feedImageUrl, feedLink string) {
 	iconURL, err := findFeedIconURL(feedImageUrl, feed.Link, feedLink)
 	if err != nil {
-		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
+		log.Printf("Failed to find favicon for %s (%s): %s", htmlutil.RedactDiscordToken(feed.FeedLink), htmlutil.RedactDiscordToken(feed.Link), htmlutil.RedactDiscordToken(err.Error()))
 	}
 	if iconURL != "" {
 		w.updateFeedIconURL(feed.Id, iconURL)

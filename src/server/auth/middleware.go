@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/nkanaev/yarr/src/assets"
@@ -19,9 +20,15 @@ func unsafeMethod(method string) bool {
 	return method == "POST" || method == "PUT" || method == "DELETE"
 }
 
+var discordRSSPath = regexp.MustCompile(`^/rss/discord/channel/[^/]+/[^/]+$`)
+
 func (m *Middleware) Handler(c *router.Context) {
 	authConfig := m.DB.GetAuthConfig()
 	if !authConfig.Enabled {
+		c.Next()
+		return
+	}
+	if discordRSSPath.MatchString(strings.TrimPrefix(c.Req.URL.Path, m.BasePath)) {
 		c.Next()
 		return
 	}

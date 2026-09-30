@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nkanaev/yarr/src/discord"
 	"github.com/nkanaev/yarr/src/storage"
 	"github.com/nkanaev/yarr/src/worker"
 )
@@ -17,6 +19,7 @@ type Server struct {
 	db          *storage.Storage
 	worker      *worker.Worker
 	backups     *BackupService
+	discord     *discord.Service
 	backupsOnce sync.Once
 	cache       map[string]interface{}
 	cache_mutex *sync.Mutex
@@ -36,6 +39,13 @@ func NewServer(db *storage.Storage, addr string) *Server {
 		cache:       make(map[string]interface{}),
 		cache_mutex: &sync.Mutex{},
 	}
+	if db != nil {
+		var err error
+		s.discord, err = discord.New(db)
+		if err != nil {
+			log.Print("Failed to initialize Discord RSS cache")
+		}
+	}
 	return s
 }
 
@@ -52,6 +62,11 @@ func (h *Server) GetAddr() string {
 }
 
 func (s *Server) Start() {
+	if s.discord != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go s.discord.Cleanup(ctx)
+	}
 	refreshRate := s.db.GetSettingsValueInt64("refresh_rate")
 	s.worker.FindFavicons()
 	s.worker.StartFeedCleaner()

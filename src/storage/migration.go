@@ -33,6 +33,7 @@ var migrations = []func(*sql.Tx) error{
 	m23_add_feed_custom_icon,
 	m24_add_favorite_and_item_order,
 	m25_add_feed_refresh_times,
+	m26_discord_cache,
 }
 
 var maxVersion = int64(len(migrations))

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nkanaev/yarr/src/content/htmlutil"
 	"github.com/nkanaev/yarr/src/feedmeta"
 )
 
@@ -465,7 +466,7 @@ func (s *Storage) SetFeedError(feedID int64, lastError error) {
 		insert into feed_errors (feed_id, error)
 		values (?, ?)
 		on conflict (feed_id) do update set error = excluded.error`,
-		feedID, lastError.Error(),
+		feedID, htmlutil.RedactDiscordToken(lastError.Error()),
 	)
 	if err != nil {
 		log.Print(err)

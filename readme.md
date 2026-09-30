@@ -23,6 +23,7 @@ yarr 将 Web 界面和静态资源嵌入单个可执行文件，并使用 SQLite
 - 支持 Web 访问认证、内置 HTTPS、子路径部署和 Unix Socket。
 - 支持手动备份和每日自动备份，备份同时包含 SQLite 数据库和 OPML 订阅清单。
 - 提供 Fever API 和 FreshRSS 兼容的 Google Reader API，可连接第三方 RSS 客户端。
+- 提供 [Discord 频道 RSS 接口](doc/discord.md)，支持帖子正文、持久化缓存、夜间暂停抓取和凭据失效提示。
 
 > yarr 定位为日常 Feed 阅读器，而不是永久归档工具。系统会定期清理每个订阅源超过 500 篇的已读且未收藏文章；未读文章和收藏文章不会被自动清理。
 
