@@ -52,6 +52,10 @@ _Avoid_: RSSHub URL, RSSHub shortcut
 The saved link yarr uses to fetch articles from one subscription source.
 _Avoid_: Feed URL, Feed link
 
+**已订阅源 RSS**:
+A subscribable RSS representation of articles yarr has already saved from one **订阅源**.
+_Avoid_: RSS 抓取代理, 原始订阅源
+
 **RSSHub 快速添加**:
 A settings action that creates an RSSHub subscription link from a supported service template and a user-entered identifier.
 _Avoid_: RSSHub preset, RSSHub shortcut

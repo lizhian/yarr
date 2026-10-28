@@ -32,7 +32,7 @@ func (s *Server) handler() http.Handler {
 	if s.db != nil {
 		r.Use((&auth.Middleware{
 			BasePath: s.BasePath,
-			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json", "/radar/"},
+			Public:   []string{"/static", "/fever", "/api/greader.php", "/manifest.json", "/radar/", "/rss/from/"},
 			DB:       s.db,
 		}).Handler)
 	}
@@ -43,6 +43,7 @@ func (s *Server) handler() http.Handler {
 	r.For("/rss/discord/channel/:channelId/:token", s.handleDiscordRSS)
 	r.For("/rss/bilibili/:uid", s.handleBilibiliRSS)
 	r.For("/rss/bilibili/watchlater/:uid", s.handleBilibiliWatchlaterRSS)
+	r.For("/rss/from/*url", s.handleFromRSS)
 	r.For("/api/bilibili", s.handleBilibiliConfig)
 	r.For("/api/status", s.handleStatus)
 	r.For("/api/auth", s.handleAuth)
